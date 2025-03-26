@@ -9,8 +9,15 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
+import sys
+from urllib.parse import urlparse
 from pathlib import Path
+
+# Import env.py
+# ✅ Ensure `env.py` is loaded
+if os.path.isfile('env.py'):
+    import env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +32,11 @@ SECRET_KEY = 'django-insecure-hso5-^ncnjn!fh5c!tv@0bhe&kpjuceyupk1$dr^_i2xo4=-+^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io']
+ALLOWED_HOSTS = [
+    '8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io',
+    'localhost,127.0.0.1',
+    'yourdomain.com'
+]
 
 
 # Application definition
@@ -75,11 +86,23 @@ WSGI_APPLICATION = 'bet_club.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# Replace the DATABASES section of your settings.py with this
+tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
+
+# Replace the DATABASES section of your settings.py with this
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+  'default': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.getenv('DB_NAME'),
+    'USER': os.getenv('DB_USER'),
+    'PASSWORD': os.getenv('DB_PASSWORD'),
+    'HOST': os.getenv('DB_HOST'),
+    'PORT': os.getenv('DB_PORT', 5432),
+    'OPTIONS': {
+      'sslmode': 'require',
+    },
+    'DISABLE_SERVER_SIDE_CURSORS': True,
+  }
 }
 
 
