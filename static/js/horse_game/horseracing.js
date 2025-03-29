@@ -1,12 +1,13 @@
 import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
 
-async function useRaceData() {
+async function getRaceData() {
     const raceData = await fetchTextFiles();
     console.log("Race data in another file:", raceData);
     
     // Example usage
     console.log("Horsenames:", raceData.horsenames);
     shuffleArray(raceData.horsenames); // Shuffle the array
+    raceData.horsenames = raceData.horsenames.slice(0, 144) // only need 6 * 24
     console.log("Horsenames:", raceData.horsenames);
 }
 
@@ -17,6 +18,6 @@ function shuffleArray(array) {
     }
 }
 
-useRaceData();
+getRaceData();
 
 console.log("Horsenames:", raceData.horsenames);

@@ -3,8 +3,70 @@
 {% block content %}
 <!-- content starts here -->
 
-<h1>Flat Jumpers</h1>
-<p>Data is loading automatically...</p>
+<h1 class="text-center">Flat Jumpers</h1>
+
+<div class="modal" id="gameOptionsModal" aria-labelledby="gameOptionsLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Game Options</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>Players:</p>
+            <!-- Player Entries -->
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="Player One" id="inputDefault">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p1-check" checked="">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p1-label">Human Player</label>
+            </div>
+          </div>
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="C Appleby" id="p2-name">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p2-check">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p2-label">AI Player</label>
+            </div>
+          </div>
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="R Hannon" id="p3-name">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p3-check">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p3-label">AI Player</label>
+            </div>
+          </div>
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="W Mullins" id="p4-name">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p4-check">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p4-label">AI Player</label>
+            </div>
+          </div>
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="N Henderson" id="p5-name">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p5-check">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p5-label">AI Player</label>
+            </div>
+          </div>
+          <div class="player-entry">
+            <input type="text" class="form-control" placeholder="G Elliot" id="p6-name">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="p6-check">
+                <label class="form-check-label" for="flexSwitchCheckChecked" id="p6-label">AI Player</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="start-game">Go Racing!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <!-- content ends here -->
 {% endblock content %}
 {% block additional %}
