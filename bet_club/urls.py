@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from game_horse import views as horse_views
-from .views import horse_view  # Import the view
+from .views import horse_view, home_view  # Import the view
 
 urlpatterns = [
-    path('', horse_views.index, name='index'),
-    path("horse/", horse_view, name="horse"),
+    ## path('', home_view.index, name='index'),
+    path("home/", home_view, name="home"),
+    path("horse.html", horse_view, name="horse"),
     path('admin/', admin.site.urls),
 ]
