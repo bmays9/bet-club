@@ -3,7 +3,11 @@
 {% block content %}
 <!-- content starts here -->
 
-<p>HORSE RACING</p>
-
+<h1>Flat Jumpers</h1>
+<p>Data is loading automatically...</p>
 <!-- content ends here -->
 {% endblock content %}
+{% block additional %}
+<script type="module" src="{% static 'js/horse_game/load_data.js' %}"></script>
+<script type="module" src="{% static 'js/horse_game/horseracing.js' %}"></script>
+{% endblock %}
