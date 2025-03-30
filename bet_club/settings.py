@@ -38,6 +38,9 @@ ALLOWED_HOSTS = [
     'yourdomain.com'
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io",  # Add your Gitpod domain
+]
 
 # Application definition
 
@@ -50,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'game_horse',
     'lms',
+    'score_predict',
 ]
 
 MIDDLEWARE = [
