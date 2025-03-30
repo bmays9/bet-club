@@ -5,11 +5,60 @@
 
 <h1 class="text-center">Flat Jumpers</h1>
 
+<div class="game-state" id="game-state">
+  <div class="meeting-info">
+    <h4>Next Meeting: Chepstow (1 of 16)</h2>
+    <h5>Going: Good</h3>
+  </div>
+  <div class="meeting-races">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Time</th>
+          <th scope="col">Distance</th>
+          <th scope="col">Name</th>
+          <th scope="col">Prize Money</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="table-active">
+          <td>1:15</td>
+          <td>5f</td>
+          <td>The Brocklesby</td>
+          <td>£5000</td>
+        </tr>
+        <tr class="table-active">
+          <td>1:15</td>
+          <td>5f</td>
+          <td>The Brocklesby</td>
+          <td>£5000</td>
+        </tr>
+        <tr class="table-active">
+          <td>1:15</td>
+          <td>5f</td>
+          <td>The Brocklesby</td>
+          <td>£5000</td>
+        </tr>
+        <tr class="table-active">
+          <td>1:15</td>
+          <td>5f</td>
+          <td>The Brocklesby</td>
+          <td>£5000</td>
+        </tr>
+        <tr class="table-active">
+          <td>1:15</td>
+          <td>5f</td>
+          <td>The Brocklesby</td>
+          <td>£5000</td>
+        </tr>
+      </tbody>
+</div>
+
 <div class="modal" id="gameOptionsModal" aria-labelledby="gameOptionsLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Game Options</h5>
+          <h5 class="modal-title">Start New Game!</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
             <span aria-hidden="true"></span>
           </button>
@@ -72,4 +121,4 @@
 {% block additional %}
 <script type="module" src="{% static 'js/horse_game/load_data.js' %}"></script>
 <script type="module" src="{% static 'js/horse_game/horseracing.js' %}"></script>
-{% endblock %}
+{% endblock additional %}

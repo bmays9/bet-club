@@ -20,7 +20,7 @@ from game_horse import views as horse_views
 from .views import horse_view, home_view  # Import the view
 
 urlpatterns = [
-    ## path('', home_view.index, name='index'),
+    path('', home_view, name='index'),
     path("home/", home_view, name="home"),
     path("horse.html", horse_view, name="horse"),
     path('admin/', admin.site.urls),
