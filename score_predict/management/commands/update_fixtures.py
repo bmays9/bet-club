@@ -9,8 +9,11 @@ API_KEY = os.getenv("API_FOOTBALL_KEY")
 BASE_URL = "https://v3.football.api-sports.io/"
 
 HEADERS = {
-    'x-rapidapi-key': API_KEY
+    'x-rapidapi-key': API_KEY,
+    'x-rapidapi-host': 'v3.football.api-sports.io'
 }
+
+season = 2021
 
 LEAGUES = {
     39: "PL",
@@ -28,7 +31,7 @@ class Command(BaseCommand):
             url = f"{BASE_URL}fixtures"
             params = {
                 "league": league_id,
-                "season": datetime.datetime.now().year,
+                "season": season,
                 "from": date_from,
                 "to": date_to,
             }
@@ -36,12 +39,18 @@ class Command(BaseCommand):
             data = response.json()
             if "response" in data:
                 fixtures.extend(data["response"])
+        print(response.text)
+        print(fixtures)
+
         return fixtures
 
     def handle(self, *args, **kwargs):
-        today = datetime.date.today()
+        # today = datetime.date.today()
+        today = datetime.date.today().replace(year=season + 1)
         past_week = (today - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
         next_week = (today + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+        print(past_week)
+        print(next_week)
 
         # Fetch past results
         past_results = self.fetch_fixtures(past_week, today)
