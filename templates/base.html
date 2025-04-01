@@ -1,6 +1,7 @@
 {% load static %}
 
 {% url 'home' as home_url %}
+{% url 'scores' as scores_url %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -27,12 +28,12 @@
         <div class="collapse navbar-collapse" id="navbarColor01">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
-              <a class="nav-link active" href="#">Home
+              <a class="nav-link {% if request.path == home_url %}active{%endif%}" href="{% url 'home' %}">Home</a>
                 <span class="visually-hidden">(current)</span>
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">ScorePredict</a>
+              <a class="nav-link {% if request.path == scores_url %}active{%endif%}" href="{% url 'scores' %}">ScorePredict</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">LMS</a>

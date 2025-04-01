@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- content starts here -->
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Football Fixtures</h1>
+    
+    {% for league, fixtures in fixture_list.items %}
+    <div class="mb-4">
+        <button class="bg-blue-500 text-white px-4 py-2 rounded w-full text-left" onclick="toggleCollapse('{{ league|slugify }}')">
+            {{ league }} Fixtures
+        </button>
+        <div id="{{ league|slugify }}" class="mt-2 hidden">
+            <table class="table-auto w-full bg-gray-100 rounded border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="px-4 py-2 border">Date</th>
+                        <th class="px-4 py-2 border">Home Team</th>
+                        <th class="px-4 py-2 border">Away Team</th>
+                        <th class="px-4 py-2 border">Score</th>
+                        <th class="px-4 py-2 border">Predicted Home Score</th>
+                        <th class="px-4 py-2 border">Predicted Away Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fixture in fixtures %}
+                    <tr class="border-b">
+                        <td class="px-4 py-2">{{ fixture.date }}</td>
+                        <td class="px-4 py-2">{{ fixture.home_team }}</td>
+                        <td class="px-4 py-2">{{ fixture.away_team }}</td>
+                        <td class="px-4 py-2">{{ fixture.home_score }} - {{ fixture.away_score }}</td>
+                        <td class="px-4 py-2">
+                            <input type="number" name="home_pred_{{ fixture.id }}" placeholder="Home Score" class="border p-1 w-12 text-center">
+                        </td>
+                        <td class="px-4 py-2">
+                            <input type="number" name="away_pred_{{ fixture.id }}" placeholder="Away Score" class="border p-1 w-12 text-center">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+<script>
+function toggleCollapse(id) {
+    var section = document.getElementById(id);
+    section.classList.toggle("hidden");
+}
+</script>
+
+<!-- content ends here -->
+{% endblock content %}
