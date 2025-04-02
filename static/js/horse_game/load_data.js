@@ -1,5 +1,5 @@
 export async function fetchTextFiles() {
-    const fileNames = ["horsenames.txt", "meetings.txt", "distances.txt", "racenames.txt", "money.txt"];
+    const fileNames = ["horsenames.txt", "meetings.txt", "distances.txt", "racenames.txt", "prizemoney.txt"];
     const baseUrl = "/static/data/horse_game/";  // Ensure Django serves static files
     const fileData = {};
 
