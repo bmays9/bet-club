@@ -1,8 +1,11 @@
 import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
 
 let meeting_number = 0;
+let players = []
 const TOTALHORSES = 144
 let raceData = {}; // Declare raceData globally
+let playerData = {};
+let horseData = {};
 
 
 async function getRaceData() {
@@ -46,8 +49,35 @@ function horseRating(distance, peakDistance, maxRating, spread) {
     return maxRating * Math.exp(exponent);
 }
 
+function setPlayerData() {
+    
+    let plyr = [];
+    let wins = 0;
+    let betting = 0;
+    let entries = 0;
+    let winnings = 0;
+    let total = 0;
+
+    for (let i = 0; i < 6; i++){
+        name = players[i];
+        
+        plyr.push({
+            name,
+            wins,
+            betting,
+            entries,
+            winnings,
+            total
+        })
+    }
+    
+    return plyr
+}
+
 function buildHorseData() {
     
+    let horses = [];
+
     for (let i = 0; i < TOTALHORSES; i++) {
         let rating = Math.floor(Math.random() * 101) + 10; // 10 to 110
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
@@ -55,12 +85,15 @@ function buildHorseData() {
         let age = Math.floor(Math.random() * 7 + 4);
         let rest = 0
         const goingPref = getRandomGoingPreference();
+        const name = raceData.horsenames[i];
 
         horses.push({
+            name,
+            baseRating: rating,
             rating,
             bestDist,
             spread,
-            goingPref
+            goingPref,
             age,
             rest
         });
@@ -128,13 +161,16 @@ function displayGameState(array) {
                 }
     
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
+
+    // Player data
 }
 
 
 async function runHorseRacing() {
 
     await getRaceData();
-    horsedata = buildHorseData();
+    horseData = buildHorseData();
+    playerData = setPlayerData();
     displayGameState(meeting_number);
 
 

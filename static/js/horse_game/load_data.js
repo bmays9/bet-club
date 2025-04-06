@@ -62,5 +62,6 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log(players); // Log player data
         myModal.hide(); // Hide the modal after validation
         // You can now use `players` array in your game logic
+        return players;
     });
 });
