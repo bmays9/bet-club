@@ -1,6 +1,19 @@
+// load_data.js
+import { runHorseRacing } from "./horseracing.js";
+
+// Exported player array if needed elsewhere
+export let players = [];
+
+// Load race data from text files
 export async function fetchTextFiles() {
-    const fileNames = ["horsenames.txt", "meetings.txt", "distances.txt", "racenames.txt", "prizemoney.txt"];
-    const baseUrl = "/static/data/horse_game/";  // Ensure Django serves static files
+    const fileNames = [
+        "horsenames.txt",
+        "meetings.txt",
+        "distances.txt",
+        "racenames.txt",
+        "prizemoney.txt"
+    ];
+    const baseUrl = "/static/data/horse_game/";
     const fileData = {};
 
     for (const file of fileNames) {
@@ -13,55 +26,43 @@ export async function fetchTextFiles() {
             console.error(`Error loading ${file}:`, error);
         }
     }
-    console.log(fileData); // Object with arrays for each file
-    return fileData; // If you need to use it elsewhere
+
+    console.log("Loaded file data:", fileData);
+    return fileData;
 }
 
+// When page is ready, show modal and collect players
 document.addEventListener("DOMContentLoaded", function () {
-    let myModal = new bootstrap.Modal(document.getElementById('gameOptionsModal'));
+    const myModal = new bootstrap.Modal(document.getElementById("gameOptionsModal"));
     myModal.show();
 
-    // Function to toggle label text
-    function togglePlayerLabel(checkboxId, labelId) {
-        let checkbox = document.getElementById(checkboxId);
-        let label = document.getElementById(labelId);
-
-        checkbox.addEventListener("change", function () {
+    // Attach label toggles to each checkbox
+    for (let i = 1; i <= 6; i++) {
+        const checkbox = document.getElementById(`p${i}-check`);
+        const label = document.getElementById(`p${i}-label`);
+        checkbox.addEventListener("change", () => {
             label.textContent = checkbox.checked ? "Human Player" : "AI Player";
         });
     }
-        
-    // Apply function to all player checkboxes
-    for (let i = 1; i <= 6; i++) {
-        togglePlayerLabel(`p${i}-check`, `p${i}-label`);
-    }
 
+    // Start game on button click
     document.getElementById("start-game").addEventListener("click", function () {
-        let players = [];
+        players = []; // Clear in case of replays
 
         for (let i = 1; i <= 6; i++) {
-            let playerNameInput = document.getElementById(`p${i}-name`);
-            let playerCheckbox = document.getElementById(`p${i}-checkbox`);
+            const input = document.getElementById(`p${i}-name`);
+            const checkbox = document.getElementById(`p${i}-check`);
+            const name = input?.value.trim() || `Player ${i}`;
+            const isHuman = checkbox?.checked || false;
 
-            let playerName = playerNameInput ? playerNameInput.value.trim() : `Player ${i}`;
-            let isHuman = playerCheckbox ? playerCheckbox.checked : false;
-
-            // Validate name length
-            if (playerName.length > 12) {
-                alert(`Player ${i} name must be 12 characters or fewer!`);
-                return;
-            }
-
-            // Store player data
-            players.push({
-                name: playerName || `Player ${i}`, // Default if empty
-                human: isHuman
-            });
+            players.push({ name, human: isHuman });
         }
 
-        console.log(players); // Log player data
-        myModal.hide(); // Hide the modal after validation
-        // You can now use `players` array in your game logic
-        return players;
+        console.log("Collected players:", players);
+        document.activeElement.blur(); // Remove focus from button
+        myModal.hide();
+
+        // Start game
+        runHorseRacing(players);
     });
 });

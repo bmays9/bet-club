@@ -15,14 +15,33 @@
       <!-- Javascript will fill the table-->
     </table>
   </div>
+
+  <div class="player-standings" id="player-standings">
+    <div class="player-title">
+      <h4>Current Standings</h4>
+    </div>
+    <div class="player-table">
+      <table class="table table-hover table-sm" id="gs-players">
+        <!-- Javascript will fill the table-->
+      </table>
+    </div>
+  </div>
+  <button id="clear-game-state" class="btn btn-primary">Continue</button>
 </div>
 
-<div class="player-standings" id="player-standings">
-  <div class="player-table">
-    <h4>Current Standings</h4>
+<div id="player-stable">
+  <h6 id="stable-name">Stable</h6>
+  <div class="selection-table">
+    <table class="table table-hover table-sm" id="st-selection">
+      <!-- Javascript will fill the table-->
+    </table>
   </div>
-  <div class="meeting-races">
-    <table class="table table-hover" id="gs-players">
+</div>
+
+<div id="player-stable">
+  <h6 id="stable-name">Horses</h6>
+  <div class="stable-table">
+    <table class="table table-hover table-sm" id="st-horses">
       <!-- Javascript will fill the table-->
     </table>
   </div>
@@ -48,35 +67,35 @@
             </div>
           </div>
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="C Appleby" id="p2-name">
+            <input type="text" class="form-control" value="C Appleby" id="p2-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p2-check">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p2-label">AI Player</label>
             </div>
           </div>
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="R Hannon" id="p3-name">
+            <input type="text" class="form-control" value="R Hannon" id="p3-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p3-check">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p3-label">AI Player</label>
             </div>
           </div>
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="W Mullins" id="p4-name">
+            <input type="text" class="form-control" value="W Mullins" id="p4-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p4-check">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p4-label">AI Player</label>
             </div>
           </div>
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="N Henderson" id="p5-name">
+            <input type="text" class="form-control" value="N Henderson" id="p5-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p5-check">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p5-label">AI Player</label>
             </div>
           </div>
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="G Elliot" id="p6-name">
+            <input type="text" class="form-control" value="G Elliot" id="p6-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p6-check">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p6-label">AI Player</label>

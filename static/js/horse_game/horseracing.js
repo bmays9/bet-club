@@ -21,7 +21,7 @@ async function getRaceData() {
 }
 
 function shuffleArray(array) {
-    for (let i = 0; i < TOTALHORSES; i++) {
+    for (let i = array.length -1; i > 0 ; i--) {
         const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
         [array[i], array[j]] = [array[j], array[i]]; // Swap elements
     }
@@ -49,7 +49,7 @@ function horseRating(distance, peakDistance, maxRating, spread) {
     return maxRating * Math.exp(exponent);
 }
 
-function setPlayerData() {
+function setPlayerData(playersList) {
     
     let plyr = [];
     let wins = 0;
@@ -59,10 +59,10 @@ function setPlayerData() {
     let total = 0;
 
     for (let i = 0; i < 6; i++){
-        name = players[i];
+        let player = playersList[i]
         
         plyr.push({
-            name,
+            name: player.name,
             wins,
             betting,
             entries,
@@ -134,6 +134,7 @@ function goingModifier(horseGoingPref, raceGoing) {
     if (distance === 2) return 0.85;
     return 0.75;
 }
+
 function displayGameState(array) {
 
     console.log("Checking raceData:", raceData);
@@ -163,20 +164,65 @@ function displayGameState(array) {
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
 
     // Player data
+
+    let playerTableHtml = "";
+    playerTableHtml = `<tr>
+                <th>Pos</th>
+                <th>Name</th>
+                <th>Wins</th>
+                <th>Betting</th>
+                <th>Fees</th>
+                <th>Winnings</th>
+                <th>Total</th>
+                </tr>`;
+    
+    for (let i = 0; i < 6; i++) {
+        const player = playerData[i]; // extract player object
+        playerTableHtml += 
+            `<tr>
+            <td>${i + 1}</td>
+            <td>${player.name}</td>
+            <td>${player.wins}</td>
+            <td>${player.betting}</td>
+            <td>${player.entries}</td>
+            <td>${player.winnings}</td>
+            <td>${player.total}</td>
+            </tr>`;
+                }
+    
+    document.getElementById('gs-players').innerHTML = playerTableHtml;
+
 }
 
+document.getElementById('clear-game-state').addEventListener('click', function () {
+    // Clear game state tables
+    document.getElementById('gs-meeting-races').innerHTML = "";
+    document.getElementById('gs-players').innerHTML = "";
+    document.getElementById('meeting').innerHTML = "";
+    document.getElementById('gs-meeting').innerHTML = "${raceData.meeting[meeting_number]}";
+    // Randomize the Picking Order
+    shuffleArray(playerData); // Shuffle the array
 
-async function runHorseRacing() {
+    // Scroll to the first player's stable
+    const playerStable = document.getElementById('player-stable');  // Adjust the ID if needed
+    if (playerStable) {
+        displayStable()
+    }
+});
 
+function displayStable() {
+
+ }
+
+
+
+export async function runHorseRacing(playersList) {
+    players = playersList;
     await getRaceData();
     horseData = buildHorseData();
-    playerData = setPlayerData();
+    playerData = setPlayerData(players);
     displayGameState(meeting_number);
-
-
-    // End of season:
     endOfSeasonUpdate(horseData);
-
 }
 
 
