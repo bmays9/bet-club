@@ -3,15 +3,15 @@
 {% block content %}
 <!-- content starts here -->
 
-<h1 class="text-center">Flat Jumpers</h1>
+<h1 class="text-center" id='game-banner'>Flat Jumpers</h1>
 
 <div class="game-state" id="game-state">
   <div class="meeting-info">
-    <h4>Next Meeting: <span id="gs-meeting">Chepstow (1 of 16)</span></h4>
-    <h5>Going: Good</h5>
+    <h5 id="meeting">Next Meeting: <span id="gs-meeting">Chepstow (1 of 16)</span></h5>
+    <h6>Going: Good</h5>
   </div>
   <div class="meeting-races">
-    <table class="table table-hover" id="gs-meeting-races">
+    <table class="table table-hover table-sm" id="gs-meeting-races">
       <!-- Javascript will fill the table-->
     </table>
   </div>

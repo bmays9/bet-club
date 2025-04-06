@@ -1,3 +1,8 @@
+:root,
+[data-bs-theme=light] {
+    --bs-font-sans-serif: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
 .player-entry {
     display: flex;
     align-items: center;
@@ -10,3 +15,20 @@
     width: 40%;
 }
 
+.game-state {
+
+}
+
+.gs-meeting-races {
+    font-size: 0.6rem;        /* smaller than default */
+    margin: 0;                 /* remove default margin if needed */
+}
+
+#game-banner {
+  font-size: 1rem;        /* smaller than default */
+  text-transform: uppercase; /* all caps */
+  background-color: #f0f0f0; /* light grey */
+  padding: 5px 20px;        /* some spacing */
+  margin: 0;                 /* remove default margin if needed */
+  text-align: center;        /* optional: center the text */
+}
