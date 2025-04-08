@@ -7,8 +7,8 @@
 
 <div class="game-state" id="game-state">
   <div class="meeting-info">
-    <h5 id="meeting">Next Meeting: <span id="gs-meeting">Chepstow (1 of 16)</span></h5>
-    <h6>Going: Good</h5>
+    <h6><span id="next-meeting">Next Meeting: </span><span id="gs-meeting">Catterick (1 of 16)</span></h6>
+    <h7>Going: Good</h7>
   </div>
   <div class="meeting-races">
     <table class="table table-hover table-sm" id="gs-meeting-races">
@@ -18,7 +18,7 @@
 
   <div class="player-standings" id="player-standings">
     <div class="player-title">
-      <h4>Current Standings</h4>
+      <h4 id="gs-standings">Current Standings</h4>
     </div>
     <div class="player-table">
       <table class="table table-hover table-sm" id="gs-players">
@@ -27,6 +27,15 @@
     </div>
   </div>
   <button id="clear-game-state" class="btn btn-primary">Continue</button>
+</div>
+
+<div id="race-selections">
+  <h6 id="st-meeting-going" class="meeting">Chepstow</h6>
+  <div class="selection-table">
+    <table class="table table-hover table-sm" id="race-selection">
+      <!-- Javascript will fill the table-->
+    </table>
+  </div>
 </div>
 
 <div id="player-stable">
@@ -60,7 +69,7 @@
           <p>Players:</p>
             <!-- Player Entries -->
           <div class="player-entry">
-            <input type="text" class="form-control" placeholder="Player One" id="inputDefault">
+            <input type="text" class="form-control" value="Player One" id="p1-name">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="p1-check" checked="">
                 <label class="form-check-label" for="flexSwitchCheckChecked" id="p1-label">Human Player</label>

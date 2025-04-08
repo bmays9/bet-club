@@ -47,12 +47,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Start game on button click
     document.getElementById("start-game").addEventListener("click", function () {
-        players = []; // Clear in case of replays
+        const nameInputs = document.querySelectorAll('.player-name');
+        const playersList = [];
 
         for (let i = 1; i <= 6; i++) {
             const input = document.getElementById(`p${i}-name`);
             const checkbox = document.getElementById(`p${i}-check`);
-            const name = input?.value.trim() || `Player ${i}`;
+            const name = input?.value.trim().slice(0, 12) || `Player ${i}`;
             const isHuman = checkbox?.checked || false;
 
             players.push({ name, human: isHuman });
@@ -63,6 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
         myModal.hide();
 
         // Start game
+        console.log(players)
         runHorseRacing(players);
     });
 });
