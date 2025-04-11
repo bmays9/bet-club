@@ -21,8 +21,11 @@
 
 
 .gs-meeting-races {
-    font-size: 0.6rem;        /* smaller than default */
-    margin: 0;                 /* remove default margin if needed */
+       
+}
+
+.small-font {
+    font-size: 0.6rem;
 }
 
 #game-banner {

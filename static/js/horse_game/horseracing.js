@@ -10,6 +10,7 @@ let raceData = {}; // Declare raceData globally
 let playerData = {};
 let horseData = {};
 let raceEntries = {};
+let going = ["Soft-Ish", "Sofyt"];
 
 
 async function getRaceData() {
@@ -81,6 +82,8 @@ function setPlayerData(playersList) {
 function buildHorseData() {
     
     let horses = [];
+    console.log("players:", players);
+    console.log("playerData:", playerData);
 
     for (let i = 0; i < TOTALHORSES; i++) {
         let rating = Math.floor(Math.random() * 101) + 10; // 10 to 110
@@ -90,16 +93,26 @@ function buildHorseData() {
         let rest = 0
         const goingPref = getRandomGoingPreference();
         const name = raceData.horsenames[i];
-
+        // Assign owner in chunks of 24
+        const ownerIndex = Math.floor(i / 24);
+        const owner = playerData[ownerIndex].name || `Unknown`;
+        let number = i + 1
+        let runs = 0, wins = 0, money = 0  
+        
         horses.push({
+            number,
             name,
+            owner,
             baseRating: rating,
             rating,
             bestDist,
             spread,
             goingPref,
             age,
-            rest
+            rest,
+            runs,
+            wins,
+            money,
         });
     }
 
@@ -207,7 +220,7 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     document.getElementById('gs-players').innerHTML = "";
     document.getElementById('next-meeting').innerHTML = "";
     document.getElementById('gs-standings').innerHTML = "";
-    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]}`
+    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | Good-Soft`
     document.getElementById('clear-game-state').style.display = 'none';
 
     // Randomize the Picking Order
@@ -224,31 +237,26 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     };
 
 
-    // Scroll to the first player's stable
-    const playerStable = document.getElementById('player-stable');  // Adjust the ID if needed
-    if (playerStable) {
-        displayRaceSelections()
-        displayStable()
-    }
-});
+    displayRaceSelections()
+    displayStable(0)
+
+    });
 
 function displayRaceSelections() {
     
-    document.getElementById('st-meeting-going').innerHTML = `${raceData.meetings[meeting_number]} Going: Good-Soft`;
-
     let selectionHtml = "";
     selectionHtml = `<tr>
                 <th>Time</th>
-                <th>Distance</th>
-                <th>Selection 1/th>
-                <th>Selection 2</th>
-                <th>Selection 3</th>
+                <th>Dist</th>
+                <th>#1</th>
+                <th>#2</th>
+                <th>#3</th>
                 </tr>`;
                 
     for (let i = 0; i < 6; i++) {
         const distance = raceData.distances[meeting_number * 6 + i] || "—";
                 
-        const entries = playerEntries[i] || [];
+        const entries = raceEntries[i] || [];
         const selections = [
         entries[0] || "",
         entries[1] || "",
@@ -256,7 +264,7 @@ function displayRaceSelections() {
         ];
                 
         selectionHtml += `<tr>
-                    <td>${time}</td>
+                    <td>${raceTime[i]}</td>
                     <td>${distance}</td>
                     <td>${selections[0]}</td>
                     <td>${selections[1]}</td>
@@ -267,18 +275,46 @@ function displayRaceSelections() {
     document.getElementById('race-selection').innerHTML = selectionHtml;
 }
 
-function displayStable() {
+function displayStable(currentPlayerIndex) {
     
+    const playerName = playerData[currentPlayerIndex].name;
+
+    const playerHorses = horseData.filter(horse => horse.owner === playerName);
+
+    let stableHtml = "";
+    stableHtml = `<tr>
+                <th>Name</th>
+                <th>Cond</th>
+                <th>R</th>
+                <th>W</th>
+                <th>Money</th>
+                <th>Form</th>
+                </tr>`;
+                
+    for (let i = 0; i < playerHorses.length; i++) {
+        const horse = playerHorses[i];
+                
+        stableHtml += `<tr>
+                    <td>${horse.name}</td>
+                    <td>${horse.rest}</td>
+                    <td>${horse.runs}</td>
+                    <td>${horse.wins}</td>
+                    <td>${horse.money}</td>
+                    <td>${horse.money}</td>
+                    </tr>`;
+                }
+                
+    document.getElementById('st-selection').innerHTML = stableHtml;  
     
- }
+}
 
 
 
 export async function runHorseRacing(players) {
     
     await getRaceData();
-    horseData = buildHorseData();
     playerData = setPlayerData(players);
+    horseData = buildHorseData();
     displayGameState(meeting_number);
     endOfSeasonUpdate(horseData);
 }
