@@ -3,46 +3,69 @@
 {% block content %}
 <!-- content starts here -->
 <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Football Fixtures</h1>
-    
-    {% for league, fixtures in fixture_list.items %}
-    <div class="mb-4">
-        <button class="bg-blue-500 text-white px-4 py-2 rounded w-full text-left" onclick="toggleCollapse('{{ league|slugify }}')">
-            {{ league }} Fixtures
-        </button>
-        <div id="{{ league|slugify }}" class="mt-2 hidden">
-            <table class="table-auto w-full bg-gray-100 rounded border-collapse">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th class="px-4 py-2 border">Date</th>
-                        <th class="px-4 py-2 border">Home Team</th>
-                        <th class="px-4 py-2 border">Away Team</th>
-                        <th class="px-4 py-2 border">Score</th>
-                        <th class="px-4 py-2 border">Predicted Home Score</th>
-                        <th class="px-4 py-2 border">Predicted Away Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for fixture in fixtures %}
-                    <tr class="border-b">
-                        <td class="px-4 py-2">{{ fixture.date }}</td>
-                        <td class="px-4 py-2">{{ fixture.home_team }}</td>
-                        <td class="px-4 py-2">{{ fixture.away_team }}</td>
-                        <td class="px-4 py-2">{{ fixture.home_score }} - {{ fixture.away_score }}</td>
-                        <td class="px-4 py-2">
-                            <input type="number" name="home_pred_{{ fixture.id }}" placeholder="Home Score" class="border p-1 w-12 text-center">
-                        </td>
-                        <td class="px-4 py-2">
-                            <input type="number" name="away_pred_{{ fixture.id }}" placeholder="Away Score" class="border p-1 w-12 text-center">
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endfor %}
+    <h1 class="text-2xl font-bold mb-4">Score Predictions</h1>
 
+    <div class="accordion small-font" id="accordionExample">
+      {% for league_name, fixtures in fixture_list.items %}
+        <div class="accordion-item border-0">
+          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+            <div class="accordion-button d-grid" style="grid-template-columns: 1fr 40px 40px 40px;"
+                 data-bs-toggle="collapse"
+                 data-bs-target="#collapse{{ forloop.counter }}"
+                 aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                 aria-controls="collapse{{ forloop.counter }}">
+              
+              <!-- League name (left-aligned) -->
+              <span class="fw-bold">{{ league_name }}</span>
+    
+              <!-- H D A buttons (fixed-width columns) -->
+              <span class="text-center prediction-cell" data-result="H">H</span>
+              <span class="text-center prediction-cell" data-result="D">D</span>
+              <span class="text-center prediction-cell" data-result="A">A</span>
+    
+            </div>
+          </h2>
+    
+          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+               aria-labelledby="heading{{ forloop.counter }}"
+               data-bs-parent="#accordionExample">
+            <div class="accordion-body py-2 px-3">
+              {% if fixtures %}
+              <ul class="list-group list-group-flush">
+                {% for fixture in fixtures %}
+                <li class="list-group-item d-flex flex-row py-1 px-2">
+                  <!-- LEFT: Fixture info -->
+                  <div class="flex-grow-1 date-font">
+                    <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
+                
+                    <!-- Home Team and Home Score Prediction -->
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <div class="fixture">{{ fixture.home_team }}</div>
+                      <input type="number" min="0" placeholder="H"
+                             class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                             data-fixture-id="{{ fixture.id }}" data-team="home">
+                    </div>
+                
+                    <!-- Away Team and Away Score Prediction -->
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="fixture">{{ fixture.away_team }}</div>
+                      <input type="number" min="0" placeholder="A"
+                             class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                             data-fixture-id="{{ fixture.id }}" data-team="away">
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+                <p class="mb-0">No fixtures available for this league.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    
 <script>
 function toggleCollapse(id) {
     var section = document.getElementById(id);
@@ -52,3 +75,7 @@ function toggleCollapse(id) {
 
 <!-- content ends here -->
 {% endblock content %}
+
+{% block additional %}
+<script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
+{% endblock additional %}

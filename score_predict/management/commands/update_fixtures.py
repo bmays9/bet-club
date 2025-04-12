@@ -47,8 +47,8 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # today = datetime.date.today()
         today = datetime.date.today().replace(year=season + 1)
-        past_week = (today - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-        next_week = (today + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+        past_week = (today - datetime.timedelta(days=10)).strftime('%Y-%m-%d')
+        next_week = (today + datetime.timedelta(days=10)).strftime('%Y-%m-%d')
         print(past_week)
         print(next_week)
 

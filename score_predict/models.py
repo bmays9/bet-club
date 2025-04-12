@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Fixture(models.Model):
@@ -13,7 +14,7 @@ class Fixture(models.Model):
         ('H', 'Home Win'),
         ('D', 'Draw'),
         ('A', 'Away Win'),
-        (None, 'Not Played')
+        ('N', 'Not Played')
     ]
     
     league_id = models.IntegerField(choices=[(l[0], l[1]) for l in LEAGUES])
@@ -24,7 +25,8 @@ class Fixture(models.Model):
     away_team = models.CharField(max_length=100)
     home_score = models.IntegerField(null=True, blank=True)
     away_score = models.IntegerField(null=True, blank=True)
-    result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True)
+    result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True, default='N')
 
     def __str__(self):
         return f"{self.league_short_name}: {self.home_team} vs {self.away_team} - {self.date.strftime('%Y-%m-%d')}"
+
