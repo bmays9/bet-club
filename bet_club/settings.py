@@ -109,18 +109,7 @@ tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
 
 # Replace the DATABASES section of your settings.py with this
 DATABASES = {
-  'default': {
-    'ENGINE': 'django.db.backends.postgresql',
-    'NAME': os.getenv('DB_NAME'),
-    'USER': os.getenv('DB_USER'),
-    'PASSWORD': os.getenv('DB_PASSWORD'),
-    'HOST': os.getenv('DB_HOST'),
-    'PORT': os.getenv('DB_PORT', 5432),
-    'OPTIONS': {
-      'sslmode': 'require',
-    },
-    'DISABLE_SERVER_SIDE_CURSORS': True,
-  }
+    'default': dj_database_url.parse(os.environ.get("DATABASE_URL"))
 }
 
 
