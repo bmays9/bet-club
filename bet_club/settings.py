@@ -35,7 +35,7 @@ DEBUG = False
 ALLOWED_HOSTS = [
     '8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io',
     'localhost,127.0.0.1',
-    '.herokuapp.com'
+    '.herokuapp.com',
     'yourdomain.com'
 ]
 
