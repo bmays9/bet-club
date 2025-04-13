@@ -1,0 +1,1 @@
+web: gunicorn bet_club.wsgi
