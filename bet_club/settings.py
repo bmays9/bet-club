@@ -13,6 +13,7 @@ import os
 import sys
 from urllib.parse import urlparse
 from pathlib import Path
+import dj_database_url
 
 # Import env.py
 # ✅ Ensure `env.py` is loaded
