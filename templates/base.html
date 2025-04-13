@@ -1,7 +1,10 @@
 {% load static %}
-
 {% url 'home' as home_url %}
 {% url 'scores' as scores_url %}
+{% url 'account_login' as login_url %}
+{% url 'account_signup' as signup_url %}
+{% url 'account_logout' as logout_url %}
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -67,11 +70,27 @@
                 <a class="dropdown-item" href="#">Separated link</a>
               </div>
             </li>
+            {% if user.is_authenticated %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.path == logout_url %}active{% endif %}" aria-current="page" href="{% url 'account_logout' %}">Logout</a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.path == signup_url %}active{% endif %}" aria-current="page"
+                    href="{% url 'account_signup' %}">Register</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.path == login_url %}active{% endif %}" aria-current="page" href="{% url 'account_login' %}">Login</a>
+            </li>
+            {% endif %}
           </ul>
-          <form class="d-flex">
-            <input class="form-control me-sm-2" type="search" placeholder="Search">
-            <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-          </form>
+          <span class="navbar-text">
+            {% if user.is_authenticated %}
+            You are logged in as {{ user }} 
+            {% else %}
+            You are not logged in
+            {% endif %}
+          </span>
         </div>
       </div>
     </nav>

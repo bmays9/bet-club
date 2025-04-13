@@ -202,10 +202,10 @@ function displayGameState(array) {
             <td>${i + 1}</td>
             <td>${player.name}</td>
             <td>${player.wins}</td>
-            <td>${player.betting}</td>
-            <td>${player.entries}</td>
-            <td>${player.winnings}</td>
-            <td>${player.total}</td>
+            <td>£${player.betting}</td>
+            <td>£${player.entries}</td>
+            <td>£${player.winnings}</td>
+            <td>£${player.total}</td>
             </tr>`;
                 }
     
@@ -299,7 +299,7 @@ function displayStable(currentPlayerIndex) {
                     <td>${horse.rest}</td>
                     <td>${horse.runs}</td>
                     <td>${horse.wins}</td>
-                    <td>${horse.money}</td>
+                    <td>£${horse.money}</td>
                     <td>${horse.money}</td>
                     </tr>`;
                 }
