@@ -283,11 +283,12 @@ function displayStable(currentPlayerIndex) {
 
     let stableHtml = "";
     stableHtml = `<tr>
+                <th>Sel</th>
+                <th>Fit</th>
                 <th>Name</th>
-                <th>Cond</th>
                 <th>R</th>
                 <th>W</th>
-                <th>Money</th>
+                <th>Winnings</th>
                 <th>Form</th>
                 </tr>`;
                 
@@ -295,8 +296,12 @@ function displayStable(currentPlayerIndex) {
         const horse = playerHorses[i];
                 
         stableHtml += `<tr>
+                    <td>
+                        <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
+                        <label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0" for="btnradio${i}">🎯</label>
+                    </td>            
+                    <td>${horse.rest}</td>            
                     <td>${horse.name}</td>
-                    <td>${horse.rest}</td>
                     <td>${horse.runs}</td>
                     <td>${horse.wins}</td>
                     <td>£${horse.money}</td>

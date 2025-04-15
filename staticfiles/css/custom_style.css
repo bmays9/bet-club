@@ -104,6 +104,9 @@
     font-size: 10px;  /* Adjust the font size as needed */
 }
 
+.horse-select {
+  width: 30px;
+}
 
 @media (max-width: 576px) {
   .score-pred-cell {

@@ -1,12 +1,16 @@
+Acclaim
 Adjaawi
 Adolmio
 Adonix
 Adrenaline Rush
 Aero Noughty
 Affirmed
+After The Show
 Al Nafiq
 Alfa Cake
 Alfie Flowers
+Alkaline Duo
+Alkurinchi
 Alpha Dash
 Alydar
 Amber Split
@@ -17,14 +21,19 @@ Apex Delight
 Apollo’s Thunder
 April Vox
 Aravindra
+Arma Thirty
+Arthur's Ice
 Ask The Question
 Astro Blitz
 Atlanta Dream
 Aurora Jinx
+Ballybawn Flow
+Basilico
 Beltrain
 Bergsson
-Big Brown 
-Bistro Kid
+Bergvall
+Big Burrows
+Biloxi Parish
 Bistro Kid
 Black Hawk Racer
 Blaze of Glory
@@ -34,6 +43,7 @@ Blistering Jet
 Blockitt
 Blue Hurricane
 Blue Tempest
+Boisdale
 Bold Meteor
 Botanical
 Bowl Me Over
@@ -41,16 +51,22 @@ Bravo To Nero
 Bridge Too Far
 Brighton Belle
 Bring It On
+Bring It On
 Brixton Smile
 Broadrunner
 Bullet Chain
 Buzzkill
 California Chrome
+California Cruise
 Camelott
+Camen Isles
 Canning Fox
 Cape Town Prince
+Carbonetra
 Carruso
+Castlegrace
 Celestial Speedster
+Cellar Door
 Celtic Song
 Chamonix
 Chaperone
@@ -68,12 +84,18 @@ Criminal Beat
 Crimson Gale
 Crimson Titan
 Crimson Tornado
+Crystalline
 Cuban Hilltop
+Cut The Deck
 Cyclone Express
 Dagger Strike
+Dallawi
 Dawn Ruler
+DeChambeau
 Denton Abbey
+Detroit Dealer
 Diamond Blitz
+Donegal Boy
 Double Millennium
 Dr October
 Dream Patient
@@ -82,6 +104,8 @@ Dundee Aware
 Eclipse Runner
 Eclipse Titan
 Effervesce
+El Salvador
+Eldorado
 Electric Tango
 Electric Tempest
 Embrace The Day
@@ -89,9 +113,11 @@ Embulo
 Enable
 Equinox King
 Ever So Sweet
+Fascinate
 Fashionista
 Ferrington
 Fireball Fury
+Fireburner
 Firestorm
 Firestorm Express
 Flashfire Gale
@@ -100,6 +126,8 @@ Flintoff
 Flowers For Hours
 Flutter Me Up
 Forgotten Link
+Freeze Amadeus
+French Recruit
 Fresh As A Duke
 Gaelic Pegasus 
 Galactic Sprinter
@@ -116,6 +144,7 @@ Gretsky
 Gunendran
 Haaland
 Haljik
+Harbour Jinx
 Hasselbaink
 Hertford Hero
 Highland Reel
@@ -127,7 +156,7 @@ Honkington
 Hooping Around
 Howling Jim
 Humble Brag
-Hurricane Dash
+Hurricane Dice
 Hurricane Lane
 Hurricane Speed
 Hurricane Thai
@@ -135,6 +164,8 @@ Hyper Drive
 Hyperion’s Dream
 Hypernovial
 Ice Thunder
+In The Bleachers
+In The Wonder
 Indigone
 Infernal Streak
 Inferno Flash
@@ -152,6 +183,7 @@ Iron Thunder
 Istabraq
 Jacksonville
 J'adore
+Jargon Buster
 Jetstream Fury
 Jetstream Racer
 Joytastic
@@ -160,30 +192,38 @@ Justify
 King Scraper
 Krystalline
 La Rochelle
+Lake Coniston
 Lamela
 Lightning Comet
 Lightning Hooves
 Little Dab'll Do
+Loch Niven
 Lotto Creek
 Luhblinah
 Lunar Racer
 Lunar Rocket
+Made In York
+Madrid Maestro
 Magellan
 Magnifica
 Man On War
 Mannings Way
 Master Francis
+MeetMeAtSix
 Melbourne Beret
 Meteor Fury
 Meteor Gallop
 Meteor Shower
 Mexican Marvel
 Midnight Charger
+Midnight Miracle
 Midnight Warrior
 Miroman
 Miss Girling
 Miss Marble
+Mister Cranston
 Mitrovic
+Monoplastic
 More Or Less
 Mr Baxter
 Mr Strikeback
@@ -199,15 +239,19 @@ Noira
 Nova Blazer
 Nuraji
 Oak Reef
-Obsidian Racer
-Obsidian Stride
-Obsidian Thunder
+Obelisk
 Odegaard
+Olazabal
 Omega Racer
+One For Rome
+One In The Pocket
 Orinoco
 Ornathologist
 Ounce Or Pounce
+Out Of Ammo
 Outback Larry
+Outerbelly
+Palinka
 Passenger Forty
 Pegasus Fire
 Pegasus Lightning
@@ -218,12 +262,16 @@ Phantom Rocket
 Phoenix Stride
 Photographic
 Pizaglo
+Portman Road
 Practical Jest
+Pragmatic
 Pringle To Mingle
 Progress In Turn
 Quantum Burst
-Quantum Racer
+Quantum Ice
 Queen Of Clubs
+Queen Of The Bronx
+Quest
 Quest
 Quicker By Night
 Quite The Tonic
@@ -236,6 +284,7 @@ Randomix
 Rapid Eclipse
 Rapid Inferno
 Ravenelli
+Ravenstore
 Ready To Fly
 Real Minty
 Reclaim
@@ -243,14 +292,18 @@ Red Architect
 Red Lightning
 Red Titan Charger
 Red Tuxedo
+Red Violin
 Riverside Dancer
 Roaring Lion
+Rollin' And Tumblin'
 Rolling Thunder
+Romford Park
 Roundabout
 Ruler of the World
 Sad Ken
 Saint Fallon
 Saliarna
+Scaldour
 Scam Wolf
 Scandinavia
 Scholar's Mate
@@ -260,12 +313,14 @@ Shadow Racer
 Shadowstrike
 Shallow
 Shooting Styx
+Silk Riches
 Silver Blaze
 Silver Streaker
-Skybound Charger
+Simmering Sun
+Sizing Sweden
 Skyfire Charger
-Skyfire Racer
 Skyward Blitz
+Slovak Drama
 Solar Eruption
 Solar Flash
 Solar Stampede
@@ -281,10 +336,10 @@ Speed Demon
 Split Tension
 Sprinkler
 Stalaze Chancer
+Stamp The Card
 Starborn Creek
 Stardust Streak
-Starlight Comet
-Starlight Racer
+Starlight Cometh
 Starlit Victory
 Starshot Express
 Storm Chaser
@@ -295,6 +350,8 @@ Summertown
 Sunday Silence
 Sunfire Majesty
 Supernova Hoof
+Tactico
+Take Back Sunday
 Tangential
 Tapit
 Tear Jerker
@@ -305,13 +362,15 @@ Tennessee Target
 Thanksamillion
 The Better Half
 The Big Show
-The Cometare
+The Cometaire
 The Crimson Streak
+The Crows Nest
 The Dark Crusader
 The Dimestore Kid
 The Infernal Streak
 The Lunar Flash
 The Magic Dragon
+The Only One
 The Reprimand
 The Scarlet Comet
 The Scarlet Speedster
@@ -324,16 +383,20 @@ The Storm King
 The Totham Tonne
 The Trapper
 The Wildfire King
+Theatre Guide
+Throwaway
 Thunder To Exit
-Thunderbolt Racer
-Thundering Glory
-Thunderstrike Racer
-Thunderstruck Ace
+Thunderbolton
+Tiger Role
+Tijuana
 Titan Hoof
 Titan’s Charge
+Titanium
+Titanium
 Tiz The Law
-Tornado Blitz
+Tormadori
 Tornado Fury
+Tree Of Life
 Trentalexa
 Trigonomic
 Turbo Eclipse
@@ -343,33 +406,38 @@ Turbonica Jazz
 Turling Comet
 Twente Minutes
 Ultra Dash
+Ultra Spark
 Undercooked
 Unintended
+Up The Bracket
 Urban Denial
 Valkyrie Hoofbeat
 Vancroix
 Velocity Ace
 Velocity Storm
 Velvet Symphony
+Venatour
 Vertical Retreat
 Vertonghen
 Vienna World
 Vortex King
 Vortex Sprinter
 War Admiral
-Warhorse Striker
+Warhole Bounty
 Warhorse Titan
 Warp Speed
 Warrior Pride
 Wendory
 Western Mochi
+Westwood Drive
 Whispering Call
+Whistlestop
 White Knight Charger
 Wild Striker
 Wild Wind Rider
 Wildfire Charger
 Wildfire Spirit
-Windstorm Champion
+Windstorm
 Wonderwall
 Yahlina
 Yellow Quay
@@ -380,4 +448,5 @@ YouveBeenWarned
 Zambour
 Zealand
 Zenyatta
+Zidane
 Zondervan
