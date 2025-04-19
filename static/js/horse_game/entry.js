@@ -1,3 +1,5 @@
+import { raceEntries } from './gameState.js';
+
 export let allEntries = {
     "Player 1": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
     "Player 2": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
@@ -9,19 +11,23 @@ export let allEntries = {
 
 export function canEnterRace(playerName, horseName, raceIndex) {
     // Check if horse is already entered
+    console.log("Can it Enter?")
     for (let entries of Object.values(raceEntries)) {
         if (entries.some(e => e.horseName === horseName)) return false;
     }
 
     // Check player hasn't used 3 entries in this race
-    const entriesInRace = raceEntries[raceIndex];
-    const playerCount = entriesInRace.filter(e => e.playerName === playerName).length;
-    return playerCount < 3;
+    console.log("RaceEntries in canEnterRace", raceEntries)
+    console.log("raceEntries:", raceEntries);
+    console.log("raceIndex:", raceIndex);
+    const entriesInRace = raceEntries[raceIndex].length
+    return entriesInRace < 3;
 }
 
 export function enterHorse(playerName, horseName, raceIndex) {
     if (canEnterRace(playerName, horseName, raceIndex)) {
         raceEntries[raceIndex].push({ playerName, horseName });
+        console.log("Horse Is Entered")
         return true;
     }
     return false;
@@ -41,3 +47,16 @@ export function displayRaceEntries(containerId) {
     }
     container.innerHTML = html;
 }
+
+export function allRacesHaveEntries() {
+    console.log("All Races have entries")
+    for (let i = 0; i < 6; i++) {
+        if (!raceEntries[i] || raceEntries[i].length === 0) {
+            console.log("Nope")
+            return false; // At least one race is empty
+        }
+    }
+    console.log("Yes")
+    return true; // Every race has at least one entry
+}
+

@@ -1,7 +1,7 @@
 import { fetchTextFiles } from "./load_data.js";
-import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
+import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
 import { shuffleArray, getRandomGoingPreference, buildHorseData, adjustRatingByAge, endOfSeasonUpdate, goingModifier, resetPlayerData } from './initialise.js';
-import { playerData, horseData, raceData, setHorseData, setPlayerData, setRaceData } from './gameState.js';
+import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, setRaceData } from './gameState.js';
 
 let meeting_number = 0;
 let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"]
@@ -9,6 +9,7 @@ let players = []
 const TOTALHORSES = 144
 let going = ["Soft-Ish", "Sofyt"];
 let selectedRaceIndex = null;
+let lineups = []; // stores final race line ups, taken from raceEntries after they are confirme
 
 
 async function buildRaceData() {
@@ -68,7 +69,7 @@ function displayGameState(array) {
                 </tr>`;
     
     for (let i = 0; i < 6; i++) {
-        const player = playerData()[i]; // extract player object
+        const player = playerData[i]; // extract player object
         playerTableHtml += 
             `<tr>
             <td>${i + 1}</td>
@@ -96,17 +97,17 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     document.getElementById('clear-game-state').style.display = 'none';
 
     // Randomize the Picking Order
-    shuffleArray(getPlayerData()); // Shuffle the array
+    shuffleArray(playerData); // Shuffle the array
 
     //empty the entries array
-    raceEntries = {
+    setRaceEntries({
         0: [],
         1: [],
         2: [],
         3: [],
         4: [],
         5: []
-    };
+      });
 
 
     displayRaceSelections()
@@ -115,6 +116,7 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     });
 
     function displayRaceSelections() {
+        
         let selectionHtml = `<tr>
             <th>Time</th>
             <th>Dist</th>
@@ -127,9 +129,9 @@ document.getElementById('clear-game-state').addEventListener('click', function (
             const distance = raceData.distances[meeting_number * 6 + i] || "—";
             const entries = raceEntries[i] || [];
             const selections = [
-                entries[0] || "",
-                entries[1] || "",
-                entries[2] || ""
+                entries[0]?.horseName || "",
+                entries[1]?.horseName || "",
+                entries[2]?.horseName || ""
             ];
             
             selectionHtml += `<tr class="race-row ${selectedRaceIndex === i ? 'table-primary' : ''}" data-index="${i}">
@@ -152,84 +154,155 @@ document.getElementById('clear-game-state').addEventListener('click', function (
         });
     }
 
-function displayStable(currentPlayerIndex) {
-    
-    const playerName = playerData[currentPlayerIndex].name;
+    function displayStable(currentPlayerIndex) {
+    let playerName = playerData[currentPlayerIndex].name;
 
-    const playerHorses = horseData.filter(horse => horse.owner === playerName);
+    // Insert button and stable HTML
+    document.getElementById('page-info').innerHTML = `${playerName}'s stable and race selections. <br>
+    <button id="confirm-selections" class="btn btn-sm btn-primary">Finish</button>
+    <button id="auto-selections" class="btn btn-sm btn-primary">Test</button>`;
+    let confirmBtn = document.getElementById("confirm-selections");
+    confirmBtn.disabled = true; // Initially disable
+    let testBtn = document.getElementById("auto-selections");
 
-    let stableHtml = "";
-    stableHtml = `<tr>
-                <th>Sel</th>
-                <th>Fit</th>
-                <th>Name</th>
-                <th>R</th>
-                <th>W</th>
-                <th>Winnings</th>
-                <th>Form</th>
-                </tr>`;
-                
-                for (let i = 0; i < playerHorses.length; i++) {
-                    const horse = playerHorses[i];
-                
-                    // Check if the horse has already been entered into a race
-                    let enteredRaceIndex = null;
-                    for (let j = 0; j < 6; j++) {
-                        if (raceEntries[j].includes(horse.name)) {
-                            enteredRaceIndex = j;
-                            break;
-                        }
-                    }
-                
-                    const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : "➤";
-                    const rowClass = enteredRaceIndex !== null ? "table-success" : "";
-                
-                    stableHtml += `<tr class="${rowClass}">
-                        <td>
-                            <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
-                            <label 
-                                class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn" 
-                                data-horse-name="${horse.name}" 
-                                for="btnradio${i}">${entrySymbol}</label>
-                        </td>            
-                        <td>${horse.rest}</td>            
-                        <td>${horse.name}</td>
-                        <td>${horse.runs}</td>
-                        <td>${horse.wins}</td>
-                        <td>£${horse.money}</td>
-                        <td>${horse.money}</td>
-                    </tr>`;
-                }
-                
-    document.getElementById('st-selection').innerHTML = stableHtml;  
-    
+    let playerHorses = horseData.filter(horse => horse.owner === playerName);
+
+    let stableHtml = `
+        <tr>
+            <th>Sel</th>
+            <th>Fit</th>
+            <th>Name</th>
+            <th>R</th>
+            <th>W</th>
+            <th>Winnings</th>
+            <th>Form</th>
+        </tr>
+    `;
+
+    // Loop over player's horses and display stable data
+    for (let i = 0; i < playerHorses.length; i++) {
+        const horse = playerHorses[i];
+
+        let enteredRaceIndex = null;
+        for (let j = 0; j < 6; j++) {
+            if (raceEntries[j].includes(horse.name)) {
+                enteredRaceIndex = j;
+                break;
+            }
+        }
+
+        const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : "➤";
+        const rowClass = enteredRaceIndex !== null ? "table-success" : "";
+
+        stableHtml += `
+            <tr class="${rowClass}">
+                <td>
+                    <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
+                    <label 
+                        class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn" 
+                        data-horse-name="${horse.name}" 
+                        for="btnradio${i}">${entrySymbol}</label>
+                </td>            
+                <td>${horse.rest}</td>            
+                <td>${horse.name}</td>
+                <td>${horse.runs}</td>
+                <td>${horse.wins}</td>
+                <td>£${horse.money}</td>
+                <td>${horse.money}</td>
+            </tr>`;
+    }
+
+    document.getElementById('st-selection').innerHTML = stableHtml;
+
+    // Event listener for horse selection
     document.querySelectorAll('.horse-entry-btn').forEach(button => {
         button.addEventListener('click', function () {
             if (selectedRaceIndex === null) {
                 alert("Please select a race first.");
                 return;
             }
-    
+
             const horseName = this.getAttribute('data-horse-name');
-            const race = raceEntries[selectedRaceIndex];
-    
-            if (race.length >= 3) {
-                alert("This race already has 3 entries.");
-                return;
+            playerName = playerData[currentPlayerIndex].name;
+            console.log("Horsename:", horseName)
+            console.log("Playername:", playerName)
+
+            const entered = enterHorse(playerName, horseName, selectedRaceIndex);
+            console.log("Entered: ", entered);
+            if (entered) {
+
+                displayRaceSelections(); // Update selections
+                displayStable(currentPlayerIndex); // Re-render stable
+
+                // Check if all races have been entered and enable the button
+                let check = allRacesHaveEntries();
+                console.log("ARHE", check);
+                if (allRacesHaveEntries()) {
+                    confirmBtn.disabled = false;
+                } else {
+                    confirmBtn.disabled = true;
+                }
             }
-    
-            // Prevent duplicate entries
-            if (race.includes(horseName)) {
-                alert("This horse is already entered in this race.");
-                return;
-            }
-    
-            race.push(horseName);
-            displayRaceSelections(); // Update display
         });
     });
-}
 
+    // event listener for testing
+    testBtn.onclick = function () {
+        playerName = playerData[currentPlayerIndex].name;
+        playerHorses = horseData.filter(horse => horse.owner === playerName);
+    
+        // Clear existing entries without reassigning
+        for (let i = 0; i < 6; i++) {
+            raceEntries[i] = [];
+        }
+    
+        // Add the first 6 horses to each of the 6 races (1 per race)
+        for (let i = 0; i < 6; i++) {
+            const horse = playerHorses[i];
+            if (horse) {
+                raceEntries[i].push({ playerName, horseName: horse.name });
+            }
+        }
+    
+        displayRaceSelections();
+        displayStable(currentPlayerIndex);
+    
+        if (confirmBtn) {
+            confirmBtn.disabled = false; // enable the finish button
+        }
+    };
+
+    // Confirm button to save entries and move to the next player
+    confirmBtn.onclick = function () {
+        lineups.push({
+            player: playerData[currentPlayerIndex].name,
+            entries: JSON.parse(JSON.stringify(raceEntries)) // Deep copy
+        });
+
+        // Clear existing entries without reassigning
+        for (let i = 0; i < 6; i++) {
+            raceEntries[i] = [];
+        }
+
+        currentPlayerIndex++;
+
+        if (currentPlayerIndex >= playerData.length) {
+            alert("All players have selected their entries!");
+            return;
+        }
+
+        displayRaceSelections();
+        displayStable(currentPlayerIndex); // Display next player's stable
+        this.disabled = true; // Disable the confirm button again after action
+    };
+
+    // Ensure the button is updated correctly if all races have entries
+    if (allRacesHaveEntries()) {
+        confirmBtn.disabled = false;
+    } else {
+        confirmBtn.disabled = true;
+    }
+}
 
 
 export async function runHorseRacing(players) {

@@ -1,7 +1,7 @@
 // load_data.js
 import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
-import { playerData, setPlayerData, horseData, setHorseData } from './gameState.js';
+import { playerData, setPlayerData, horseData, setHorseData , raceData} from './gameState.js';
 
 export function shuffleArray(array) {
     for (let i = array.length -1; i > 0 ; i--) {
@@ -57,7 +57,7 @@ export function buildHorseData() {
         let age = Math.floor(Math.random() * 7 + 4);
         let rest = 0
         const goingPref = getRandomGoingPreference();
-        const name = RaceData.horsenames[i];
+        const name = raceData.horsenames[i];
         // Assign owner in chunks of 24
         const ownerIndex = Math.floor(i / 24);
         const owner = playerData[ownerIndex].name || `Unknown`;
