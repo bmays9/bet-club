@@ -36,7 +36,7 @@
   </div>
 </div>
 
-<div id="player-stable">
+<div id="player-selections">
   <h6 id="stable-name"></h6>
   <div class="selection-table small-font">
     <table class="table table-hover table-sm" id="st-selection">
@@ -53,6 +53,42 @@
     </table>
   </div>
 </div>
+
+<div id="race-screen" class="container my-4">
+
+  <!-- 📍 Race Header -->
+  <div class="mb-4">
+    <h2><span id="r-time">2:30 PM</span><span id="r-name"> Race Name</h2>
+    <p><strong><span id="r-dist"> </span> Prize:</strong><span id="r-prize">1000</span>
+    <br><span id="r-runners">11</span> runners</p>
+  </div>
+
+  <!-- 📋 Racecard Table -->
+  <div class="table-responsive">
+    <table class="table table-bordered text-center align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>No.</th>
+          <th>Horse</th>
+          <th>Trainer</th>
+          <th>Form</th>
+          <th>Odds</th>
+        </tr>
+      </thead>
+      <tbody id="racecard-body">
+        <!-- Rows will be dynamically inserted here -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 🟢 Start Race Button -->
+  <div class="text-center mt-4">
+    <button id="start-race" class="btn btn-lg btn-success">Start Race</button>
+  </div>
+
+</div>
+
+
 
 <div class="modal" id="gameOptionsModal" aria-labelledby="gameOptionsLabel" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog" role="document">
