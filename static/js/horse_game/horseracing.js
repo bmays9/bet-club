@@ -323,11 +323,12 @@ document.getElementById('clear-game-state').addEventListener('click', function (
             document.getElementById("player-stable").style.display = "none";
             document.getElementById('page-info').style.display = "none";
             showRacecard(0);
+
+        } else {
+            displayRaceSelections();
+            displayStable(currentPlayerIndex);
+            this.disabled = true;
         }
-    
-        displayRaceSelections();
-        displayStable(currentPlayerIndex);
-        this.disabled = true;
     };
 
     // Ensure the button is updated correctly if all races have entries

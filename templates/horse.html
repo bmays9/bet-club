@@ -59,21 +59,15 @@
   <!-- 📍 Race Header -->
   <div class="mb-4">
     <h2><span id="r-time">2:30 PM</span><span id="r-name"> Race Name</h2>
-    <p><strong><span id="r-dist"> </span> Prize:</strong><span id="r-prize">1000</span>
+    <p><strong><span id="r-dist"> </span></strong> Prize Money: £<span id="r-prize">1000</span>
     <br><span id="r-runners">11</span> runners</p>
   </div>
 
   <!-- 📋 Racecard Table -->
-  <div class="table-responsive">
-    <table class="table table-bordered text-center align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>No.</th>
-          <th>Horse</th>
-          <th>Trainer</th>
-          <th>Form</th>
-          <th>Odds</th>
-        </tr>
+  <div class="table-responsive small-font">
+    <table class="table table-bordered text-center align-middle table table-hover table-sm">
+      <thead class="table-light" id="racecard-header">
+
       </thead>
       <tbody id="racecard-body">
         <!-- Rows will be dynamically inserted here -->
@@ -81,9 +75,10 @@
     </table>
   </div>
 
-  <!-- 🟢 Start Race Button -->
+  <!-- 🟢 Start / Next Race Buttons -->
   <div class="text-center mt-4">
     <button id="start-race" class="btn btn-lg btn-success">Start Race</button>
+    <button id="next-race" class="btn btn-lg btn-success">Start Race</button>
   </div>
 
 </div>

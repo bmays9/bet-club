@@ -55,8 +55,7 @@ export function buildHorseData() {
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
         const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
         let age = Math.floor(Math.random() * 7 + 4);
-        let rest = 0;
-        let form = "";
+        let rest = 0
         const goingPref = getRandomGoingPreference();
         const name = raceData.horsenames[i];
         // Assign owner in chunks of 24
@@ -77,7 +76,6 @@ export function buildHorseData() {
             age,
             rest,
             runs,
-            form,
             wins,
             money,
         });

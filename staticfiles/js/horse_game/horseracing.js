@@ -1,155 +1,38 @@
-import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
-import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
+import { fetchTextFiles } from "./load_data.js";
+import { showRacecard } from "./race.js";
+import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
+import { shuffleArray, getRandomGoingPreference, buildHorseData, adjustRatingByAge, endOfSeasonUpdate, goingModifier, resetPlayerData } from './initialise.js';
+import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, setRaceData } from './gameState.js';
 
-
-let meeting_number = 0;
-let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"]
+export let meeting_number = 0;
+export let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"]
 let players = []
 const TOTALHORSES = 144
-let raceData = {}; // Declare raceData globally
-let playerData = {};
-let horseData = {};
-let raceEntries = {};
-let going = ["Soft-Ish", "Sofyt"];
+export let going = [];
+let selectedRaceIndex = null;
+export let lineups = []; // stores final race line ups, taken from raceEntries after they are confirme
 
 
-async function getRaceData() {
-    raceData = await fetchTextFiles();
-    console.log("Race data in another file:", raceData);
+async function buildRaceData() {
+    const data = await fetchTextFiles(); // Fetch the data, store it in a local variable
+    console.log("Race data in another file:", data);
     
     // Example usage
-    console.log("Horsenames:", raceData.horsenames);
-    shuffleArray(raceData.horsenames); // Shuffle the array
-    raceData.horsenames = raceData.horsenames.slice(0, TOTALHORSES) // only need 6 * 24
-    console.log("Horsenames:", raceData.horsenames);
+    console.log("Horsenames:", data.horsenames);
+    shuffleArray(data.horsenames); // Shuffle the array
+    data.horsenames = data.horsenames.slice(0, TOTALHORSES); // only need 6 * 24
+    console.log("Horsenames after slice:", data.horsenames);
+    // Set going for each meeting
+    const goingOptions = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
 
-}
-
-function shuffleArray(array) {
-    for (let i = array.length -1; i > 0 ; i--) {
-        const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
-        [array[i], array[j]] = [array[j], array[i]]; // Swap elements
-    }
-}
-
-
-function getRandomGoingPreference() {
-    const goings = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
-    const weights = [5, 15, 40, 25, 15]; // Must match order of goings
-
-    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-    const rand = Math.random() * totalWeight;
-
-    let cumulative = 0;
-    for (let i = 0; i < goings.length; i++) {
-        cumulative += weights[i];
-        if (rand < cumulative) return goings[i];
-    }
-
-    return goings[goings.length - 1]; // Fallback
-}
-
-function horseRating(distance, peakDistance, maxRating, spread) {
-    const exponent = -Math.pow(distance - peakDistance, 2) / (2 * Math.pow(spread, 2));
-    return maxRating * Math.exp(exponent);
-}
-
-function setPlayerData(playersList) {
+    const goings = Array.from({ length: 20 }, () => {
+        const randomIndex = Math.floor(Math.random() * goingOptions.length);
+        return goingOptions[randomIndex]; // ✅ add this line
+    });
     
-    let plyr = [];
-    let wins = 0;
-    let betting = 0;
-    let entries = 0;
-    let winnings = 0;
-    let total = 0;
-
-    for (let i = 0; i < playersList.length; i++){
-        let player = playersList[i]
-        
-        plyr.push({
-            name: player.name,
-            wins,
-            betting,
-            entries,
-            winnings,
-            total
-        })
-    }
-    
-    return plyr
-}
-
-function buildHorseData() {
-    
-    let horses = [];
-    console.log("players:", players);
-    console.log("playerData:", playerData);
-
-    for (let i = 0; i < TOTALHORSES; i++) {
-        let rating = Math.floor(Math.random() * 101) + 10; // 10 to 110
-        const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
-        const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
-        let age = Math.floor(Math.random() * 7 + 4);
-        let rest = 0
-        const goingPref = getRandomGoingPreference();
-        const name = raceData.horsenames[i];
-        // Assign owner in chunks of 24
-        const ownerIndex = Math.floor(i / 24);
-        const owner = playerData[ownerIndex].name || `Unknown`;
-        let number = i + 1
-        let runs = 0, wins = 0, money = 0  
-        
-        horses.push({
-            number,
-            name,
-            owner,
-            baseRating: rating,
-            rating,
-            bestDist,
-            spread,
-            goingPref,
-            age,
-            rest,
-            runs,
-            wins,
-            money,
-        });
-    }
-
-    return horses;
-}
-
-function adjustRatingByAge(baseRating, age) {
-    let modifier = 1;
-
-    if (age === 4) modifier = 0.90;
-    else if (age === 5) modifier = 0.95;
-    else if (age >= 6 && age <= 8) modifier = 1.00;
-    else if (age === 9) modifier = 0.95;
-    else if (age === 10) modifier = 0.90;
-
-    return Math.round(baseRating * modifier);
-}
-
-function endOfSeasonUpdate(horses) {
-    for (let horse of horses) {
-        horse.age++;
-        horse.rating = adjustRatingByAge(horse.baseRating, horse.age);
-    }
-}
-
-function goingModifier(horseGoingPref, raceGoing) {
-    const goings = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
-
-    const prefIndex = goings.indexOf(horseGoingPref);
-    const raceIndex = goings.indexOf(raceGoing);
-
-    const distance = Math.abs(prefIndex - raceIndex);
-
-    if (distance === 0) return 1.0;
-    if (distance === 1) return 0.95;
-    if (distance === 2) return 0.85;
-    return 0.75;
+    console.log(goings);
+    data.goings = goings
+    setRaceData(data); // Save the fetched data to the global state via the setter
 }
 
 function displayGameState(array) {
@@ -216,25 +99,26 @@ function displayGameState(array) {
 document.getElementById('clear-game-state').addEventListener('click', function () {
     // Clear game state tables
     console.log("raceData in clear-game-state click:", raceData);
+    console.log("going in clear-game-state click:", going);
     document.getElementById('gs-meeting-races').innerHTML = "";
     document.getElementById('gs-players').innerHTML = "";
     document.getElementById('next-meeting').innerHTML = "";
     document.getElementById('gs-standings').innerHTML = "";
-    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | Good-Soft`
+    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | ${raceData.goings[meeting_number]}`
     document.getElementById('clear-game-state').style.display = 'none';
 
     // Randomize the Picking Order
     shuffleArray(playerData); // Shuffle the array
 
     //empty the entries array
-    raceEntries = {
+    setRaceEntries({
         0: [],
         1: [],
         2: [],
         3: [],
         4: [],
         5: []
-    };
+      });
 
 
     displayRaceSelections()
@@ -242,85 +126,227 @@ document.getElementById('clear-game-state').addEventListener('click', function (
 
     });
 
-function displayRaceSelections() {
+    function displayRaceSelections() {
+        
+        let selectionHtml = `<tr>
+            <th>Time</th>
+            <th>Dist</th>
+            <th>#1</th>
+            <th>#2</th>
+            <th>#3</th>
+        </tr>`;
+        
+        for (let i = 0; i < 6; i++) {
+            const distance = raceData.distances[meeting_number * 6 + i] || "—";
+            const entries = raceEntries[i] || [];
+            const selections = [
+                entries[0]?.horseName || "",
+                entries[1]?.horseName || "",
+                entries[2]?.horseName || ""
+            ];
+            
+            selectionHtml += `<tr class="race-row ${selectedRaceIndex === i ? 'table-primary' : ''}" data-index="${i}">
+                <td>${raceTime[i]}</td>
+                <td>${distance}</td>
+                <td>${selections[0]}</td>
+                <td>${selections[1]}</td>
+                <td>${selections[2]}</td>
+            </tr>`;
+        }
     
-    let selectionHtml = "";
-    selectionHtml = `<tr>
-                <th>Time</th>
-                <th>Dist</th>
-                <th>#1</th>
-                <th>#2</th>
-                <th>#3</th>
-                </tr>`;
-                
-    for (let i = 0; i < 6; i++) {
-        const distance = raceData.distances[meeting_number * 6 + i] || "—";
-                
-        const entries = raceEntries[i] || [];
-        const selections = [
-        entries[0] || "",
-        entries[1] || "",
-        entries[2] || ""
-        ];
-                
-        selectionHtml += `<tr>
-                    <td>${raceTime[i]}</td>
-                    <td>${distance}</td>
-                    <td>${selections[0]}</td>
-                    <td>${selections[1]}</td>
-                    <td>${selections[2]}</td>
-                    </tr>`;
-                }
-                
-    document.getElementById('race-selection').innerHTML = selectionHtml;
-}
-
-function displayStable(currentPlayerIndex) {
+        document.getElementById('race-selection').innerHTML = selectionHtml;
     
-    const playerName = playerData[currentPlayerIndex].name;
+        // ✅ Add click handlers right after rendering
+        document.querySelectorAll('.race-row').forEach(row => {
+            row.addEventListener('click', function () {
+                selectedRaceIndex = parseInt(this.getAttribute('data-index'));
+                displayRaceSelections(); // Re-render to highlight the selected row
+            });
+        });
+    }
 
-    const playerHorses = horseData.filter(horse => horse.owner === playerName);
+    function displayStable(currentPlayerIndex) {
+        console.log("Display Stable: ", )
+    let playerName = playerData[currentPlayerIndex].name;
 
-    let stableHtml = "";
-    stableHtml = `<tr>
-                <th>Sel</th>
-                <th>Fit</th>
-                <th>Name</th>
-                <th>R</th>
-                <th>W</th>
-                <th>Winnings</th>
-                <th>Form</th>
-                </tr>`;
-                
+    // Insert button and stable HTML
+    document.getElementById('page-info').innerHTML = `${playerName}'s stable and race selections. <br>
+    <button id="confirm-selections" class="btn btn-sm btn-primary">Finish</button>
+    <button id="auto-selections" class="btn btn-sm btn-primary">Test</button>`;
+    let confirmBtn = document.getElementById("confirm-selections");
+    confirmBtn.disabled = true; // Initially disable
+    let testBtn = document.getElementById("auto-selections");
+
+    let playerHorses = horseData.filter(horse => horse.owner === playerName);
+
+    let stableHtml = `
+        <tr>
+            <th>Sel</th>
+            <th>Fit</th>
+            <th>Name</th>
+            <th>R</th>
+            <th>W</th>
+            <th>Winnings</th>
+            <th>Form</th>
+        </tr>
+    `;
+
+    // Loop over player's horses and display stable data
     for (let i = 0; i < playerHorses.length; i++) {
         const horse = playerHorses[i];
-                
-        stableHtml += `<tr>
-                    <td>
-                        <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
-                        <label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0" for="btnradio${i}">🎯</label>
-                    </td>            
-                    <td>${horse.rest}</td>            
-                    <td>${horse.name}</td>
-                    <td>${horse.runs}</td>
-                    <td>${horse.wins}</td>
-                    <td>£${horse.money}</td>
-                    <td>${horse.money}</td>
-                    </tr>`;
-                }
-                
-    document.getElementById('st-selection').innerHTML = stableHtml;  
-    
-}
 
+        let enteredRaceIndex = null;
+        for (let j = 0; j < 6; j++) {
+            if (raceEntries[j].includes(horse.name)) {
+                enteredRaceIndex = j;
+                break;
+            }
+        }
+
+        const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : "➤";
+        const rowClass = enteredRaceIndex !== null ? "table-success" : "";
+
+        stableHtml += `
+            <tr class="${rowClass}">
+                <td>
+                    <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
+                    <label 
+                        class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn" 
+                        data-horse-name="${horse.name}" 
+                        for="btnradio${i}">${entrySymbol}</label>
+                </td>            
+                <td>${horse.rest}</td>            
+                <td>${horse.name}</td>
+                <td>${horse.runs}</td>
+                <td>${horse.wins}</td>
+                <td>£${horse.money}</td>
+                <td>${horse.money}</td>
+            </tr>`;
+    }
+
+    document.getElementById('st-selection').innerHTML = stableHtml;
+
+    // Event listener for horse selection
+    document.querySelectorAll('.horse-entry-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            if (selectedRaceIndex === null) {
+                alert("Please select a race first.");
+                return;
+            }
+
+            const horseName = this.getAttribute('data-horse-name');
+            playerName = playerData[currentPlayerIndex].name;
+            console.log("Horsename:", horseName)
+            console.log("Playername:", playerName)
+
+            const entered = enterHorse(playerName, horseName, selectedRaceIndex);
+            console.log("Entered: ", entered);
+            if (entered) {
+
+                displayRaceSelections(); // Update selections
+                displayStable(currentPlayerIndex); // Re-render stable
+
+                // Check if all races have been entered and enable the button
+                let check = allRacesHaveEntries();
+                console.log("ARHE", check);
+                if (allRacesHaveEntries()) {
+                    confirmBtn.disabled = false;
+                } else {
+                    confirmBtn.disabled = true;
+                }
+            }
+        });
+    });
+
+    // event listener for testing
+    testBtn.onclick = function () {
+        playerName = playerData[currentPlayerIndex].name;
+        playerHorses = horseData.filter(horse => horse.owner === playerName);
+    
+        // Clear existing entries without reassigning
+        for (let i = 0; i < 6; i++) {
+            raceEntries[i] = [];
+        }
+    
+        // Add the first 6 horses to each of the 6 races (1 per race)
+        for (let i = 0; i < 6; i++) {
+            const horse = playerHorses[i];
+            if (horse) {
+                raceEntries[i].push({ playerName, horseName: horse.name });
+            }
+        }
+    
+        displayRaceSelections();
+        displayStable(currentPlayerIndex);
+    
+        if (confirmBtn) {
+            confirmBtn.disabled = false; // enable the finish button
+        }
+    };
+
+    // Confirm button to save entries and move to the next player
+    confirmBtn.onclick = function () {
+        const playerName = playerData[currentPlayerIndex].name;
+    
+        const raceLineup = [];
+    
+        if (lineups.length === 0) {
+            // Initialize the 6 races
+            for (let i = 0; i < 6; i++) {
+                lineups.push([]);  // one array for each race
+            }
+        }
+        
+        for (let i = 0; i < 6; i++) {
+            const race = raceEntries[i];
+            race.forEach(entry => {
+                lineups[i].push({
+                    race: i,
+                    horseName: entry.horseName,
+                    trainer: entry.playerName
+                });
+            });
+        }
+    
+        // Clear race entries for next player
+        for (let i = 0; i < 6; i++) {
+            raceEntries[i] = [];
+        }
+    
+        currentPlayerIndex++;
+    
+        if (currentPlayerIndex >= playerData.length) {
+            console.log("Ready to show first race", lineups)
+            // Hide setup screens
+            document.getElementById("race-selections").style.display = "none";
+            document.getElementById("player-selections").style.display = "none";
+            document.getElementById("player-stable").style.display = "none";
+            document.getElementById('page-info').style.display = "none";
+            showRacecard(0);
+        }
+    
+        displayRaceSelections();
+        displayStable(currentPlayerIndex);
+        this.disabled = true;
+    };
+
+    // Ensure the button is updated correctly if all races have entries
+    if (allRacesHaveEntries()) {
+        confirmBtn.disabled = false;
+    } else {
+        confirmBtn.disabled = true;
+    }
+}
 
 
 export async function runHorseRacing(players) {
+    await buildRaceData();
+    const builtData = resetPlayerData(players); // <-- BUILD playerData
+    setPlayerData(builtData);                   // <-- SAVE to shared state
+
+    setHorseData(buildHorseData());             // <-- Same with horses
     
-    await getRaceData();
-    playerData = setPlayerData(players);
-    horseData = buildHorseData();
     displayGameState(meeting_number);
+    
     endOfSeasonUpdate(horseData);
 }
-

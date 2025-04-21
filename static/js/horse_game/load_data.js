@@ -18,7 +18,7 @@ export async function fetchTextFiles() {
 
     for (const file of fileNames) {
         try {
-            const response = await fetch(baseUrl + file);
+            const response = await fetch(`${baseUrl + file}?v=${Date.now()}`);
             if (!response.ok) throw new Error(`Failed to load ${file}`);
             const text = await response.text();
             fileData[file.replace('.txt', '')] = text.split("\n").map(line => line.trim());
