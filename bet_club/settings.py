@@ -37,8 +37,9 @@ if DEBUG:
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 ALLOWED_HOSTS = [
-    '8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io',
+    '8000-bmays9-betclub-1ck08jddohy.ws-eu118.gitpod.io',
     'localhost,127.0.0.1',
+    '127.0.0.1',
     '.herokuapp.com',
     'yourdomain.com'
 ]

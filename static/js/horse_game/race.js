@@ -1,8 +1,9 @@
 import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, setRaceData } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
-import { lineups , raceTime, meeting_number, going } from './horseracing.js';
+import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState } from './horseracing.js';
 
-let gameRaceNumber = -1
+let gameRaceNumber = 0
+let meetingRaceNumber = 0
 let rDist = "";
 let rGoing = "";
 let rName = "";
@@ -13,14 +14,15 @@ let priceHorses = [];
 let rPrizes = [];
 const racecardBody = document.getElementById("racecard-body");
 const racecardHeader = document.getElementById("racecard-header");
+let startBtn = document.getElementById('start-race');
+let nextRaceBtn = document.getElementById('next-race');
 
 export function showRacecard (racenum) {
 
     console.log("Here's the horse Data" , horseData)
-    // Increase the race number, game total not meeting total
-    gameRaceNumber ++
-    
-    console.log("Let's Race");
+        
+    console.log("Let's Race, gameracenume / racenum", gameRaceNumber, racenum);
+
     racecardBody.innerHTML = ""; // clear previous
     rDist = raceData.distances[gameRaceNumber];
     rGoing = going[meeting_number];
@@ -92,6 +94,8 @@ export function showRacecard (racenum) {
     document.getElementById('start-race').addEventListener('click', function () {
         const result = simulateRace(ratedHorses); // ✅ simulate using pure ability
         displayResults(result);
+
+        
 });
 }
 
@@ -223,7 +227,8 @@ function displayResults(finishingOrder) {
     // update horseData
     updateHorseData(finishingOrder)
 
-    // display next race button.
+
+
 }
 
 function updateHorseData(results) {
@@ -262,6 +267,66 @@ function updateHorseData(results) {
         }
     });
 
-    // enable next race button
-    s
+    // display next race button.
+    startBtn.disabled = true
+    nextRaceBtn.disabled = false
+
+};
+
+
+
+document.getElementById('next-race').addEventListener('click', handleNextRace);
+
+function handleNextRace() {
+    meetingRaceNumber++;
+    console.log("HandleNextRae - MeetingraceNumber", meetingRaceNumber)
+
+    if (meetingRaceNumber >= 6) {
+        // End of meeting
+        if (meeting_number < 15) { // Only move to next meeting if fewer than 16 total
+            console.log("MeetingraceNumber >= 6, display game state", meetingRaceNumber)
+            incrementMeetingNumber(); // ✅ works
+            meetingRaceNumber = 0;
+            
+            displayGameState(); // Show standings or summary
+            
+
+            // Replace the handler for the continue phase
+            nextRaceBtn.removeEventListener('click', handleNextRace);
+            nextRaceBtn.addEventListener('click', handleContinueToNextMeeting);
+
+        } else {
+          
+            // All 16 meetings complete
+            displayFinalStandings(); // You need to define this function
+            nextRaceBtn.disabled = true;
+
+            
+        }
+
+    } else {
+        // Continue to next race in the current meeting
+        gameRaceNumber++;
+        showRacecard(meetingRaceNumber);
+        if (meetingRaceNumber == 5) {
+            nextRaceBtn.textContent = "Continue";
+        }
+        startBtn.disabled = false;
+        nextRaceBtn.disabled = true;
+    }
+}
+
+function handleContinueToNextMeeting() {
+    // Let players enter new horses
+
+    nextRaceBtn.textContent = "Next Race";
+    nextRaceBtn.disabled = true;
+    startBtn.disabled = true;
+
+    // Reset horses' rest days, clear selections, or any other prep work here
+    prepareForNextMeeting(); // You should define this function to handle resetting
+
+    // Reassign original handler
+    nextRaceBtn.removeEventListener('click', handleContinueToNextMeeting);
+    nextRaceBtn.addEventListener('click', handleNextRace);
 }

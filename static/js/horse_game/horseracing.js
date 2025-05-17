@@ -35,7 +35,7 @@ async function buildRaceData() {
     setRaceData(data); // Save the fetched data to the global state via the setter
 }
 
-function displayGameState(array) {
+export function displayGameState(array) {
 
     console.log("Checking raceData:", raceData);
     document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} (${meeting_number + 1} of ${raceData.meetings.length})`;
@@ -61,6 +61,15 @@ function displayGameState(array) {
             <td>${raceData.prizemoney[meeting_number * 6 + i]}</td>
             </tr>`;
                 }
+    // If gs-meeting-races doesn't exist, create and insert it
+    if (!document.getElementById('gs-meeting-races')) {
+        const newTable = document.createElement('table');
+        newTable.className = "table table-hover table-sm";
+        newTable.id = "gs-meeting-races";
+
+        // Append it somewhere in your DOM — for example, inside 'page-info'
+        document.getElementById('page-info').appendChild(newTable);
+}
     
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
 
@@ -339,6 +348,10 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     }
 }
 
+export function incrementMeetingNumber() {
+    meeting_number++;
+}
+
 
 export async function runHorseRacing(players) {
     await buildRaceData();
@@ -351,3 +364,5 @@ export async function runHorseRacing(players) {
     
     endOfSeasonUpdate(horseData);
 }
+
+
