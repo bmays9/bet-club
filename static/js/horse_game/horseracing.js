@@ -37,8 +37,9 @@ async function buildRaceData() {
 
 export function displayGameState(array) {
 
-    console.log("Checking raceData:", raceData);
+    console.log("DISPLAY GAME STATE: Race data", raceData);
     document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} (${meeting_number + 1} of ${raceData.meetings.length})`;
+    document.getElementById('clear-game-state').style.display = 'inline-block';
 
     if (!raceData || !raceData.distances) {
         console.error("Race data is not loaded yet.");
@@ -71,6 +72,7 @@ export function displayGameState(array) {
         document.getElementById('page-info').appendChild(newTable);
 }
     
+console.log("TableHTML, should be the races", tableHtml)
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
 
     // Player data
@@ -115,7 +117,7 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     document.getElementById('gs-standings').innerHTML = "";
     document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | ${raceData.goings[meeting_number]}`
     document.getElementById('clear-game-state').style.display = 'none';
-
+    
     // Randomize the Picking Order
     shuffleArray(playerData); // Shuffle the array
 

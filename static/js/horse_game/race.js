@@ -16,10 +16,18 @@ const racecardBody = document.getElementById("racecard-body");
 const racecardHeader = document.getElementById("racecard-header");
 let startBtn = document.getElementById('start-race');
 let nextRaceBtn = document.getElementById('next-race');
+let currentRatedHorses = [];
+let currentRacePrizes = [];
+
+startBtn.addEventListener('click', () => {
+    const result = simulateRace(currentRatedHorses);
+    displayResults(result);
+});
 
 export function showRacecard (racenum) {
 
     console.log("Here's the horse Data" , horseData)
+    console.log("Player Data before we start", playerData)
         
     console.log("Let's Race, gameracenume / racenum", gameRaceNumber, racenum);
 
@@ -30,11 +38,12 @@ export function showRacecard (racenum) {
     rTime = raceTime[racenum];
     rPrize = Number(raceData.prizemoney[gameRaceNumber]);
     entries = lineups[racenum];
+
     // Calculate 1,2,3 Prize Money
     let rPrize1 = Math.round(Number(rPrize) * 0.65);
     console.log("rPrize1: ", rPrize1)
     let rPrize2 = Math.round(Number(rPrize) * 0.25);
-    console.log("rPrize2: ", rPrize1)
+    console.log("rPrize2: ", rPrize2)
     let rPrize3 = Math.round(Number(rPrize) * 0.10);
     rPrizes = [rPrize1, rPrize2, rPrize3];
     // Display Race Details
@@ -91,12 +100,10 @@ export function showRacecard (racenum) {
         racecardBody.innerHTML += row;
     });
 
-    document.getElementById('start-race').addEventListener('click', function () {
-        const result = simulateRace(ratedHorses); // ✅ simulate using pure ability
-        displayResults(result);
+    currentRatedHorses = ratedHorses;
+    currentRacePrizes = rPrizes;
 
-        
-});
+    
 }
 
 function getHorseRatings(raceHorses, distanceStr, going) {
@@ -216,7 +223,7 @@ function displayResults(finishingOrder) {
             <tr>
                 <td>${index + 1}</td>
                 <td>${horse.name}</td>
-                <td>${horse.trainer || "?"}</td>
+                <td>${horse.owner || "?"}</td>
                 <td>${odds}</td>
                 <td>${index < 3 ? rPrizes[index] : ""}</td>
             </tr>
@@ -225,9 +232,9 @@ function displayResults(finishingOrder) {
     });
 
     // update horseData
+    console.log("Before we update, here's the finishingOrder being sent", finishingOrder)
     updateHorseData(finishingOrder)
-
-
+    updatePlayerData(finishingOrder)
 
 }
 
@@ -274,8 +281,49 @@ function updateHorseData(results) {
 };
 
 
-
 document.getElementById('next-race').addEventListener('click', handleNextRace);
+
+function updatePlayerData(results) {
+    results.forEach((horse, index) => {
+        console.log("Updating Playe using horse", horse)
+        const ownerName = horse.owner;
+        const pos = index + 1;
+        const playerIndex = playerData.findIndex(p => p.name === ownerName);
+        console.log("updating playerData: ", playerData)
+        console.log("updating playerData Index: ", playerIndex)
+        if (playerIndex !== -1) {
+            const player = playerData[playerIndex];
+
+            // Add win for 1st place
+            console.log("Pos", pos)
+            if (pos === 1) {
+                player.wins = (player.wins || 0) + 1;
+            }
+
+            // Add prize money for top 3
+            const prizeMoney = rPrizes[index];
+            if (prizeMoney) {
+                console.log("Player Winnings", prizeMoney)
+                player.winnings = (player.winnings || 0) + Number(prizeMoney);
+                player.total = (player.total || 0) + Number(prizeMoney);
+            }
+
+            // Handle Entry Fee
+            rPrize = Number(raceData.prizemoney[gameRaceNumber]);
+            const entryFee = Number(rPrize) * 0.1 ;
+            
+            console.log("Player Entry", entryFee  )
+            player.entries = (player.entries || 0) + Number(entryFee);
+            player.total = (player.total || 0) - Number(entryFee);
+            
+            // Update the playerData array
+            playerData[playerIndex] = player;
+
+            console.log("All playerData Now after player updated: ", playerData)
+        }
+    });
+}
+
 
 function handleNextRace() {
     meetingRaceNumber++;
