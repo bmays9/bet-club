@@ -15,6 +15,11 @@ export function setPlayerData(data) {
     playerData = data;
 }
 
+export function sortPlayerData() {
+    playerData.sort((a, b) => (b.total || 0) - (a.total || 0));
+}
+
+
 export function setHorseData(data) {
     horseData = data;
 }

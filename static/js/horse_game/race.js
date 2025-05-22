@@ -1,4 +1,4 @@
-import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, setRaceData } from './gameState.js';
+import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
 import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState } from './horseracing.js';
 
@@ -30,7 +30,7 @@ export function showRacecard (racenum) {
     console.log("Player Data before we start", playerData)
         
     console.log("Let's Race, gameracenume / racenum", gameRaceNumber, racenum);
-
+    document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
     rDist = raceData.distances[gameRaceNumber];
     rGoing = going[meeting_number];
@@ -335,8 +335,8 @@ function handleNextRace() {
             console.log("MeetingraceNumber >= 6, display game state", meetingRaceNumber)
             incrementMeetingNumber(); // ✅ works
             meetingRaceNumber = 0;
+            handleContinueToNextMeeting(); 
             
-            displayGameState(); // Show standings or summary
             
 
             // Replace the handler for the continue phase
@@ -372,9 +372,22 @@ function handleContinueToNextMeeting() {
     startBtn.disabled = true;
 
     // Reset horses' rest days, clear selections, or any other prep work here
-    prepareForNextMeeting(); // You should define this function to handle resetting
+    horseData.forEach(horse => {
+        if (typeof horse.rest === 'number') {
+            horse.rest += 1;
+        } else {
+            horse.rest = 1; // if undefined, initialize it
+        }
+    });
+
+    //prepareForNextMeeting(); // You should define this function to handle resetting
+    console.log("All playerData before sorting: ", playerData)
+    sortPlayerData();
+    console.log("All playerData Now after sorting: ", playerData)
 
     // Reassign original handler
-    nextRaceBtn.removeEventListener('click', handleContinueToNextMeeting);
-    nextRaceBtn.addEventListener('click', handleNextRace);
+    // nextRaceBtn.removeEventListener('click', handleContinueToNextMeeting);
+    // nextRaceBtn.addEventListener('click', handleNextRace);
+
+    displayGameState(); // Show standings or summary
 }

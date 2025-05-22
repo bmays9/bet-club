@@ -1,13 +1,40 @@
-import { fetchTextFiles } from "./load_data.js";
-import { showRacecard } from "./race.js";
-import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
-import { shuffleArray, getRandomGoingPreference, buildHorseData, adjustRatingByAge, endOfSeasonUpdate, goingModifier, resetPlayerData } from './initialise.js';
-import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, setRaceData } from './gameState.js';
+import {
+    fetchTextFiles
+} from "./load_data.js";
+import {
+    showRacecard
+} from "./race.js";
+import {
+    allEntries,
+    canEnterRace,
+    enterHorse,
+    displayRaceEntries,
+    allRacesHaveEntries
+} from './entry.js';
+import {
+    shuffleArray,
+    getRandomGoingPreference,
+    buildHorseData,
+    adjustRatingByAge,
+    endOfSeasonUpdate,
+    goingModifier,
+    resetPlayerData
+} from './initialise.js';
+import {
+    raceEntries,
+    playerData,
+    horseData,
+    raceData,
+    setRaceEntries,
+    setHorseData,
+    setPlayerData,
+    setRaceData
+} from './gameState.js';
 
 export let meeting_number = 0;
-export let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"]
-let players = []
-const TOTALHORSES = 144
+export let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"];
+let players = [];
+const TOTALHORSES = 144;
 export let going = [];
 let selectedRaceIndex = null;
 export let lineups = []; // stores final race line ups, taken from raceEntries after they are confirme
@@ -16,7 +43,7 @@ export let lineups = []; // stores final race line ups, taken from raceEntries a
 async function buildRaceData() {
     const data = await fetchTextFiles(); // Fetch the data, store it in a local variable
     console.log("Race data in another file:", data);
-    
+
     // Example usage
     console.log("Horsenames:", data.horsenames);
     shuffleArray(data.horsenames); // Shuffle the array
@@ -25,13 +52,15 @@ async function buildRaceData() {
     // Set going for each meeting
     const goingOptions = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
 
-    const goings = Array.from({ length: 20 }, () => {
+    const goings = Array.from({
+        length: 20
+    }, () => {
         const randomIndex = Math.floor(Math.random() * goingOptions.length);
         return goingOptions[randomIndex]; // ✅ add this line
     });
-    
+
     console.log(goings);
-    data.goings = goings
+    data.goings = goings;
     setRaceData(data); // Save the fetched data to the global state via the setter
 }
 
@@ -39,7 +68,11 @@ export function displayGameState(array) {
 
     console.log("DISPLAY GAME STATE: Race data", raceData);
     document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} (${meeting_number + 1} of ${raceData.meetings.length})`;
-    document.getElementById('clear-game-state').style.display = 'inline-block';
+    document.getElementById('clear-game-state').style.display = 'block';
+    document.getElementById('page-info').style.display = 'block';
+    document.getElementById('race-screen').style.display = 'none';
+    document.getElementById('page-info').innerHTML = ""
+    
 
     if (!raceData || !raceData.distances) {
         console.error("Race data is not loaded yet.");
@@ -52,32 +85,33 @@ export function displayGameState(array) {
                 <th>Name</th>
                 <th>Prize Money</th>
                 </tr>`;
-    
+
     for (let i = 0; i < 6; i++) {
-        tableHtml += 
+        tableHtml +=
             `<tr>
             <td>${raceTime[i]}</td>
             <td>${raceData.distances[meeting_number * 6 + i]}</td>
             <td>${raceData.racenames[meeting_number * 6 + i]}</td>
             <td>${raceData.prizemoney[meeting_number * 6 + i]}</td>
             </tr>`;
-                }
+    }
     // If gs-meeting-races doesn't exist, create and insert it
     if (!document.getElementById('gs-meeting-races')) {
+        console.log("There is no gs-meeting-races id so i'm creating one");
         const newTable = document.createElement('table');
         newTable.className = "table table-hover table-sm";
         newTable.id = "gs-meeting-races";
 
         // Append it somewhere in your DOM — for example, inside 'page-info'
         document.getElementById('page-info').appendChild(newTable);
-}
-    
-console.log("TableHTML, should be the races", tableHtml)
+    }
+
+    console.log("TableHTML, should be the races", tableHtml);
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
 
     // Player data
- 
-    console.log("Player Data", playerData)
+
+    console.log("Player Data", playerData);
     let playerTableHtml = "";
     playerTableHtml = `<tr>
                 <th>Pos</th>
@@ -88,10 +122,10 @@ console.log("TableHTML, should be the races", tableHtml)
                 <th>Winnings</th>
                 <th>Total</th>
                 </tr>`;
-    
+
     for (let i = 0; i < 6; i++) {
         const player = playerData[i]; // extract player object
-        playerTableHtml += 
+        playerTableHtml +=
             `<tr>
             <td>${i + 1}</td>
             <td>${player.name}</td>
@@ -101,13 +135,13 @@ console.log("TableHTML, should be the races", tableHtml)
             <td>£${player.winnings}</td>
             <td>£${player.total}</td>
             </tr>`;
-                }
-    
+    }
+
     document.getElementById('gs-players').innerHTML = playerTableHtml;
 
 }
 
-document.getElementById('clear-game-state').addEventListener('click', function () {
+document.getElementById('clear-game-state').addEventListener('click', function() {
     // Clear game state tables
     console.log("raceData in clear-game-state click:", raceData);
     console.log("going in clear-game-state click:", going);
@@ -115,9 +149,10 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     document.getElementById('gs-players').innerHTML = "";
     document.getElementById('next-meeting').innerHTML = "";
     document.getElementById('gs-standings').innerHTML = "";
-    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | ${raceData.goings[meeting_number]}`
-    document.getElementById('clear-game-state').style.display = 'none';
-    
+    document.getElementById('gs-meeting').innerHTML = `${raceData.meetings[meeting_number]} | ${raceData.goings[meeting_number]}`;
+    document.getElementById('clear-game-state').style.display = "none";
+    document.getElementById('race-screen').style.display = "inline-block";
+
     // Randomize the Picking Order
     shuffleArray(playerData); // Shuffle the array
 
@@ -129,55 +164,60 @@ document.getElementById('clear-game-state').addEventListener('click', function (
         3: [],
         4: [],
         5: []
-      });
-
-
-    displayRaceSelections()
-    displayStable(0)
-
     });
 
-    function displayRaceSelections() {
-        
-        let selectionHtml = `<tr>
+
+    displayRaceSelections();
+    displayStable(0);
+
+});
+
+function displayRaceSelections() {
+
+    let selectionHtml = `<tr>
             <th>Time</th>
             <th>Dist</th>
             <th>#1</th>
             <th>#2</th>
             <th>#3</th>
         </tr>`;
-        
-        for (let i = 0; i < 6; i++) {
-            const distance = raceData.distances[meeting_number * 6 + i] || "—";
-            const entries = raceEntries[i] || [];
-            const selections = [
-                entries[0]?.horseName || "",
-                entries[1]?.horseName || "",
-                entries[2]?.horseName || ""
-            ];
-            
-            selectionHtml += `<tr class="race-row ${selectedRaceIndex === i ? 'table-primary' : ''}" data-index="${i}">
+
+    for (let i = 0; i < 6; i++) {
+        const distance = raceData.distances[meeting_number * 6 + i] || "—";
+        const entries = raceEntries[i] || [];
+        const selections = [
+            entries[0]?.horseName || "",
+            entries[1]?.horseName || "",
+            entries[2]?.horseName || ""
+        ];
+
+        selectionHtml += `<tr class="race-row ${selectedRaceIndex === i ? 'table-primary' : ''}" data-index="${i}">
                 <td>${raceTime[i]}</td>
                 <td>${distance}</td>
                 <td>${selections[0]}</td>
                 <td>${selections[1]}</td>
                 <td>${selections[2]}</td>
             </tr>`;
-        }
-    
-        document.getElementById('race-selection').innerHTML = selectionHtml;
-    
-        // ✅ Add click handlers right after rendering
-        document.querySelectorAll('.race-row').forEach(row => {
-            row.addEventListener('click', function () {
-                selectedRaceIndex = parseInt(this.getAttribute('data-index'));
-                displayRaceSelections(); // Re-render to highlight the selected row
-            });
-        });
     }
 
-    function displayStable(currentPlayerIndex) {
-        console.log("Display Stable: ", )
+    document.getElementById('race-selection').innerHTML = selectionHtml;
+
+    // ✅ Add click handlers right after rendering
+    document.querySelectorAll('.race-row').forEach(row => {
+        row.addEventListener('click', function() {
+            selectedRaceIndex = parseInt(this.getAttribute('data-index'));
+            displayRaceSelections(); // Re-render to highlight the selected row
+        });
+    });
+}
+
+function displayStable(currentPlayerIndex) {
+    console.log("Display Stable: ");
+    document.getElementById("race-selections").style.display = "inline-block";
+    document.getElementById("player-selections").style.display = "inline-block";
+    document.getElementById("player-stable").style.display = "inline-block";
+    document.getElementById('page-info').style.display = "inline-block";
+    document.getElementById('race-screen').style.display = "none";
     let playerName = playerData[currentPlayerIndex].name;
 
     // Insert button and stable HTML
@@ -239,7 +279,7 @@ document.getElementById('clear-game-state').addEventListener('click', function (
 
     // Event listener for horse selection
     document.querySelectorAll('.horse-entry-btn').forEach(button => {
-        button.addEventListener('click', function () {
+        button.addEventListener('click', function() {
             if (selectedRaceIndex === null) {
                 alert("Please select a race first.");
                 return;
@@ -247,8 +287,8 @@ document.getElementById('clear-game-state').addEventListener('click', function (
 
             const horseName = this.getAttribute('data-horse-name');
             playerName = playerData[currentPlayerIndex].name;
-            console.log("Horsename:", horseName)
-            console.log("Playername:", playerName)
+            console.log("Horsename:", horseName);
+            console.log("Playername:", playerName);
 
             const entered = enterHorse(playerName, horseName, selectedRaceIndex);
             console.log("Entered: ", entered);
@@ -270,44 +310,47 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     });
 
     // event listener for testing
-    testBtn.onclick = function () {
+    testBtn.onclick = function() {
         playerName = playerData[currentPlayerIndex].name;
         playerHorses = horseData.filter(horse => horse.owner === playerName);
-    
+
         // Clear existing entries without reassigning
         for (let i = 0; i < 6; i++) {
             raceEntries[i] = [];
         }
-    
+
         // Add the first 6 horses to each of the 6 races (1 per race)
         for (let i = 0; i < 6; i++) {
             const horse = playerHorses[i];
             if (horse) {
-                raceEntries[i].push({ playerName, horseName: horse.name });
+                raceEntries[i].push({
+                    playerName,
+                    horseName: horse.name
+                });
             }
         }
-    
+
         displayRaceSelections();
         displayStable(currentPlayerIndex);
-    
+
         if (confirmBtn) {
             confirmBtn.disabled = false; // enable the finish button
         }
     };
 
     // Confirm button to save entries and move to the next player
-    confirmBtn.onclick = function () {
+    confirmBtn.onclick = function() {
         const playerName = playerData[currentPlayerIndex].name;
-    
+
         const raceLineup = [];
-    
+
         if (lineups.length === 0) {
             // Initialize the 6 races
             for (let i = 0; i < 6; i++) {
-                lineups.push([]);  // one array for each race
+                lineups.push([]); // one array for each race
             }
         }
-        
+
         for (let i = 0; i < 6; i++) {
             const race = raceEntries[i];
             race.forEach(entry => {
@@ -318,14 +361,14 @@ document.getElementById('clear-game-state').addEventListener('click', function (
                 });
             });
         }
-    
+
         // Clear race entries for next player
         for (let i = 0; i < 6; i++) {
             raceEntries[i] = [];
         }
-    
+
         currentPlayerIndex++;
-    
+
         if (currentPlayerIndex >= playerData.length) {
             console.log("Ready to show first race", lineups)
             // Hide setup screens
@@ -358,13 +401,11 @@ export function incrementMeetingNumber() {
 export async function runHorseRacing(players) {
     await buildRaceData();
     const builtData = resetPlayerData(players); // <-- BUILD playerData
-    setPlayerData(builtData);                   // <-- SAVE to shared state
+    setPlayerData(builtData); // <-- SAVE to shared state
 
-    setHorseData(buildHorseData());             // <-- Same with horses
-    
+    setHorseData(buildHorseData()); // <-- Same with horses
+
     displayGameState(meeting_number);
-    
+
     endOfSeasonUpdate(horseData);
 }
-
-
