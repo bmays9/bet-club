@@ -64,6 +64,7 @@ export function buildHorseData() {
         const owner = playerData[ownerIndex].name || `Unknown`;
         let number = i + 1
         let runs = 0, wins = 0, money = 0  
+        let history = [];
         
         horses.push({
             number,
@@ -80,6 +81,7 @@ export function buildHorseData() {
             form,
             wins,
             money,
+            history,
         });
     }
 

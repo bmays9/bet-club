@@ -73,7 +73,6 @@ export function displayGameState(array) {
     document.getElementById('race-screen').style.display = 'none';
     document.getElementById('page-info').innerHTML = ""
     
-
     if (!raceData || !raceData.distances) {
         console.error("Race data is not loaded yet.");
         return;
@@ -165,6 +164,8 @@ document.getElementById('clear-game-state').addEventListener('click', function()
         4: [],
         5: []
     });
+
+    lineups = [];
 
 
     displayRaceSelections();
@@ -271,11 +272,23 @@ function displayStable(currentPlayerIndex) {
                 <td>${horse.runs}</td>
                 <td>${horse.wins}</td>
                 <td>£${horse.money}</td>
-                <td>${horse.money}</td>
+                <td>
+                    <a href="#" class="form-link" data-horse-name="${horse.name}">${horse.form}</a>
+                </td>
             </tr>`;
     }
 
     document.getElementById('st-selection').innerHTML = stableHtml;
+
+    // Event Listener for form and showing full history
+
+    document.querySelectorAll('.form-link').forEach(link => {
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            const horseName = this.getAttribute('data-horse-name');
+            showHistoryModal(horseName);
+        });
+    });
 
     // Event listener for horse selection
     document.querySelectorAll('.horse-entry-btn').forEach(button => {
@@ -393,6 +406,50 @@ function displayStable(currentPlayerIndex) {
     }
 }
 
+function showHistoryModal(horseName) {
+    const horse = horseData.find(h => h.name === horseName);
+    const modalBody = document.getElementById('modalBodyContent');
+
+    if (!horse || !horse.history || horse.history.length === 0) {
+        modalBody.innerHTML = `<p>No race history available for this horse.</p>`;
+    } else {
+        const rows = horse.history.map(h => `
+            <tr>
+                <td>${h.meeting}</td>
+                <td>${h.course}</td>
+                <td>${h.going}</td>
+                <td>${h.distance}</td>
+                <td>${h.position}</td>
+                <td>£${h.winnings}</td>
+            </tr>
+        `).join("");
+
+        modalBody.innerHTML = `
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Meeting</th>
+                        <th>Course</th>
+                        <th>Going</th>
+                        <th>Distance</th>
+                        <th>Pos</th>
+                        <th>£</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    // Show modal using Bootstrap
+    const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+    modal.show();
+}
+
+function closeModal() {
+    document.getElementById('historyModal').style.display = 'none';
+}
+
 export function incrementMeetingNumber() {
     meeting_number++;
 }
@@ -409,3 +466,4 @@ export async function runHorseRacing(players) {
 
     endOfSeasonUpdate(horseData);
 }
+

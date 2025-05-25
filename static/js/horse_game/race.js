@@ -18,6 +18,7 @@ let startBtn = document.getElementById('start-race');
 let nextRaceBtn = document.getElementById('next-race');
 let currentRatedHorses = [];
 let currentRacePrizes = [];
+let phase = "racing"; // or "end-of-meeting"
 
 startBtn.addEventListener('click', () => {
     const result = simulateRace(currentRatedHorses);
@@ -29,7 +30,8 @@ export function showRacecard (racenum) {
     console.log("Here's the horse Data" , horseData)
     console.log("Player Data before we start", playerData)
         
-    console.log("Let's Race, gameracenume / racenum", gameRaceNumber, racenum);
+    console.log("Let's Race, gameracenume / racenum / meetingracenum", gameRaceNumber, racenum);
+    console.log("Phase:", phase);
     document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
     rDist = raceData.distances[gameRaceNumber];
@@ -103,7 +105,9 @@ export function showRacecard (racenum) {
     currentRatedHorses = ratedHorses;
     currentRacePrizes = rPrizes;
 
-    
+    nextRaceBtn.textContent = "Next Race";
+    nextRaceBtn.disabled = true;
+    startBtn.disabled = false;
 }
 
 function getHorseRatings(raceHorses, distanceStr, going) {
@@ -235,6 +239,7 @@ function displayResults(finishingOrder) {
     console.log("Before we update, here's the finishingOrder being sent", finishingOrder)
     updateHorseData(finishingOrder)
     updatePlayerData(finishingOrder)
+    meetingRaceNumber ++;
 
 }
 
@@ -268,6 +273,20 @@ function updateHorseData(results) {
             if (prizeMoney) {
                 h.money = (h.money || 0) + Number(prizeMoney);
             }
+
+            // ✅ Add full race history entry
+            let rCourse = raceData.meetings[meeting_number];
+
+            h.history = h.history || [];
+            h.history.push({
+                meeting: meeting_number,
+                course: rCourse,
+                going: rGoing,
+                distance: rDist,
+                position: pos,
+                winnings: prizeMoney || 0
+            });
+
 
             // Update the horseData array
             horseData[horseIndex] = h;
@@ -326,68 +345,60 @@ function updatePlayerData(results) {
 
 
 function handleNextRace() {
-    meetingRaceNumber++;
-    console.log("HandleNextRae - MeetingraceNumber", meetingRaceNumber)
+    console.log("HandleNextRace - MeetingRace:", meetingRaceNumber, "Phase:", phase);
 
-    if (meetingRaceNumber >= 6) {
-        // End of meeting
-        if (meeting_number < 15) { // Only move to next meeting if fewer than 16 total
-            console.log("MeetingraceNumber >= 6, display game state", meetingRaceNumber)
-            incrementMeetingNumber(); // ✅ works
-            meetingRaceNumber = 0;
-            handleContinueToNextMeeting(); 
-            
-            
-
-            // Replace the handler for the continue phase
-            nextRaceBtn.removeEventListener('click', handleNextRace);
-            nextRaceBtn.addEventListener('click', handleContinueToNextMeeting);
-
-        } else {
-          
-            // All 16 meetings complete
-            displayFinalStandings(); // You need to define this function
-            nextRaceBtn.disabled = true;
-
-            
-        }
-
-    } else {
-        // Continue to next race in the current meeting
-        gameRaceNumber++;
-        showRacecard(meetingRaceNumber);
-        if (meetingRaceNumber == 5) {
-            nextRaceBtn.textContent = "Continue";
-        }
-        startBtn.disabled = false;
-        nextRaceBtn.disabled = true;
+    // If we've run 6 races and phase is racing, that means race 6 was just shown but not run yet
+    if (meetingRaceNumber === 6 && phase === "racing") {
+        console.log("Race 6 shown but not completed yet. Waiting for start.");
+        console.log("Meeting Number.", meeting_number);
+        console.log("meetingRaceNumber.", meetingRaceNumber);
+        return; // don't proceed yet — wait for race 6 to be started & finished
     }
+
+    // If all races completed and phase is no longer racing, move to next meeting
+    if (meetingRaceNumber === 6 && phase !== "racing") {
+        phase = "end-of-meeting";
+        console.log("End of meeting reached.");
+        nextRaceBtn.textContent = "Next Race"; // reset for next meeting
+        startBtn.disabled = true;
+        nextRaceBtn.disabled = false;
+        // call your showStandings() or nextMeeting() here if needed
+        return;
+    }
+
+    // Start new race
+    showRacecard(meetingRaceNumber);
+    phase = "racing";
+
+    startBtn.disabled = false;
+    nextRaceBtn.disabled = true;
+
+    // For the 6th race, show "Continue" next time
+    if (meetingRaceNumber === 5) {
+        nextRaceBtn.textContent = "Continue";
+    } else {
+        nextRaceBtn.textContent = "Next Race";
+    }
+
+    meetingRaceNumber++;
+    gameRaceNumber++;
 }
 
 function handleContinueToNextMeeting() {
-    // Let players enter new horses
+    console.log("Continuing to next meeting...");
+    
+    if (meeting_number < 16) {
+        incrementMeetingNumber();  // Advance the meeting
+        meetingRaceNumber = 0;
+        phase = "selection";      // or whatever your selection phase is called
 
-    nextRaceBtn.textContent = "Next Race";
-    nextRaceBtn.disabled = true;
-    startBtn.disabled = true;
+        nextRaceBtn.textContent = "Next Race";
+        nextRaceBtn.disabled = true;
+        startBtn.disabled = true;
 
-    // Reset horses' rest days, clear selections, or any other prep work here
-    horseData.forEach(horse => {
-        if (typeof horse.rest === 'number') {
-            horse.rest += 1;
-        } else {
-            horse.rest = 1; // if undefined, initialize it
-        }
-    });
-
-    //prepareForNextMeeting(); // You should define this function to handle resetting
-    console.log("All playerData before sorting: ", playerData)
-    sortPlayerData();
-    console.log("All playerData Now after sorting: ", playerData)
-
-    // Reassign original handler
-    // nextRaceBtn.removeEventListener('click', handleContinueToNextMeeting);
-    // nextRaceBtn.addEventListener('click', handleNextRace);
-
-    displayGameState(); // Show standings or summary
+        prepareHorseSelections();  // Your function to set up the next meeting
+    } else {
+        displayFinalStandings();
+        nextRaceBtn.disabled = true;
+    }
 }
