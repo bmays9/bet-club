@@ -18,7 +18,6 @@ let startBtn = document.getElementById('start-race');
 let nextRaceBtn = document.getElementById('next-race');
 let currentRatedHorses = [];
 let currentRacePrizes = [];
-let phase = "racing"; // or "end-of-meeting"
 
 startBtn.addEventListener('click', () => {
     const result = simulateRace(currentRatedHorses);
@@ -31,8 +30,7 @@ export function showRacecard (racenum) {
     console.log("Player Data before we start", playerData)
         
     console.log("Let's Race, gameracenume / racenum / meetingracenum", gameRaceNumber, racenum);
-    console.log("Phase:", phase);
-    document.getElementById('race-screen').style.display = "block";
+       document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
     rDist = raceData.distances[gameRaceNumber];
     rGoing = going[meeting_number];
@@ -105,7 +103,7 @@ export function showRacecard (racenum) {
     currentRatedHorses = ratedHorses;
     currentRacePrizes = rPrizes;
 
-    nextRaceBtn.textContent = "Next Race";
+    // nextRaceBtn.textContent = "Next Race";
     nextRaceBtn.disabled = true;
     startBtn.disabled = false;
 }
@@ -239,8 +237,7 @@ function displayResults(finishingOrder) {
     console.log("Before we update, here's the finishingOrder being sent", finishingOrder)
     updateHorseData(finishingOrder)
     updatePlayerData(finishingOrder)
-    meetingRaceNumber ++;
-
+    
 }
 
 function updateHorseData(results) {
@@ -345,43 +342,38 @@ function updatePlayerData(results) {
 
 
 function handleNextRace() {
-    console.log("HandleNextRace - MeetingRace:", meetingRaceNumber, "Phase:", phase);
+    console.log("HandleNextRace!!!!!!!!!XXXXXXXX");
+    console.log("HandleNextRace - MeetingRace:", meetingRaceNumber);
 
-    // If we've run 6 races and phase is racing, that means race 6 was just shown but not run yet
-    if (meetingRaceNumber === 6 && phase === "racing") {
-        console.log("Race 6 shown but not completed yet. Waiting for start.");
-        console.log("Meeting Number.", meeting_number);
-        console.log("meetingRaceNumber.", meetingRaceNumber);
-        return; // don't proceed yet — wait for race 6 to be started & finished
-    }
+    // 🔁 Move increment to the top
+    meetingRaceNumber++;
+    gameRaceNumber++;
 
-    // If all races completed and phase is no longer racing, move to next meeting
-    if (meetingRaceNumber === 6 && phase !== "racing") {
-        phase = "end-of-meeting";
+    console.log("meetingRaceNumber +1. Now it's: ", meetingRaceNumber);
+    console.log("gameRaceNumber +1. Now it's: ", gameRaceNumber);
+
+    if (meetingRaceNumber == 6) {
         console.log("End of meeting reached.");
         nextRaceBtn.textContent = "Next Race"; // reset for next meeting
         startBtn.disabled = true;
         nextRaceBtn.disabled = false;
-        // call your showStandings() or nextMeeting() here if needed
+        handleContinueToNextMeeting();
         return;
     }
 
-    // Start new race
-    showRacecard(meetingRaceNumber);
-    phase = "racing";
-
-    startBtn.disabled = false;
-    nextRaceBtn.disabled = true;
-
-    // For the 6th race, show "Continue" next time
+    // Before the 6th race, show "Continue" next time
     if (meetingRaceNumber === 5) {
-        nextRaceBtn.textContent = "Continue";
+        console.log("meetingRaceNumber IS 5 ", meetingRaceNumber);
+        document.getElementById('next-race').textContent = "Continue";
     } else {
+        console.log("meetingRaceNumber IS NOT 5 ", meetingRaceNumber);
         nextRaceBtn.textContent = "Next Race";
     }
 
-    meetingRaceNumber++;
-    gameRaceNumber++;
+    showRacecard(meetingRaceNumber);
+
+    startBtn.disabled = false;
+    nextRaceBtn.disabled = true;
 }
 
 function handleContinueToNextMeeting() {
@@ -390,13 +382,12 @@ function handleContinueToNextMeeting() {
     if (meeting_number < 16) {
         incrementMeetingNumber();  // Advance the meeting
         meetingRaceNumber = 0;
-        phase = "selection";      // or whatever your selection phase is called
-
+        
         nextRaceBtn.textContent = "Next Race";
         nextRaceBtn.disabled = true;
         startBtn.disabled = true;
 
-        prepareHorseSelections();  // Your function to set up the next meeting
+        displayGameState(meeting_number);  // Your function to set up the next meeting
     } else {
         displayFinalStandings();
         nextRaceBtn.disabled = true;
