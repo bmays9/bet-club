@@ -1,4 +1,4 @@
-import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData } from './gameState.js';
+import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest, fitnessModifier } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
 import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState } from './horseracing.js';
 
@@ -33,7 +33,7 @@ export function showRacecard (racenum) {
        document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
     rDist = raceData.distances[gameRaceNumber];
-    rGoing = going[meeting_number];
+    rGoing = raceData.goings[meeting_number];
     rName = raceData.racenames[gameRaceNumber];
     rTime = raceTime[racenum];
     rPrize = Number(raceData.prizemoney[gameRaceNumber]);
@@ -65,14 +65,14 @@ export function showRacecard (racenum) {
     );
 
     const ratedHorses  = getHorseRatings(raceHorses, rDist, rGoing);
-
+    console.log("These ratings", ratedHorses);
     priceHorses = assignOdds(ratedHorses); // Adds odds based on ability
     
 
 
     console.log("This Lineup", lineups[racenum]);
     console.log("These raceHorses", raceHorses);
-    console.log("These ratings", ratedHorses);
+    
     console.log("These prices", priceHorses);
     
     // Set Racecard Headers
@@ -83,11 +83,14 @@ export function showRacecard (racenum) {
             <th>Trainer</th>
             <th>Form</th>
             <th>Odds</th>
+            <th>Rating</th>
+            <th>raceRating</th>
         </tr>`
 
     entries.forEach((entry, index) => {
         const horse = horseData.find(h => h.name === entry.horseName);
         const pricedHorse = priceHorses[index]; // Get the horse with odds added
+        console.log("Priced Horse", pricedHorse)
         const row = `
             <tr>
                 <td>${index + 1}</td>
@@ -95,6 +98,8 @@ export function showRacecard (racenum) {
                 <td>${entry.trainer}</td>
                 <td>${horse.form}</td>
                 <td>${pricedHorse.odds}</td> <!-- odds now correctly displayed -->
+                <td>${horse.rating}</td>
+                <td>${pricedHorse.raceRating}</td>
             </tr>
         `;
         racecardBody.innerHTML += row;
@@ -112,22 +117,29 @@ function getHorseRatings(raceHorses, distanceStr, going) {
     const raceDistanceF = distanceToFurlongs(rDist);
   
     return raceHorses.map(horse => {
+
       let rating = horse.rating;
-  
+      console.log("THIS HORSE:", horse.name) 
+      console.log("rating at the start", rating) 
       // Distance adjustment
       const bestDistF = horse.bestDist;
       const distDiff = Math.abs(bestDistF - raceDistanceF);
       const distPenalty = distDiff * horse.spread * 0.2;
       rating -= distPenalty;
+      console.log("rating adjusted for distance: ", rating) 
   
       // Going preference adjustment
       const goingModifier = getGoingModifier(horse.goingPref, going);
       rating += goingModifier;
+      console.log("rating adjusted for going: ", rating) 
   
       // Optional: other adjustments (age, rest, etc.)
-      rating -= horse.rest * 0.2;
-      rating += horse.wins * 0.5;
-  
+      let fitness = fitnessModifier(horse.rest)
+      
+      rating = rating * fitness
+      console.log("rating after fitness adjustment", rating)  
+      rating += horse.wins * 3; //3 points every win.
+    console.log("Race rating : ", Math.round(rating * 10) / 10)  
       return {
         ...horse,
         raceRating: Math.round(rating * 10) / 10 // rounded rating for this race
@@ -143,14 +155,70 @@ function getGoingModifier(pref, actual) {
 }
 
 function assignOdds(ratedHorses) {
-    const maxRating = Math.max(...ratedHorses.map(h => h.rating));
-    return ratedHorses.map(horse => {
-        const relativeChance = horse.rating / maxRating;
-        const impliedOdds = 1 / relativeChance;
-        const formattedOdds = formatOdds(impliedOdds);
-        return { ...horse, odds: formattedOdds };
+
+    // Step 1: Calculate implied probability and base odds using total of all ratings
+    const totalRating = ratedHorses.reduce((sum, h) => sum + h.raceRating, 0);
+
+    let horsesWithBaseOdds = ratedHorses.map(horse => {
+        const relativeChance = horse.raceRating / totalRating;
+        const impliedProbability = relativeChance;
+        const decimalOdds = 1 / impliedProbability;
+        console.log("Horse Base Odds - Start", horse.name, decimalOdds)
+        return { ...horse, baseProbability: impliedProbability, decimalOdds };
+    });
+   
+
+
+    // Step 2: Randomly adjust odds for 40 - 60% of horses
+    const numToAdjust = Math.floor(Math.random() * (horsesWithBaseOdds.length * 0.2)) + Math.ceil(horsesWithBaseOdds.length * 0.4); // 0.2 is the range, 0.4 is the base
+    const indicesToAdjust = new Set();
+
+    while (indicesToAdjust.size < numToAdjust) {
+        indicesToAdjust.add(Math.floor(Math.random() * horsesWithBaseOdds.length));
+    }
+
+    horsesWithBaseOdds = horsesWithBaseOdds.map((horse, i) => {
+        if (indicesToAdjust.has(i)) {
+            const adjustmentFactor = 1 + (Math.random() * 0.3 - 0.3); // +/-30%
+            horse.decimalOdds *= adjustmentFactor;
+            console.log("Adjustment Factor", adjustmentFactor)
+            console.log("Horse Adjusted Odds", horse.name, horse.decimalOdds)
+        }
+        return horse;
+    });
+
+
+    // Step 3: Calculate new implied probabilities after adjustment
+    horsesWithBaseOdds = horsesWithBaseOdds.map(horse => {
+        horse.adjustedProbability = 1 / horse.decimalOdds;
+        return horse;
+    });
+
+    // Step 4: Calculate total overround
+    let totalProbability = horsesWithBaseOdds.reduce((sum, h) => sum + h.adjustedProbability, 0);
+    console.log("totalProbability", totalProbability)
+
+    // Step 5: Adjust one horse to bring overround to 100–110%
+    horsesWithBaseOdds = adjustOverround(horsesWithBaseOdds, 1.0, 1.15);
+
+    console.log("Horse Base Odds - after overround adjustment",horsesWithBaseOdds)
+    totalProbability = horsesWithBaseOdds.reduce((sum, h) => sum + h.adjustedProbability, 0);
+    console.log("totalProbability at the end", totalProbability)
+
+    // Step 6: Final formatting
+    return horsesWithBaseOdds.map(horse => {
+        return {
+            ...horse,
+            odds: formatOdds(horse.decimalOdds)
+        };
     });
 }
+    // order the odds by their relative chance - favourite has the lowest odds. The odds dont have to reflect the relative chance exactly, as the player doesnt know the ratings.
+    // select between 1/3 and 1/4 of the horses to randomly adjust the odds. Up or down, by a random amount 
+    // then select another horse to adjust to make the overround of odds between 100% and 110% 
+    // later I will want to adjust the odds for horse.wins and horse.form
+
+
 
 // Utility: Convert distance string to furlongs
 function distanceToFurlongs(distStr) {
@@ -176,6 +244,38 @@ const commonOddsWithProb = commonFractionalOdds.map(([num, denom]) => {
     return { num, denom, impliedProb };
 });
 
+
+function adjustOverround(horses, minOverround = 1.0, maxOverround = 1.15) {
+    const targetOverround = minOverround + Math.random() * (maxOverround - minOverround);
+    let currentOverround = horses.reduce((sum, h) => sum + (1 / h.decimalOdds), 0);
+
+    // Pick one random horse to adjust
+    const adjustIndex = Math.floor(Math.random() * horses.length);
+    let adjustmentAttempts = 0;
+    const maxAttempts = 100;
+
+    while ((currentOverround < minOverround || currentOverround > maxOverround) && adjustmentAttempts < maxAttempts) {
+        const horse = horses[adjustIndex];
+        const currentProbability = 1 / horse.decimalOdds;
+
+        // Calculate needed scale factor for this horse only
+        const adjustmentFactor = targetOverround / currentOverround;
+        const newProbability = currentProbability * adjustmentFactor;
+
+        // Clamp adjustment between 0.01 and 0.99 to avoid weird odds
+        const clampedProbability = Math.min(Math.max(newProbability, 0.01), 0.99);
+
+        horse.decimalOdds = 1 / clampedProbability;
+        horse.adjustedProbability = clampedProbability;
+
+        // Recalculate total overround
+        currentOverround = horses.reduce((sum, h) => sum + (1 / h.decimalOdds), 0);
+        adjustmentAttempts++;
+    }
+
+    return horses;
+}
+
 function formatOdds(impliedOdds) {
     const impliedProb = 1 / impliedOdds;
     let closest = commonOddsWithProb[0];
@@ -193,9 +293,12 @@ function formatOdds(impliedOdds) {
 }
 
 function simulateRace(horses) {
+    const maxVariance = Math.max(...horses.map(h => h.raceRating)) / 10;
+    console.log("Variance as part of Max rating" ,maxVariance)
     const horsesWithRoll = horses.map(horse => {
-        const variance = (Math.random() - 0.5) * 0.3; // Tweakable randomness factor
-        const finalScore = horse.rating + variance;  // pure ability + noise
+        const variance = (Math.random()) * maxVariance; // Tweakable randomness factor - 10% of the max rating
+        const finalScore = horse.raceRating + variance;  // pure ability + noise
+        console.log("Horse Rating, and after variance" ,horse.raceRating, finalScore)
         return { ...horse, finalScore };
     });
 
@@ -246,6 +349,7 @@ function updateHorseData(results) {
         if (horseIndex !== -1) {
             const pos = index + 1;
             const h = horseData[horseIndex];
+            let rGoing = raceData.goings[meeting_number];
 
             // Add short form (e.g. "1", "2", etc.)
             h.form = (h.form || "") + pos;
@@ -273,10 +377,11 @@ function updateHorseData(results) {
 
             // ✅ Add full race history entry
             let rCourse = raceData.meetings[meeting_number];
+            console.log("rgoing:" , rGoing);
 
             h.history = h.history || [];
             h.history.push({
-                meeting: meeting_number,
+                meeting: meeting_number + 1,
                 course: rCourse,
                 going: rGoing,
                 distance: rDist,
@@ -378,6 +483,10 @@ function handleNextRace() {
 
 function handleContinueToNextMeeting() {
     console.log("Continuing to next meeting...");
+    // update horse rest +1
+    incrementHorseRest(horseData)
+
+
     
     if (meeting_number < 16) {
         incrementMeetingNumber();  // Advance the meeting

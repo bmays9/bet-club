@@ -66,3 +66,20 @@ export function allRacesHaveEntries() {
     }
     return true;
 }
+
+export function incrementHorseRest(horses) {
+    for (let horse of horses) {
+        horse.rest++;
+    }
+}
+
+export function fitnessModifier(fitnessLevel) {
+    if (fitnessLevel === 0) return 0.8;
+    if (fitnessLevel === 1) return 0.85;
+    if (fitnessLevel === 2) return 0.9;
+    if (fitnessLevel === 3) return 1.0;
+    if (fitnessLevel === 4) return 0.95;
+    if (fitnessLevel === 5) return 0.9;
+    
+    return 0.85;
+}

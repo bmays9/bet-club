@@ -48,7 +48,6 @@ async function buildRaceData() {
     console.log("Horsenames:", data.horsenames);
     shuffleArray(data.horsenames); // Shuffle the array
     data.horsenames = data.horsenames.slice(0, TOTALHORSES); // only need 6 * 24
-    console.log("Horsenames after slice:", data.horsenames);
     // Set going for each meeting
     const goingOptions = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
 
@@ -105,7 +104,6 @@ export function displayGameState(array) {
         document.getElementById('page-info').appendChild(newTable);
     }
 
-    console.log("TableHTML, should be the races", tableHtml);
     document.getElementById('gs-meeting-races').innerHTML = tableHtml;
 
     // Player data
@@ -408,7 +406,7 @@ function displayStable(currentPlayerIndex) {
 
 function showHistoryModal(horseName) {
     const horse = horseData.find(h => h.name === horseName);
-    const modalBody = document.getElementById('modalBodyContent');
+    const modalBody = document.getElementById('historyModalContent');
 
     if (!horse || !horse.history || horse.history.length === 0) {
         modalBody.innerHTML = `<p>No race history available for this horse.</p>`;
@@ -425,10 +423,10 @@ function showHistoryModal(horseName) {
         `).join("");
 
         modalBody.innerHTML = `
-            <table class="table table-striped">
+            <table class="table table-striped table-sm">
                 <thead>
                     <tr>
-                        <th>Meeting</th>
+                        <th>Wk</th>
                         <th>Course</th>
                         <th>Going</th>
                         <th>Distance</th>
@@ -461,6 +459,7 @@ export async function runHorseRacing(players) {
     setPlayerData(builtData); // <-- SAVE to shared state
 
     setHorseData(buildHorseData()); // <-- Same with horses
+    console.log("Horse Data:", horseData)
 
     displayGameState(meeting_number);
 

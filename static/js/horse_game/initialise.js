@@ -51,7 +51,7 @@ export function buildHorseData() {
     console.log("playerData:", playerData);
 
     for (let i = 0; i < 144; i++) {
-        let rating = Math.floor(Math.random() * 101) + 10; // 10 to 110
+        let rating = Math.floor(Math.random() * 101) + 50; // 50 to 200
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
         const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
         let age = Math.floor(Math.random() * 7 + 4);
@@ -94,8 +94,8 @@ export function adjustRatingByAge(baseRating, age) {
     if (age === 4) modifier = 0.90;
     else if (age === 5) modifier = 0.95;
     else if (age >= 6 && age <= 8) modifier = 1.00;
-    else if (age === 9) modifier = 0.95;
-    else if (age === 10) modifier = 0.90;
+    else if (age === 9) modifier = 0.90;
+    else if (age === 10) modifier = 0.80;
 
     return Math.round(baseRating * modifier);
 }
@@ -120,3 +120,4 @@ export function goingModifier(horseGoingPref, raceGoing) {
     if (distance === 2) return 0.85;
     return 0.75;
 }
+
