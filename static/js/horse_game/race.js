@@ -1,6 +1,7 @@
 import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest, fitnessModifier } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
 import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState } from './horseracing.js';
+import { shuffleArray } from './initialise.js';
 
 let gameRaceNumber = 0
 let meetingRaceNumber = 0
@@ -28,6 +29,9 @@ export function showRacecard (racenum) {
 
     console.log("Here's the horse Data" , horseData)
     console.log("Player Data before we start", playerData)
+
+    // Randomize the Betting Order
+    shuffleArray(playerData); // Shuffle the array
         
     console.log("Let's Race, gameracenume / racenum / meetingracenum", gameRaceNumber, racenum);
        document.getElementById('race-screen').style.display = "block";
@@ -85,6 +89,7 @@ export function showRacecard (racenum) {
             <th>Odds</th>
             <th>Rating</th>
             <th>raceRating</th>
+            <th>Bet</th>
         </tr>`
 
     entries.forEach((entry, index) => {
@@ -347,7 +352,7 @@ function updateHorseData(results) {
     results.forEach((horse, index) => {
         const horseIndex = horseData.findIndex(h => h.name === horse.name);
         if (horseIndex !== -1) {
-            const pos = index + 1;
+            const pos = (index + 1) <= 9 ? index + 1 : 0;
             const h = horseData[horseIndex];
             let rGoing = raceData.goings[meeting_number];
 

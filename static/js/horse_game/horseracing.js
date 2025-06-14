@@ -7,6 +7,7 @@ import {
 import {
     allEntries,
     canEnterRace,
+    computerSelect,
     enterHorse,
     displayRaceEntries,
     allRacesHaveEntries
@@ -28,7 +29,8 @@ import {
     setRaceEntries,
     setHorseData,
     setPlayerData,
-    setRaceData
+    setRaceData,
+    sortPlayerData
 } from './gameState.js';
 
 export let meeting_number = 0;
@@ -36,7 +38,7 @@ export let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"];
 let players = [];
 const TOTALHORSES = 144;
 export let going = [];
-let selectedRaceIndex = null;
+let selectedRaceIndex = 0;
 export let lineups = []; // stores final race line ups, taken from raceEntries after they are confirme
 
 
@@ -109,6 +111,7 @@ export function displayGameState(array) {
     // Player data
 
     console.log("Player Data", playerData);
+    sortPlayerData();
     let playerTableHtml = "";
     playerTableHtml = `<tr>
                 <th>Pos</th>
@@ -229,6 +232,11 @@ function displayStable(currentPlayerIndex) {
 
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
+    if (!playerData[currentPlayerIndex].human) {
+        computerSelect(playerData[currentPlayerIndex].name, meeting_number);
+        displayRaceSelections(); // Update selections        
+    }
+
     let stableHtml = `
         <tr>
             <th>Sel</th>
@@ -304,10 +312,15 @@ function displayStable(currentPlayerIndex) {
             const entered = enterHorse(playerName, horseName, selectedRaceIndex);
             console.log("Entered: ", entered);
             if (entered) {
+                
+                selectedRaceIndex ++;
+                if (selectedRaceIndex == 6)  {
+                    selectedRaceIndex = 0
+                }
 
                 displayRaceSelections(); // Update selections
                 displayStable(currentPlayerIndex); // Re-render stable
-
+                
                 // Check if all races have been entered and enable the button
                 let check = allRacesHaveEntries();
                 console.log("ARHE", check);
@@ -455,6 +468,7 @@ export function incrementMeetingNumber() {
 
 export async function runHorseRacing(players) {
     await buildRaceData();
+    console.log("Players", players);
     const builtData = resetPlayerData(players); // <-- BUILD playerData
     setPlayerData(builtData); // <-- SAVE to shared state
 

@@ -1,5 +1,5 @@
 // load_data.js
-import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
+import { fetchTextFiles, players } from "./load_data.js"; // Adjust the path if needed
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
 import { playerData, setPlayerData, horseData, setHorseData , raceData} from './gameState.js';
 
@@ -8,6 +8,7 @@ export function shuffleArray(array) {
         const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
         [array[i], array[j]] = [array[j], array[i]]; // Swap elements
     }
+    return array;
 }
 
 
@@ -40,7 +41,8 @@ export function resetPlayerData(playersList) {
         betting: 0,
         entries: 0,
         winnings: 0,
-        total: 0
+        total: 0,
+        human: player.human
     }));
 }
     

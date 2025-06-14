@@ -1,4 +1,18 @@
-import { raceEntries } from './gameState.js';
+import {
+    raceEntries,
+    playerData,
+    horseData,
+    raceData,
+    setRaceEntries,
+    setHorseData,
+    setPlayerData,
+    setRaceData,
+    sortPlayerData
+} from './gameState.js';
+
+import {
+    shuffleArray
+} from './initialise.js';
 
 export let allEntries = {
     "Player 1": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
@@ -60,3 +74,44 @@ export function allRacesHaveEntries() {
     return true; // Every race has at least one entry
 }
 
+export function computerSelect(playerName, meeting) {
+    let selectedHorses = [];
+        
+    let playerHorses = horseData.filter(horse => horse.owner === playerName);
+    console.log("playerHorses: comp select", playerHorses)
+    console.log("meeting: comp select", meeting)
+
+    if (meeting === 0) {
+        selectedHorses = playerHorses.slice(0, 8);
+    } else if (meeting === 1) {
+        selectedHorses = playerHorses.slice(9, 17);
+    } else if (meeting === 2) {
+        selectedHorses = playerHorses.slice(17, 25);
+    }
+
+    console.log("selectedHorses: comp select", selectedHorses)
+
+    // Initialize race entries
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i] = raceEntries[i] || [];
+    }
+
+    // Assign 1 horse to each of the 6 races
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i].push({
+            playerName,
+            horseName: selectedHorses[i].name
+        });
+    }
+
+    // Randomly assign 2 extra horses to different races
+    const extraRaces = shuffleArray([0, 1, 2, 3, 4, 5]).slice(0, 2);
+    raceEntries[extraRaces[0]].push({
+        playerName,
+        horseName: selectedHorses[6].name
+    });
+    raceEntries[extraRaces[1]].push({
+        playerName,
+        horseName: selectedHorses[7].name
+    });
+}
