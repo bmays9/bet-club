@@ -119,7 +119,7 @@ export function computerAutoSelect(playerName, meeting) {
 
 export function computerSelect(playerName, meetingNumber) {
     const playerHorses = horseData.filter(h => h.owner === playerName);
-    const startIndex = (meetingNumber - 1) * 6;
+    const startIndex = (meetingNumber) * 6;
     const endIndex = startIndex + 6;
 
     const availableRaces = [];
@@ -130,13 +130,17 @@ export function computerSelect(playerName, meetingNumber) {
             index: i - startIndex
         });
     }
+    console.log("TIme to pick Horses!")
+    console.log("Races Available", availableRaces)
 
     // Initialize race entries
     for (let i = 0; i < 6; i++) {
         raceEntries[i] = raceEntries[i] || [];
     }
 
-    const entriesPerRace = raceEntries.map(r => r.length);
+    console.log("raceEntries", raceEntries)
+
+    const entriesPerRace = Array.from({ length: 6 }, (_, i) => (raceEntries[i] || []).length); // ✅ safe
     const selectedHorses = new Set();
     const restPriority = [2, 3, 4, 5, 6]; // preferred order of rest values
 
@@ -145,6 +149,8 @@ export function computerSelect(playerName, meetingNumber) {
         const filtered = playerHorses.filter(h => h.rest === restValue && !selectedHorses.has(h.name));
         prioritizedHorses.push(...filtered);
     }
+
+    console.log("Prioritised Horses", prioritizedHorses)
 
     for (let horse of prioritizedHorses) {
         if (horse.rest <= 1) continue;
@@ -156,9 +162,12 @@ export function computerSelect(playerName, meetingNumber) {
 
         let entered = false;
 
+        console.log("Run / Win DIstances for", horse.name, runDistances, winDistances)
+
         // 1. Prioritize winning distances
         for (let race of availableRaces) {
             if (winDistances.includes(race.distance) && entriesPerRace[race.index] < 3) {
+                console.log("THERE WAS A WINNING MATCH! For" , horse.name)
                 raceEntries[race.index].push({
                     playerName,
                     horseName: horse.name
@@ -169,7 +178,7 @@ export function computerSelect(playerName, meetingNumber) {
                 break;
             }
         }
-
+        console.log("Entered Winning Match?", entered)
         if (entered) continue;
 
         // 2. Otherwise, use suitability and prefer empty races

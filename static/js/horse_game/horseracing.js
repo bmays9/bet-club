@@ -204,7 +204,7 @@ function displayRaceSelections() {
             </tr>`;
     }
 
-    document.getElementById('race-selection').innerHTML = selectionHtml;
+    document.getElementById('race-selection').innerHTML = selectionHtml; //updates race-selections div with table
 
     // ✅ Add click handlers right after rendering
     document.querySelectorAll('.race-row').forEach(row => {
@@ -415,6 +415,7 @@ if (!playerData[currentPlayerIndex].human) {
         if (currentPlayerIndex >= playerData.length) {
             console.log("Ready to show first race", lineups)
             // Hide setup screens
+            
             document.getElementById("race-selections").style.display = "none";
             document.getElementById("player-selections").style.display = "none";
             document.getElementById("player-stable").style.display = "none";
@@ -436,13 +437,14 @@ if (!playerData[currentPlayerIndex].human) {
     }
 }
 
-function showHistoryModal(horseName) {
+export function showHistoryModal(horseName) {
     const horse = horseData.find(h => h.name === horseName);
     const modalBody = document.getElementById('historyModalContent');
 
     if (!horse || !horse.history || horse.history.length === 0) {
         modalBody.innerHTML = `<p>No race history available for this horse.</p>`;
     } else {
+        document.getElementById('historyModalLabel').innerHTML = `${horse.name} | Race History`;
         const rows = horse.history.map(h => `
             <tr>
                 <td>${h.meeting}</td>

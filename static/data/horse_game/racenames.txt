@@ -2,8 +2,8 @@ The Brocklesby
 Southwell2m4
 Southwell2m
 Southwell1m
-The Derby Jackpot 
-Maiden Stakes
+Southwell3m
+The Derby Jackpot
 Newcastle4m
 Newcastle1m2
 Newcastle2m
@@ -28,7 +28,7 @@ Newmarket1m2
 Newmarket1m4
 Newmarket5f
 Newmarket1m
-Haydock3m
+Gold Cup Trial
 Haydock1m
 Haydock2m
 Haydock1m2
@@ -39,9 +39,9 @@ Goodwood2m
 Goodwood2m4
 Goodwood3m
 Goodwood4m
-Goodwood1m4
+Susssex Stakes
 Chester1m2
-Chester1m4
+Chester Oaks
 Chester4m
 Chester2m4
 Chester3m
@@ -57,7 +57,7 @@ Kempton2m
 Kempton4m
 Kempton5f
 Kempton1m2
-Kempton3m
+King George
 Doncaster1m
 Doncaster4m
 Doncaster3m
@@ -73,24 +73,24 @@ Chepstow4m
 Ascot4m
 Ascot2m4
 Ascot1m4
-Ascot5f
+Ascot Dash
 Ascot1m
-Ascot1m2
+1m3 Ascot
 Cheltenham5f
 Cheltenham1m2
 Cheltenham2m4
-Cheltenham2m
+Champion Hurdle
 Cheltenham4m
-Cheltenham3m
+Cheltenham Gold Cup
 Epsom2m
 Epsom3m
 Epsom5f
-Epsom1m
+The Mile
 Epsom1m2
-Epsom1m4
+The Derby
 Aintree1m4
 Aintree1m
 Aintree3m
-Aintree2m4
+Aintree Bowl
 Aintree2m
-Aintree4m
+Grand National

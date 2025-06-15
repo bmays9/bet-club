@@ -1,6 +1,6 @@
 import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest, fitnessModifier } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
-import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState } from './horseracing.js';
+import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState, showHistoryModal } from './horseracing.js';
 import { shuffleArray } from './initialise.js';
 
 let gameRaceNumber = 0
@@ -101,10 +101,13 @@ export function showRacecard (racenum) {
                 <td>${index + 1}</td>
                 <td>${entry.horseName}</td>
                 <td>${entry.trainer}</td>
-                <td>${horse.form}</td>
+                <td>
+                <a href="#" class="form-link" data-horse-name="${horse.name}">${horse.form}</a>
+                </td>
                 <td>${pricedHorse.odds}</td> <!-- odds now correctly displayed -->
                 <td>${horse.rating}</td>
                 <td>${pricedHorse.raceRating}</td>
+                <td>${horse.bestDist}</td>
             </tr>
         `;
         racecardBody.innerHTML += row;
@@ -112,6 +115,16 @@ export function showRacecard (racenum) {
 
     currentRatedHorses = ratedHorses;
     currentRacePrizes = rPrizes;
+
+    // Event Listener for form and showing full history
+
+    document.querySelectorAll('.form-link').forEach(link => {
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            const horseName = this.getAttribute('data-horse-name');
+            showHistoryModal(horseName);
+        });
+    });
 
     // nextRaceBtn.textContent = "Next Race";
     nextRaceBtn.disabled = true;
@@ -129,7 +142,7 @@ function getHorseRatings(raceHorses, distanceStr, going) {
       // Distance adjustment
       const bestDistF = horse.bestDist;
       const distDiff = Math.abs(bestDistF - raceDistanceF);
-      const distPenalty = distDiff * horse.spread * 0.2;
+      const distPenalty = distDiff * horse.spread * 0.4;
       rating -= distPenalty;
       console.log("rating adjusted for distance: ", rating) 
   
@@ -375,7 +388,7 @@ function updateHorseData(results) {
             h.runs = h.runs + 1;
 
             // Add prize money
-            const prizeMoney = rPrizes[index];
+            const prizeMoney = Number(rPrizes[index]);
             if (prizeMoney) {
                 h.money = (h.money || 0) + Number(prizeMoney);
             }
