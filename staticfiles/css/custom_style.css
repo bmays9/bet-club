@@ -88,7 +88,26 @@
        
 }
 
+.stable-container {
+  position: relative;
+  height: 600px; /* Adjust as needed */
+  display: flex;
+  flex-direction: column;
+}
 
+#player-selections {
+  background-color: #f8f9fa; /* Optional: subtle background */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 5px;
+}
+
+.stable-table {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 500px; /* Adjust based on your layout */
+}
 
 #game-banner {
   font-size: 1rem;        /* smaller than default */

@@ -23,11 +23,12 @@ export async function fetchTextFiles() {
             if (!response.ok) throw new Error(`Failed to load ${file}`);
             const text = await response.text();
             fileData[file.replace('.txt', '')] = text.split("\n").map(line => line.trim());
+
         } catch (error) {
             console.error(`Error loading ${file}:`, error);
         }
     }
-
+    
     console.log("Loaded file data:", fileData);
     return fileData;
 }
