@@ -10,6 +10,7 @@ export async function fetchTextFiles() {
         "horsenames.txt",
         "meetings.txt",
         "distances.txt",
+        "raceclass.txt",
         "racenames.txt",
         "prizemoney.txt"
     ];
@@ -18,7 +19,7 @@ export async function fetchTextFiles() {
 
     for (const file of fileNames) {
         try {
-            const response = await fetch(baseUrl + file);
+            const response = await fetch(`${baseUrl + file}?v=${Date.now()}`);
             if (!response.ok) throw new Error(`Failed to load ${file}`);
             const text = await response.text();
             fileData[file.replace('.txt', '')] = text.split("\n").map(line => line.trim());

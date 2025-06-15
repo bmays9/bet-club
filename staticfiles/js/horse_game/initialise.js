@@ -1,5 +1,5 @@
 // load_data.js
-import { fetchTextFiles } from "./load_data.js"; // Adjust the path if needed
+import { fetchTextFiles, players } from "./load_data.js"; // Adjust the path if needed
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
 import { playerData, setPlayerData, horseData, setHorseData , raceData} from './gameState.js';
 
@@ -8,6 +8,7 @@ export function shuffleArray(array) {
         const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
         [array[i], array[j]] = [array[j], array[i]]; // Swap elements
     }
+    return array;
 }
 
 
@@ -40,7 +41,8 @@ export function resetPlayerData(playersList) {
         betting: 0,
         entries: 0,
         winnings: 0,
-        total: 0
+        total: 0,
+        human: player.human
     }));
 }
     
@@ -51,11 +53,12 @@ export function buildHorseData() {
     console.log("playerData:", playerData);
 
     for (let i = 0; i < 144; i++) {
-        let rating = Math.floor(Math.random() * 101) + 10; // 10 to 110
+        let rating = Math.floor(Math.random() * 81) + 70; // 70 to 150
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
         const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
         let age = Math.floor(Math.random() * 7 + 4);
-        let rest = 0
+        let rest = 1;
+        let form = "";
         const goingPref = getRandomGoingPreference();
         const name = raceData.horsenames[i];
         // Assign owner in chunks of 24
@@ -63,6 +66,7 @@ export function buildHorseData() {
         const owner = playerData[ownerIndex].name || `Unknown`;
         let number = i + 1
         let runs = 0, wins = 0, money = 0  
+        let history = [];
         
         horses.push({
             number,
@@ -76,8 +80,10 @@ export function buildHorseData() {
             age,
             rest,
             runs,
+            form,
             wins,
             money,
+            history,
         });
     }
 
@@ -90,8 +96,8 @@ export function adjustRatingByAge(baseRating, age) {
     if (age === 4) modifier = 0.90;
     else if (age === 5) modifier = 0.95;
     else if (age >= 6 && age <= 8) modifier = 1.00;
-    else if (age === 9) modifier = 0.95;
-    else if (age === 10) modifier = 0.90;
+    else if (age === 9) modifier = 0.90;
+    else if (age === 10) modifier = 0.80;
 
     return Math.round(baseRating * modifier);
 }
@@ -116,3 +122,4 @@ export function goingModifier(horseGoingPref, raceGoing) {
     if (distance === 2) return 0.85;
     return 0.75;
 }
+

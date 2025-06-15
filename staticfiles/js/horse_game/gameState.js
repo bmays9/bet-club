@@ -15,6 +15,11 @@ export function setPlayerData(data) {
     playerData = data;
 }
 
+export function sortPlayerData() {
+    playerData.sort((a, b) => (b.total || 0) - (a.total || 0));
+}
+
+
 export function setHorseData(data) {
     horseData = data;
 }
@@ -60,4 +65,25 @@ export function allRacesHaveEntries() {
         }
     }
     return true;
+}
+
+export function incrementHorseRest(horses) {
+    console.log("Incrementing Rest:")
+    console.log(horses)
+    for (let horse of horses) {
+        horse.rest++;
+    }
+    console.log("Incrementing Rest: Check it was done")
+    console.log(horses)
+}
+
+export function fitnessModifier(fitnessLevel) {
+    if (fitnessLevel === 1) return 0.8;
+    if (fitnessLevel === 2) return 0.9;
+    if (fitnessLevel === 3) return 1.0;
+    if (fitnessLevel === 4) return 0.95;
+    if (fitnessLevel === 5) return 0.9;
+    if (fitnessLevel === 6) return 0.85;
+    
+    return 0.85;
 }

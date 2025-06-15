@@ -73,12 +73,14 @@ California Chrome
 California Cruise
 Camelott
 Camen Isles
+Candella
 Canning Fox
 Cape Town Prince
 Carbonetra
 Carnevale
 Carruso
 Castlegrace
+Cavanaugh Park
 Celestial Speedster
 Cellar Door
 Celtic Song
@@ -111,15 +113,18 @@ Cut The Deck
 Cyclone Express
 Dagger Strike
 Dallawi
+Dashboard Elle
 Dawn Ruler
 DeChambeau
 Deja Vous
 Denmania
 Denton Abbey
 Dessert Orchid
+Detectorist
 Detroit Dealer
 Devilfish
 Diamond Blitz
+Doctor Majestic
 Donegal Boy
 Double Millennium
 Dr October
@@ -167,6 +172,7 @@ Galactic Sprinter
 Gallopin Des Chance
 Gepeto
 Get To The Money
+Getaway Smoke
 Ghostzapper
 Going For Gold
 Gold Or Bronze
@@ -174,9 +180,11 @@ Golden Milchik
 Golden Throttle
 Gothenburg
 Grafiti Noise
+Grammatic Effect
 Gravity Rider
 Great Hope
 Gretsky
+Gundogan
 Gunendran
 Haaland
 Haljik
@@ -192,7 +200,7 @@ Hightop Glass
 Himalaya
 Hit The Sky
 Hitcharide
-HMS Hawkley
+HMS Belfast
 Holding Aces
 Honkington
 Hooping Around
@@ -213,17 +221,16 @@ Infernal Streak
 Inferno Flash
 Inferno Surge
 Infinity Charger
-Infinity Hoof
 Infinity Jet
 Infinityorbust
+Iniesta
 Inkwell
 Inta Orbit
 Inverted Sun
-Irani's Barnet
 Iron Mallet
 Iron Stallion
 Iron Thunder
-Istabraq
+Istabrack
 Jacksonville
 J'adore
 Jargon Buster
@@ -245,6 +252,7 @@ Kyoto Embrace
 La Rochelle
 Lake Coniston
 Lamela
+Leovita
 Light Years 
 Lightning Comet
 Lightning Hooves
@@ -263,7 +271,7 @@ Magellan
 Magnifica
 Malbec Maestro
 Man On War
-Manning's Way
+Mannings Way
 Map Of The Stars
 Marjoom
 Master Francis
@@ -285,11 +293,14 @@ Miss Girling
 Miss Marble
 Mister Cranston
 Mitrovic
+Monday Flowers
 Monoplastic
 Montre Fondue
+Montrose Pier 
 More Or Less
 Morning Bob
 Mort Subite
+Mortified
 Moura The Third
 Mr Baxter
 Mr Strikeback
@@ -309,6 +320,7 @@ Nuraji
 Oak Reef
 Obelisk
 Odegaard
+Off The Wall
 Olazabal
 Omega Racer
 On The River Nile
@@ -319,6 +331,7 @@ Operation Forest
 Orinoco
 Ornathologist
 Ounce Or Pounce
+Our Confession
 Out Of Ammo
 Out To Get Yer
 Outback Larry
@@ -326,6 +339,7 @@ Outerbelly
 Palinka
 Papillon de Minuit
 Passenger Forty
+Pedrovia
 Pegasus Fire
 Pegasus Lightning
 Peralta Six
@@ -338,12 +352,12 @@ Photographic
 Pizaglo
 Planet Infusion
 Portman Road
-Portsmouth Pier 
 Poured It Over
 Practical Jest
 Pragmatic
 Pringle To Mingle
 Progress In Turn
+Punk Rock Princess
 Quantum Burst
 Quantum Ice
 Queen Of Clubs
@@ -369,6 +383,7 @@ Real Minty
 Reclaim
 Red Architect
 Red Lightning
+Red Morning
 Red Rumble
 Red Titan Charger
 Red Tuxedo
@@ -382,6 +397,7 @@ Romford Park
 Rory's Glory
 Roundabout
 Ruler of the World
+Sacramento
 Sad Ken
 Saint Fallon
 Saliarna
@@ -447,6 +463,7 @@ Tales Of Tregawne
 Tangential
 Tapit
 Tear Jerker
+Teenage Rockstar
 Telecom
 Tempura Flyer
 Tendulkar
@@ -502,7 +519,7 @@ Undercooked
 Unintended
 Up The Bracket
 Urban Denial
-Valkyrie Hoofbeat
+Valencia
 Vancroix
 Vautorn
 Velocity Ace
@@ -510,6 +527,7 @@ Velocity Storm
 Velours Noir
 Velvet Symphony
 Venatour
+Venus In Spring
 Vertical Retreat
 Vertonghen
 Vienna World
