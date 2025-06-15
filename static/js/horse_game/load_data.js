@@ -10,6 +10,7 @@ export async function fetchTextFiles() {
         "horsenames.txt",
         "meetings.txt",
         "distances.txt",
+        "raceclass.txt",
         "racenames.txt",
         "prizemoney.txt"
     ];

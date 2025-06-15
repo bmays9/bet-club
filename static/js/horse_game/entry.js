@@ -74,7 +74,7 @@ export function allRacesHaveEntries() {
     return true; // Every race has at least one entry
 }
 
-export function computerSelect(playerName, meeting) {
+export function computerAutoSelect(playerName, meeting) {
     let selectedHorses = [];
         
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
@@ -84,9 +84,9 @@ export function computerSelect(playerName, meeting) {
     if (meeting === 0) {
         selectedHorses = playerHorses.slice(0, 8);
     } else if (meeting === 1) {
-        selectedHorses = playerHorses.slice(9, 17);
+        selectedHorses = playerHorses.slice(8, 16);
     } else if (meeting === 2) {
-        selectedHorses = playerHorses.slice(17, 25);
+        selectedHorses = playerHorses.slice(16, 24);
     }
 
     console.log("selectedHorses: comp select", selectedHorses)
@@ -114,4 +114,117 @@ export function computerSelect(playerName, meeting) {
         playerName,
         horseName: selectedHorses[7].name
     });
+}
+
+
+export function computerSelect(playerName, meetingNumber) {
+    const playerHorses = horseData.filter(h => h.owner === playerName);
+    const startIndex = (meetingNumber - 1) * 6;
+    const endIndex = startIndex + 6;
+
+    const availableRaces = [];
+    for (let i = startIndex; i < endIndex; i++) {
+        availableRaces.push({
+            distance: raceData.distances[i],
+            raceClass: raceData.raceclass[i],
+            index: i - startIndex
+        });
+    }
+
+    // Initialize race entries
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i] = raceEntries[i] || [];
+    }
+
+    const entriesPerRace = raceEntries.map(r => r.length);
+    const selectedHorses = new Set();
+    const restPriority = [2, 3, 4, 5, 6]; // preferred order of rest values
+
+    const prioritizedHorses = [];
+    for (let restValue of restPriority) {
+        const filtered = playerHorses.filter(h => h.rest === restValue && !selectedHorses.has(h.name));
+        prioritizedHorses.push(...filtered);
+    }
+
+    for (let horse of prioritizedHorses) {
+        if (horse.rest <= 1) continue;
+
+        const runDistances = (horse.history || []).map(h => h.distance);
+        const winDistances = (horse.history || [])
+            .filter(h => h.position === 1)
+            .map(h => h.distance);
+
+        let entered = false;
+
+        // 1. Prioritize winning distances
+        for (let race of availableRaces) {
+            if (winDistances.includes(race.distance) && entriesPerRace[race.index] < 3) {
+                raceEntries[race.index].push({
+                    playerName,
+                    horseName: horse.name
+                });
+                entriesPerRace[race.index]++;
+                selectedHorses.add(horse.name);
+                entered = true;
+                break;
+            }
+        }
+
+        if (entered) continue;
+
+        // 2. Otherwise, use suitability and prefer empty races
+        const sortedRaces = availableRaces
+            .map(race => ({
+                ...race,
+                hasRunDistance: runDistances.includes(race.distance)
+            }))
+            .sort((a, b) => {
+                if (entriesPerRace[a.index] === 0 && entriesPerRace[b.index] > 0) return -1;
+                if (entriesPerRace[a.index] > 0 && entriesPerRace[b.index] === 0) return 1;
+                return a.raceClass - b.raceClass;
+            });
+
+        for (let race of sortedRaces) {
+            if (entriesPerRace[race.index] >= 3) continue;
+            if (race.raceClass === 1 && !race.hasRunDistance) continue;
+            if (race.raceClass === 2 && horse.rest < 3 && !race.hasRunDistance) continue;
+            if (race.raceClass === 4 && race.hasRunDistance) continue;
+
+            raceEntries[race.index].push({
+                playerName,
+                horseName: horse.name
+            });
+            entriesPerRace[race.index]++;
+            selectedHorses.add(horse.name);
+            break;
+        }
+    }
+}
+
+export function getRestIndicator(rest) {
+
+    let color;
+    let displayRest = rest;
+
+    switch (rest) {
+        case 0: color = "red"; break;
+        case 1: color = "orange"; break;
+        case 2: color = "forestgreen"; break;
+        case 3: color = "lightgreen"; break;
+        case 4: color = "turquoise"; break;
+        default: color = "tan"; displayRest = "="; break;
+    }
+
+    return `<span style="
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        border-radius: 50%;
+        background-color: ${color};
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        font-size: 12px;
+    ">${displayRest}</span>`;
 }

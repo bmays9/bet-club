@@ -6,11 +6,13 @@ import {
 } from "./race.js";
 import {
     allEntries,
+    allRacesHaveEntries,
     canEnterRace,
+    computerAutoSelect,
     computerSelect,
     enterHorse,
     displayRaceEntries,
-    allRacesHaveEntries
+    getRestIndicator
 } from './entry.js';
 import {
     shuffleArray,
@@ -232,10 +234,14 @@ function displayStable(currentPlayerIndex) {
 
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
-    if (!playerData[currentPlayerIndex].human) {
+if (!playerData[currentPlayerIndex].human) {
+    if (meeting_number < 3) {
+        computerAutoSelect(playerData[currentPlayerIndex].name, meeting_number);
+    } else {
         computerSelect(playerData[currentPlayerIndex].name, meeting_number);
-        displayRaceSelections(); // Update selections        
     }
+    displayRaceSelections(); // Update selections
+}
 
     let stableHtml = `
         <tr>
@@ -249,31 +255,44 @@ function displayStable(currentPlayerIndex) {
         </tr>
     `;
 
+    // Sort horses by rest descending, then by money descending
+    playerHorses.sort((a, b) => {
+        if (b.rest !== a.rest) {
+            return b.rest - a.rest; // Primary: higher rest first
+        } else {
+            return b.money - a.money; // Secondary: higher winnings first
+        }
+    });
+
     // Loop over player's horses and display stable data
     for (let i = 0; i < playerHorses.length; i++) {
         const horse = playerHorses[i];
+                // Defines fitness colouring
+        const restIndicator = getRestIndicator(horse.rest);
 
         let enteredRaceIndex = null;
         for (let j = 0; j < 6; j++) {
-            if (raceEntries[j].includes(horse.name)) {
+            if (raceEntries[j].some(entry => entry.horseName === horse.name)) {
                 enteredRaceIndex = j;
                 break;
             }
         }
 
         const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : "➤";
-        const rowClass = enteredRaceIndex !== null ? "table-success" : "";
+        const rowClass = enteredRaceIndex !== null ? "table-active" : "";
 
         stableHtml += `
             <tr class="${rowClass}">
                 <td>
-                    <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
-                    <label 
-                        class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn" 
-                        data-horse-name="${horse.name}" 
-                        for="btnradio${i}">${entrySymbol}</label>
+                    ${playerData[currentPlayerIndex].human ? `
+                        <input type="radio" class="btn-check horse-select" name="btnradio" id="btnradio${i}" autocomplete="off">
+                        <label 
+                            class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn" 
+                            data-horse-name="${horse.name}" 
+                            for="btnradio${i}">${entrySymbol}</label>
+                    ` : ''}
                 </td>            
-                <td>${horse.rest}</td>            
+                <td>${restIndicator}</td>           
                 <td>${horse.name}</td>
                 <td>${horse.runs}</td>
                 <td>${horse.wins}</td>

@@ -53,11 +53,11 @@ export function buildHorseData() {
     console.log("playerData:", playerData);
 
     for (let i = 0; i < 144; i++) {
-        let rating = Math.floor(Math.random() * 101) + 50; // 50 to 200
+        let rating = Math.floor(Math.random() * 81) + 70; // 70 to 150
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
         const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
         let age = Math.floor(Math.random() * 7 + 4);
-        let rest = 0;
+        let rest = 1;
         let form = "";
         const goingPref = getRandomGoingPreference();
         const name = raceData.horsenames[i];
