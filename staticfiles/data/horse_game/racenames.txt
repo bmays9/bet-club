@@ -1,96 +1,96 @@
 The Brocklesby
-Southwell2m4
-Southwell2m
-Southwell1m
-Southwell3m
-The Derby Jackpot
-Newcastle4m
-Newcastle1m2
-Newcastle2m
-Newcastle1m
-Newcastle1m4
-Newcastle3m
-York1m2
-York4m
-York5f
-York1m
-York2m4
-York2m
-Ayr3m
-Ayr1m4
-Ayr2m4
-Ayr5f
-Ayr4m
-Ayr1m2
-Newmarket2m
-Newmarket4m
-Newmarket1m2
-Newmarket1m4
-Newmarket5f
-Newmarket1m
-Gold Cup Trial
-Haydock1m
-Haydock2m
-Haydock1m2
-Haydock5f
-Haydock2m4
-Goodwood1m
-Goodwood2m
-Goodwood2m4
-Goodwood3m
-Goodwood4m
-Susssex Stakes
-Chester1m2
-Chester Oaks
-Chester4m
-Chester2m4
-Chester3m
-Chester5f
-Sandown1m
-Sandown2m4
-Sandown1m4
-Sandown1m2
-Sandown5f
-Sandown2m
-Kempton2m4
-Kempton2m
-Kempton4m
-Kempton5f
-Kempton1m2
-King George
-Doncaster1m
-Doncaster4m
-Doncaster3m
-Doncaster5f
-Doncaster1m4
-Doncaster1m2
-Chepstow1m4
-Chepstow2m
-Chepstow1m
-Chepstow3m
-Chepstow2m4
-Chepstow4m
-Ascot4m
-Ascot2m4
-Ascot1m4
-Ascot Dash
-Ascot1m
-1m3 Ascot
-Cheltenham5f
-Cheltenham1m2
-Cheltenham2m4
+Hever Stakes
+Sprinter Sacre Chase
+Opening Mile
+Southwell Chase
+Winter Derby Jackpot
+Eidar Chase
+Churchill Stakes
+Fighting Fifth
+Burradon Stakes
+Hoppings Stakes
+Northumberland Plate
+Musidora Stakes
+Lonsdale Cup
+Nunthorpe Stakes
+Acomb Stakes
+Bronte Cup
+Ebor
+Ayr World Hurdle
+Scottish Derby
+Future Champions Stakes
+Ayr Gold Cup
+Scottish Grand National
+Doonside Cup
+Dewhurst
+Cesarewitch
+Falmouth Stakes
+Princess Royal Stakes
+July Cup
+3000 Guineas
+Betfair Chase
+Silver Bowl
+Swinton Hurdle
+Lancashire Oaks
+Temple Stakes
+Tommy Whittle Chase
+Sussex Stakes
+Goodwood Cup
+Sussex Ryanair Trial
+Glorious Cup
+Celebration Stayers
+Nassau Stakes
+Chester Vase
+Cheshire Oaks
+Huxley Stakes
+Chester Cup
+Ormonde Trophy
+Queensferry Sprint Cup
+Eclipse Stakes
+Scilly Isles
+Brigadier Gerard Stakes
+Gordon Richards Stakes
+National Stakes
+Tingle Creek
+Wayward Lad
+Desert Orchid Chase
+Kauto Star Chase
+Sirenia Stakes
+Magnolia Stakes
+King George VI Chase
+Lincoln
+Grimthorpe
+River Don Hurdle
+Portland Cup
+Wentworth Stakes
+St Leger
+Welsh Last Chance Derby
+Welsh Champion Hurdle
+Golden Daffodil Stakes
+Silver Trophy
+Persian War Hurdle
+Welsh National
+Long Walk Hurdle
+Ascot Gold Cup
+Queen Anne Stakes
+King Charles III Stakes
+St James Palace Stakes
+Champion Stakes
+Supreme Sprint
+Boodles Trophy
+Ryanair
 Champion Hurdle
-Cheltenham4m
+NH Chase
 Cheltenham Gold Cup
-Epsom2m
-Epsom3m
-Epsom5f
-The Mile
-Epsom1m2
-The Derby
-Aintree1m4
-Aintree1m
-Aintree3m
+Surrey Stakes
+Princess Elizabeth Stakes
+Epsom Dash
+Diomed Stakes
+Coronation Cup
+Derby
+Liverpool Cup
+Becher Mile
+Aintree Hurdle
 Aintree Bowl
-Aintree2m
+Old Roan Chase
 Grand National

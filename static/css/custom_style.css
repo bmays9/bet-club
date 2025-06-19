@@ -66,7 +66,10 @@
   }
 
 
-/* Horse Racing */
+/*==================================================== Horse Racing */
+
+/* Classes */ 
+
 .player-entry {
     display: flex;
     align-items: center;
@@ -88,11 +91,45 @@
        
 }
 
+.select-horse {
+  width: 80px
+}
+
+.selection-cell {
+    width: 25%;      /* adjust as needed */
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .stable-container {
   position: relative;
   height: 600px; /* Adjust as needed */
   display: flex;
   flex-direction: column;
+}
+
+/*    IDs  */ 
+
+#race-selection-table th,
+#race-selection-table td {
+    white-space: nowrap;
+}
+
+#race-selection-table th:first-child,
+#race-selection-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 2;
+}
+
+#race-selection-table th:nth-child(2),
+#race-selection-table td:nth-child(2) {
+    position: sticky;
+    left: 70px; /* adjust based on width of first column */
+    background: white;
+    z-index: 2;
 }
 
 #player-selections {
@@ -108,6 +145,14 @@
   flex: 1;
   max-height: 500px; /* Adjust based on your layout */
 }
+
+
+#race-selection-table {
+    table-layout: fixed;
+    width: 100%;
+    white-space: nowrap;
+}
+
 
 #game-banner {
   font-size: 1rem;        /* smaller than default */

@@ -53,9 +53,10 @@ export function buildHorseData() {
     console.log("playerData:", playerData);
 
     for (let i = 0; i < 144; i++) {
-        let rating = Math.floor(Math.random() * 81) + 70; // 70 to 150
+        // let rating = Math.floor(Math.random() * 81) + 70; // 70 to 150 - uses even distribution.
+        let rating = randomNormalRating();
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
-        const spread = parseFloat((Math.random() * 8 + 2).toFixed(2)); // 2.00 to 10.00
+        const spread = parseFloat((Math.random() * 6 + 2).toFixed(2)); // 2.00 to 10.00
         let age = Math.floor(Math.random() * 7 + 4);
         let rest = 1;
         let form = "";
@@ -123,3 +124,13 @@ export function goingModifier(horseGoingPref, raceGoing) {
     return 0.75;
 }
 
+function randomNormalRating(mean = 110, stddev = 15, min = 70, max = 150) {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random(); // avoid 0
+    while (v === 0) v = Math.random();
+    let standardNormal = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    let rating = Math.round(mean + stddev * standardNormal);
+
+    // Clamp to valid range
+    return Math.max(min, Math.min(max, rating));
+}

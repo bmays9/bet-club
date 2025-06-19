@@ -237,3 +237,25 @@ export function getRestIndicator(rest) {
         font-size: 12px;
     ">${displayRest}</span>`;
 }
+
+// Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘
+export function getBestFinishSymbol(text) {
+    console.log("Getting the form symbol for POS", text)
+    if (typeof text !== 'string') return '';  // Guard against non-string values 
+    if (text.includes("1")) return "🏆";
+    if (text.includes("2")) return "🥈";
+    if (text.includes("3")) return "🥉";
+    if (text.includes("0")) return "❌";
+    if (["4th", "5th", "6th"].some(pos => text.includes(pos))) return "🟤";
+    return "";
+}
+
+// Loops through all horse-distance-form cells and replaces their content with a symbol
+export function addDistanceFormSymbols() {
+    const cells = document.querySelectorAll('.horse-distance-form');
+    cells.forEach(cell => {
+        const text = cell.textContent.trim();
+        const symbol = getBestFinishSymbol(text);
+        cell.innerHTML = symbol;
+    });
+}

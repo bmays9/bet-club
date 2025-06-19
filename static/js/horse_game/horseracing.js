@@ -5,6 +5,7 @@ import {
     showRacecard
 } from "./race.js";
 import {
+    addDistanceFormSymbols,
     allEntries,
     allRacesHaveEntries,
     canEnterRace,
@@ -12,6 +13,7 @@ import {
     computerSelect,
     enterHorse,
     displayRaceEntries,
+    getBestFinishSymbol,
     getRestIndicator
 } from './entry.js';
 import {
@@ -181,13 +183,19 @@ function displayRaceSelections() {
     let selectionHtml = `<tr>
             <th>Time</th>
             <th>Dist</th>
-            <th>#1</th>
-            <th>#2</th>
-            <th>#3</th>
+            <th>Cls</th>
+            <th>Prize</th>
+            <th>Name</th>
+            <th class="select-horse selection-cell">#1</th>
+            <th class="select-horse selection-cell">#2</th>
+            <th class="select-horse selection-cell">#3</th>
         </tr>`;
 
     for (let i = 0; i < 6; i++) {
         const distance = raceData.distances[meeting_number * 6 + i] || "—";
+        const rname = raceData.racenames[meeting_number * 6 + i];
+        const rprize = raceData.prizemoney[meeting_number * 6 + i];
+        const rclass = raceData.raceclass[meeting_number * 6 + i];
         const entries = raceEntries[i] || [];
         const selections = [
             entries[0]?.horseName || "",
@@ -198,14 +206,23 @@ function displayRaceSelections() {
         selectionHtml += `<tr class="race-row ${selectedRaceIndex === i ? 'table-primary' : ''}" data-index="${i}">
                 <td>${raceTime[i]}</td>
                 <td>${distance}</td>
-                <td>${selections[0]}</td>
-                <td>${selections[1]}</td>
-                <td>${selections[2]}</td>
+                <td>${rclass}</td>
+                <td>£${rprize}</td>
+                <td>${rname}</td>
+                <td class="selection-cell">${selections[0]}</td>
+                <td class="selection-cell">${selections[1]}</td>
+                <td class="selection-cell">${selections[2]}</td>
             </tr>`;
     }
 
     document.getElementById('race-selection').innerHTML = selectionHtml; //updates race-selections div with table
 
+
+    // Call the function after the DOM is ready
+    document.addEventListener("DOMContentLoaded", function() {
+        addDistanceFormSymbols();
+    });
+    
     // ✅ Add click handlers right after rendering
     document.querySelectorAll('.race-row').forEach(row => {
         row.addEventListener('click', function() {
@@ -234,24 +251,40 @@ function displayStable(currentPlayerIndex) {
 
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
-if (!playerData[currentPlayerIndex].human) {
-    if (meeting_number < 3) {
-        computerAutoSelect(playerData[currentPlayerIndex].name, meeting_number);
-    } else {
-        computerSelect(playerData[currentPlayerIndex].name, meeting_number);
+    const distanceKeys = ["5f", "1m", "1m2", "1m4", "2m", "2m4", "3m", "4m"];
+    const distanceToFurlongs = {
+        "5f": 5, "1m": 8, "1m2": 10, "1m4": 12,
+        "2m": 16, "2m4": 20, "3m": 24, "4m": 32
+    };
+
+    if (!playerData[currentPlayerIndex].human) {
+        if (meeting_number < 3) {
+            computerAutoSelect(playerData[currentPlayerIndex].name, meeting_number);
+        } else {
+            computerSelect(playerData[currentPlayerIndex].name, meeting_number);
+        }
+        displayRaceSelections(); // Update selections
     }
-    displayRaceSelections(); // Update selections
-}
 
     let stableHtml = `
         <tr>
             <th>Sel</th>
             <th>Fit</th>
             <th>Name</th>
+            <th>Age</th>
+            <th>Form</th>
+            <th>Winnings</th>
             <th>R</th>
             <th>W</th>
-            <th>Winnings</th>
-            <th>Form</th>
+            <th>5f</th>
+            <th>1m</th>
+            <th>1m2</th>
+            <th>1m4</th>
+            <th>2m</th>
+            <th>2m4</th>
+            <th>3m</th>
+            <th>4m</th>
+            
         </tr>
     `;
 
@@ -270,6 +303,32 @@ if (!playerData[currentPlayerIndex].human) {
                 // Defines fitness colouring
         const restIndicator = getRestIndicator(horse.rest);
 
+        let distanceResults = distanceKeys.map(distKey => {
+    // Filter history entries matching the current distance string
+    const historyAtDistance = horse.history.filter(entry => entry.distance === distKey);
+
+    // Find the best (lowest) finishing position
+    let bestPosition = null;
+    historyAtDistance.forEach(entry => {
+        if (!bestPosition || entry.position < bestPosition) {
+            bestPosition = entry.position;
+        }
+    });
+
+    // Convert the best position to a label (e.g., "1st", "2nd")
+        let posLabel = "";
+        if (bestPosition === 1) posLabel = "1st";
+        else if (bestPosition === 2) posLabel = "2nd";
+        else if (bestPosition === 3) posLabel = "3rd";  
+        else if ([4, 5, 6].includes(bestPosition)) posLabel = bestPosition + "th";
+        else if (bestPosition > 6) posLabel = "0";
+        else posLabel = "";  // No races at this distance
+
+        return `<td>${getBestFinishSymbol(posLabel)}</td>`;
+    }).join('');
+
+
+        
         let enteredRaceIndex = null;
         for (let j = 0; j < 6; j++) {
             if (raceEntries[j].some(entry => entry.horseName === horse.name)) {
@@ -294,12 +353,14 @@ if (!playerData[currentPlayerIndex].human) {
                 </td>            
                 <td>${restIndicator}</td>           
                 <td>${horse.name}</td>
-                <td>${horse.runs}</td>
-                <td>${horse.wins}</td>
-                <td>£${horse.money}</td>
+                <td>${horse.age}</td>
                 <td>
                     <a href="#" class="form-link" data-horse-name="${horse.name}">${horse.form}</a>
                 </td>
+                <td>${horse.runs}</td>
+                <td>£${horse.money}</td>
+                <td>${horse.wins}</td>
+                ${distanceResults}
             </tr>`;
     }
 
