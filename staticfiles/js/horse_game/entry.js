@@ -121,6 +121,7 @@ export function computerSelect(playerName, meetingNumber) {
     const playerHorses = horseData.filter(h => h.owner === playerName);
     const startIndex = (meetingNumber) * 6;
     const endIndex = startIndex + 6;
+    const grade1RaceIndexes = [];
 
     const availableRaces = [];
     for (let i = startIndex; i < endIndex; i++) {
@@ -129,6 +130,10 @@ export function computerSelect(playerName, meetingNumber) {
             raceClass: raceData.raceclass[i],
             index: i - startIndex
         });
+        // check grade1s
+        if (raceData.raceclass[i] === 1) {
+            grade1RaceIndexes.push(i - startIndex); // Relative index in this meeting
+        }
     }
     console.log("TIme to pick Horses!")
     console.log("Races Available", availableRaces)
@@ -142,6 +147,30 @@ export function computerSelect(playerName, meetingNumber) {
 
     const entriesPerRace = Array.from({ length: 6 }, (_, i) => (raceEntries[i] || []).length); // ✅ safe
     const selectedHorses = new Set();
+
+    // 🔶 Step 1: Pick best horses for Grade 1 races based on total money won at the race's distance
+    for (let g1Index of grade1RaceIndexes) {
+        const g1Dist = raceData.distances[startIndex + g1Index];
+
+        const eligible = playerHorses
+            .filter(h => !selectedHorses.has(h.name))
+            .map(horse => {
+                const moneyAtDist = (horse.history || [])
+                    .filter(h => h.distance === g1Dist)
+                    .reduce((sum, h) => sum + (h.winnings || 0), 0);
+                return { ...horse, moneyAtDist };
+            })
+            .sort((a, b) => b.moneyAtDist - a.moneyAtDist) // Most money won first
+            .slice(0, 3); // Top 3 horses
+
+        for (let horse of eligible) {
+            if (entriesPerRace[g1Index] >= 3) break;
+            raceEntries[g1Index].push({ playerName, horseName: horse.name });
+            entriesPerRace[g1Index]++;
+            selectedHorses.add(horse.name);
+        }
+    }
+
     const restPriority = [2, 3, 4, 5, 6]; // preferred order of rest values
 
     const prioritizedHorses = [];

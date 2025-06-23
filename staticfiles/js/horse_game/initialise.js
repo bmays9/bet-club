@@ -56,8 +56,8 @@ export function buildHorseData() {
         // let rating = Math.floor(Math.random() * 81) + 70; // 70 to 150 - uses even distribution.
         let rating = randomNormalRating();
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
-        const spread = parseFloat((Math.random() * 6 + 2).toFixed(2)); // 2.00 to 10.00
-        let age = Math.floor(Math.random() * 7 + 4);
+        const spread = parseFloat((Math.random() * 4 + 2).toFixed(2)); // 2.00 to 6.00
+        let age = Math.floor(Math.random() * 7 + 3);
         let rest = 1;
         let form = "";
         const goingPref = getRandomGoingPreference();

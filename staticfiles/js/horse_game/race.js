@@ -8,6 +8,7 @@ let meetingRaceNumber = 0
 let rDist = "";
 let rGoing = "";
 let rName = "";
+let rGrade = "";
 let rTime = "";
 let rPrize = "";
 let entries = [];
@@ -41,6 +42,7 @@ export function showRacecard (racenum) {
     rName = raceData.racenames[gameRaceNumber];
     rTime = raceTime[racenum];
     rPrize = Number(raceData.prizemoney[gameRaceNumber]);
+    rGrade = raceData.raceclass[gameRaceNumber]
     entries = lineups[racenum];
 
     // Calculate 1,2,3 Prize Money
@@ -99,7 +101,7 @@ export function showRacecard (racenum) {
         const row = `
             <tr>
                 <td>${index + 1}</td>
-                <td>${entry.horseName}</td>
+                <td>${entry.horseName}  <span class='text-body-secondary small-font'>(${horse.age})</td>
                 <td>${entry.trainer}</td>
                 <td>
                 <a href="#" class="form-link" data-horse-name="${horse.name}">${horse.form}</a>
@@ -149,7 +151,7 @@ function getHorseRatings(raceHorses, distanceStr, going) {
       // Going preference adjustment
       const goingModifier = getGoingModifier(horse.goingPref, going);
       rating += goingModifier;
-      console.log("rating adjusted for going: ", rating) 
+      console.log("rating adjusted for going: ", horse.goingPref, rating) 
   
       // Optional: other adjustments (age, rest, etc.)
       let fitness = fitnessModifier(horse.rest)
@@ -172,9 +174,11 @@ function getGoingModifier(pref, actual) {
     return -diff * 1.5; // penalty for mismatch
 }
 
+
 function assignOdds(ratedHorses) {
 
     // Step 1: Calculate implied probability and base odds using total of all ratings
+    console.log("Ratesd horse info", ratedHorses)
     const totalRating = ratedHorses.reduce((sum, h) => sum + h.raceRating, 0);
 
     let horsesWithBaseOdds = ratedHorses.map(horse => {
@@ -314,7 +318,8 @@ function simulateRace(horses) {
     const maxVariance = Math.max(...horses.map(h => h.raceRating)) / 10;
     console.log("Variance as part of Max rating" ,maxVariance)
     const horsesWithRoll = horses.map(horse => {
-        const variance = (Math.random()) * maxVariance; // Tweakable randomness factor - 10% of the max rating
+        const posneg = Math.random() < 0.5 ? -1 : 1;
+        const variance = (Math.random()) * maxVariance * posneg; // Tweakable randomness factor +or -  10% of the max rating
         const finalScore = horse.raceRating + variance;  // pure ability + noise
         console.log("Horse Rating, and after variance" ,horse.raceRating, finalScore)
         return { ...horse, finalScore };
@@ -355,13 +360,14 @@ function displayResults(finishingOrder) {
     });
 
     // update horseData
+    rGrade = raceData.raceclass[gameRaceNumber]
     console.log("Before we update, here's the finishingOrder being sent", finishingOrder)
-    updateHorseData(finishingOrder)
+    updateHorseData(finishingOrder, rGrade)
     updatePlayerData(finishingOrder)
     
 }
 
-function updateHorseData(results) {
+function updateHorseData(results, grade) {
     results.forEach((horse, index) => {
         const horseIndex = horseData.findIndex(h => h.name === horse.name);
         if (horseIndex !== -1) {
@@ -381,43 +387,51 @@ function updateHorseData(results) {
                 h.wins = (h.wins || 0) + 1;
             }
 
-            // Reset Rest 
-            h.rest = -1; // will be zero when all horses are + 1 at the end of the meeting            
+            // Add Grade 1 win
+            
+            if (!h.grade1s) h.grade1s = {};
+            if (pos === 1 && grade === 1) {
+                if (!h.grade1s[rDist]) {
+                    h.grade1s[rDist] = 1;
+                } else {
+                    h.grade1s[rDist] += 1;
+                }
+            }
+
+            // Reset rest
+            h.rest = -1;
 
             // Add run number
-            h.runs = h.runs + 1;
+            h.runs = (h.runs || 0) + 1;
 
             // Add prize money
-            const prizeMoney = Number(rPrizes[index]);
-            if (prizeMoney) {
-                h.money = (h.money || 0) + Number(prizeMoney);
-            }
+            const prizeMoney = Number(rPrizes[index]) || 0;
+            h.money = (h.money || 0) + prizeMoney;
 
             // ✅ Add full race history entry
             let rCourse = raceData.meetings[meeting_number];
             console.log("rgoing:" , rGoing);
-
+            
             h.history = h.history || [];
             h.history.push({
                 meeting: meeting_number + 1,
                 course: rCourse,
+                name: rName,
                 going: rGoing,
                 distance: rDist,
                 position: pos,
-                winnings: prizeMoney || 0
+                winnings: prizeMoney
             });
-
 
             // Update the horseData array
             horseData[horseIndex] = h;
         }
     });
 
-    // display next race button.
-    startBtn.disabled = true
-    nextRaceBtn.disabled = false
-
-};
+    // Enable next race button
+    startBtn.disabled = true;
+    nextRaceBtn.disabled = false;
+}
 
 
 document.getElementById('next-race').addEventListener('click', handleNextRace);
