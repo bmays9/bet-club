@@ -87,3 +87,14 @@ export function fitnessModifier(fitnessLevel) {
     
     return 0.85;
 }
+
+export function getNearDistances(dist) {
+    const distanceKeys = ["5f", "1m", "1m2", "1m4", "2m", "2m4", "3m", "4m"];
+    const index = distanceKeys.indexOf(dist);
+    const near = [];
+
+    if (index > 0) near.push(distanceKeys[index - 1]);
+    if (index < distanceKeys.length - 1) near.push(distanceKeys[index + 1]);
+
+    return near;
+}
