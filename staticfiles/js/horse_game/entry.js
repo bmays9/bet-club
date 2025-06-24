@@ -1,4 +1,5 @@
 import {
+    getNearDistances,
     raceEntries,
     playerData,
     horseData,
@@ -131,8 +132,9 @@ export function computerSelect(playerName, meetingNumber) {
             index: i - startIndex
         });
         // check grade1s
-        if (raceData.raceclass[i] === 1) {
+        if (raceData.raceclass[i] < 3) {
             grade1RaceIndexes.push(i - startIndex); // Relative index in this meeting
+            console.log("Grade 1 or 2", grade1RaceIndexes)
         }
     }
     console.log("TIme to pick Horses!")
@@ -148,16 +150,23 @@ export function computerSelect(playerName, meetingNumber) {
     const entriesPerRace = Array.from({ length: 6 }, (_, i) => (raceEntries[i] || []).length); // ✅ safe
     const selectedHorses = new Set();
 
-    // 🔶 Step 1: Pick best horses for Grade 1 races based on total money won at the race's distance
+    // 🔶 Step 1: Pick best horses for Grade 1 + 2 races based on total money won at the race's distance
     for (let g1Index of grade1RaceIndexes) {
         const g1Dist = raceData.distances[startIndex + g1Index];
+ 
+        const nearDist = getNearDistances (g1Dist)
 
         const eligible = playerHorses
             .filter(h => !selectedHorses.has(h.name))
             .map(horse => {
-                const moneyAtDist = (horse.history || [])
-                    .filter(h => h.distance === g1Dist)
-                    .reduce((sum, h) => sum + (h.winnings || 0), 0);
+                 const moneyAtDist = (horse.history || []).reduce((sum, h) => {
+                    if (h.distance === g1Dist) {
+                        return sum + (h.winnings || 0);
+                    } else if (nearDist.includes(h.distance)) {
+                        return sum + (h.winnings || 0) / 2;
+                    }
+                    return sum;
+            }, 0);
                 return { ...horse, moneyAtDist };
             })
             .sort((a, b) => b.moneyAtDist - a.moneyAtDist) // Most money won first
@@ -269,7 +278,6 @@ export function getRestIndicator(rest) {
 
 // Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘
 export function getBestFinishSymbol(text) {
-    console.log("Getting the form symbol for POS", text)
     if (typeof text !== 'string') return '';  // Guard against non-string values 
     if (text.includes("1")) return "🏆";
     if (text.includes("2")) return "🥈";

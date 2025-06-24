@@ -72,13 +72,13 @@ export function showRacecard (racenum) {
 
     const ratedHorses  = getHorseRatings(raceHorses, rDist, rGoing);
     console.log("These ratings", ratedHorses);
-    priceHorses = assignOdds(ratedHorses); // Adds odds based on ability
+    // priceHorses = assig---nOdds(ratedHorses); // Adds odds based on ability
+    priceHorses = assignFormOdds(ratedHorses, rDist); // Adds odds based on form
     
 
 
     console.log("This Lineup", lineups[racenum]);
     console.log("These raceHorses", raceHorses);
-    
     console.log("These prices", priceHorses);
     
     // Set Racecard Headers
@@ -244,14 +244,26 @@ function assignOdds(ratedHorses) {
 
 // Utility: Convert distance string to furlongs
 function distanceToFurlongs(distStr) {
-    console.log("distStr", distStr)
-    if (distStr.endsWith("f")) return parseInt(distStr); // e.g., 5f = 5
-    const match = distStr.match(/(\d+)m(\d+)?/); // e.g., 1m4 = 12 + 4 = 16f
-    if (!match) return 0;
+    console.log("distStr", distStr);
+    
+    // Just furlongs, like "5f"
+    if (/^\d+f$/.test(distStr)) {
+        return parseInt(distStr);
+    }
+
+    // Miles and furlongs, like "1m4f" or "3m"
+    const match = distStr.match(/^(\d+)m(?:([0-9]+)f)?$/);
+
+    if (!match) {
+        console.warn("Could not parse distance:", distStr);
+        return 0;
+    }
+
     const miles = parseInt(match[1]);
     const furlongs = match[2] ? parseInt(match[2]) : 0;
+
     return miles * 8 + furlongs;
-  }
+}
 
   const commonFractionalOdds = [
     [1, 10], [1, 8], [1, 6], [2, 11], [1, 5], [4, 9], [1, 4], [2, 7], [3, 10],
@@ -534,3 +546,71 @@ function handleContinueToNextMeeting() {
         nextRaceBtn.disabled = true;
     }
 }
+
+function assignFormOdds(raceHorses, targetDistanceStr) {
+    console.log(`--- Assigning Form-Based Odds for Distance ${targetDistanceStr} ---`);
+
+    const targetDist = distanceToFurlongs(targetDistanceStr);
+
+    const formScores = raceHorses.map(horse => {
+        let score = 0;
+        if (horse.history && horse.history.length) {
+            for (let race of horse.history) {
+                const histDist = distanceToFurlongs(race.distance);
+                const distDiff = Math.abs(histDist - targetDist);
+
+                // Score weight decreases with distance mismatch
+                const distanceWeight = Math.max(0, 1 - distDiff / 10); // Tweak divisor as needed
+
+                if (!isNaN(race.position) && race.position > 0) {
+                    const positionScore = Math.max(0, (10 - race.position)); // 1st = 9, 2nd = 8, ...
+                    score += positionScore * distanceWeight;
+                }
+            }
+        }
+        return { horse, score };
+    });
+
+    console.log("Form Scores:");
+    formScores.forEach(entry => {
+        console.log(`${entry.horse.name}: ${entry.score.toFixed(2)}`);
+    });
+
+    // Normalize scores to probabilities
+    const totalScore = formScores.reduce((sum, h) => sum + h.score, 0) || 1;
+    const probEntries = formScores.map(entry => ({
+        horse: entry.horse,
+        impliedProb: entry.score / totalScore
+    }));
+
+    // Apply random overround (between 1.02 and 1.15)
+    const overround = 1 + (Math.random() * 0.13 + 0.02);
+    console.log("Using overround multiplier:", overround.toFixed(4));
+
+    const adjustedProbs = probEntries.map(entry => ({
+        horse: entry.horse,
+        adjustedProb: Math.min(entry.impliedProb * overround, 1) // cap at 100%
+    }));
+
+    // Match to nearest fractional odds
+    const assignedOdds = adjustedProbs.map(entry => {
+        const bestMatch = commonOddsWithProb.reduce((closest, current) => {
+            const diff = Math.abs(current.impliedProb - entry.adjustedProb);
+            return diff < closest.diff ? { ...current, diff } : closest;
+        }, { diff: Infinity });
+
+        return {
+            horseName: entry.horse.name,
+            odds: `${bestMatch.num}/${bestMatch.denom}`,
+            impliedProb: entry.adjustedProb
+        };
+    });
+
+    console.log("Final Assigned Odds:");
+    assignedOdds.forEach(o => {
+        console.log(`${o.horseName}: ${o.odds} (prob: ${o.impliedProb.toFixed(3)})`);
+    });
+
+    return assignedOdds;
+}
+
