@@ -98,3 +98,10 @@ export function getNearDistances(dist) {
 
     return near;
 }
+
+export function convertFractionalOddsToDecimal(fraction) {
+    if (typeof fraction !== 'string') return Infinity;
+    const [numerator, denominator] = fraction.split('/').map(Number);
+    if (isNaN(numerator) || isNaN(denominator) || denominator === 0) return Infinity;
+    return numerator / denominator;
+}

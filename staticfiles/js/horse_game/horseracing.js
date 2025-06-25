@@ -13,6 +13,7 @@ import {
     computerSelect,
     enterHorse,
     displayRaceEntries,
+    fillEmptyRacesWithTiredHorses,
     getBestFinishSymbol,
     getRestIndicator
 } from './entry.js';
@@ -251,10 +252,10 @@ function displayStable(currentPlayerIndex) {
 
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
-    const distanceKeys = ["5f", "1m", "1m2", "1m4", "2m", "2m4", "3m", "4m"];
+    const distanceKeys = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
     const distanceToFurlongs = {
-        "5f": 5, "1m": 8, "1m2": 10, "1m4": 12,
-        "2m": 16, "2m4": 20, "3m": 24, "4m": 32
+        "5f": 5, "1m": 8, "1m2f": 10, "1m4f": 12,
+        "2m": 16, "2m4f": 20, "3m": 24, "4m": 32
     };
 
     if (!playerData[currentPlayerIndex].human) {
@@ -262,6 +263,7 @@ function displayStable(currentPlayerIndex) {
             computerAutoSelect(playerData[currentPlayerIndex].name, meeting_number);
         } else {
             computerSelect(playerData[currentPlayerIndex].name, meeting_number);
+            fillEmptyRacesWithTiredHorses(playerData[currentPlayerIndex].name, meeting_number);
         }
         displayRaceSelections(); // Update selections
     }
@@ -278,10 +280,10 @@ function displayStable(currentPlayerIndex) {
             <th>W</th>
             <th>5f</th>
             <th>1m</th>
-            <th>1m2</th>
-            <th>1m4</th>
+            <th>1m2f</th>
+            <th>1m4f</th>
             <th>2m</th>
-            <th>2m4</th>
+            <th>2m4f</th>
             <th>3m</th>
             <th>4m</th>
             
@@ -305,25 +307,27 @@ function displayStable(currentPlayerIndex) {
 
         let distanceResults = distanceKeys.map(distKey => {
     // Filter history entries matching the current distance string
-    const historyAtDistance = horse.history.filter(entry => entry.distance === distKey);
+        const historyAtDistance = horse.history.filter(entry => entry.distance === distKey);
 
-    // Find the best (lowest) finishing position
-    let bestPosition = null;
-    historyAtDistance.forEach(entry => {
+        // Find the best (lowest) finishing position
+        let bestPosition = null;
+        historyAtDistance.forEach(entry => {
         if (!bestPosition || entry.position < bestPosition) {
             bestPosition = entry.position;
         }
     });
 
     // Convert the best position to a label (e.g., "1st", "2nd")
+        //console.log("Best Position is", bestPosition)
+        //console.log("History At a distance is", historyAtDistance)
         let posLabel = "";
         if (bestPosition === 1) posLabel = "1st";
         else if (bestPosition === 2) posLabel = "2nd";
         else if (bestPosition === 3) posLabel = "3rd";  
         else if ([4, 5, 6].includes(bestPosition)) posLabel = bestPosition + "th";
         else if (bestPosition > 6) posLabel = "0";
+        else if (bestPosition === 0) posLabel = "0";
         else posLabel = "";  // No races at this distance
-
         return `<td>${getBestFinishSymbol(posLabel)}</td>`;
     }).join('');
 

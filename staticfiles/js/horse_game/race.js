@@ -1,4 +1,6 @@
-import { raceEntries, playerData, horseData, raceData, setRaceEntries, setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest, fitnessModifier } from './gameState.js';
+import { raceEntries, playerData, horseData, raceData, setRaceEntries, 
+    setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest,
+    fitnessModifier, convertFractionalOddsToDecimal } from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
 import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState, showHistoryModal } from './horseracing.js';
 import { shuffleArray } from './initialise.js';
@@ -26,90 +28,96 @@ startBtn.addEventListener('click', () => {
     displayResults(result);
 });
 
-export function showRacecard (racenum) {
-
-    console.log("Here's the horse Data" , horseData)
-    console.log("Player Data before we start", playerData)
+export function showRacecard(racenum) {
+    console.log("Here's the horse Data", horseData);
+    console.log("Player Data before we start", playerData);
 
     // Randomize the Betting Order
-    shuffleArray(playerData); // Shuffle the array
-        
-    console.log("Let's Race, gameracenume / racenum / meetingracenum", gameRaceNumber, racenum);
-       document.getElementById('race-screen').style.display = "block";
+    shuffleArray(playerData);
+    
+    console.log("Let's Race, gameRaceNumber / racenum / meetingracenum", gameRaceNumber, racenum);
+    document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
+
+    // Race Setup
     rDist = raceData.distances[gameRaceNumber];
     rGoing = raceData.goings[meeting_number];
     rName = raceData.racenames[gameRaceNumber];
     rTime = raceTime[racenum];
     rPrize = Number(raceData.prizemoney[gameRaceNumber]);
-    rGrade = raceData.raceclass[gameRaceNumber]
+    rGrade = raceData.raceclass[gameRaceNumber];
     entries = lineups[racenum];
 
-    // Calculate 1,2,3 Prize Money
-    let rPrize1 = Math.round(Number(rPrize) * 0.65);
-    console.log("rPrize1: ", rPrize1)
-    let rPrize2 = Math.round(Number(rPrize) * 0.25);
-    console.log("rPrize2: ", rPrize2)
-    let rPrize3 = Math.round(Number(rPrize) * 0.10);
+    // Prize Money Breakdown
+    let rPrize1 = Math.round(rPrize * 0.65);
+    let rPrize2 = Math.round(rPrize * 0.25);
+    let rPrize3 = Math.round(rPrize * 0.10);
     rPrizes = [rPrize1, rPrize2, rPrize3];
+
     // Display Race Details
-    const dTime = document.getElementById("r-time"); 
-    dTime.innerHTML = `${rTime} | `;
-    const dName = document.getElementById("r-name");
-    dName.innerHTML = rName;
-    const dDist = document.getElementById("r-dist");
-    dDist.innerHTML = rDist;
-    const dPrize = document.getElementById("r-prize")
-    dPrize.innerHTML = rPrize;
-    const dRunners = document.getElementById("r-runners");
-    dRunners.innerHTML = `${entries.length}`;
+    document.getElementById("r-time").innerHTML = `${rTime} | `;
+    document.getElementById("r-name").innerHTML = rName;
+    document.getElementById("r-dist").innerHTML = rDist;
+    document.getElementById("r-prize").innerHTML = rPrize;
+    document.getElementById("r-runners").innerHTML = `${entries.length}`;
 
-    // feed race conditions into the ratings system to get the horses ability, distance, going
-    
-    let raceHorses = entries.map(entry =>
-        horseData.find(h => h.name === entry.horseName)
-    );
+    // Get horses entered into this race
+    let raceHorses = entries.map(entry => horseData.find(h => h.name === entry.horseName));
 
-    const ratedHorses  = getHorseRatings(raceHorses, rDist, rGoing);
-    console.log("These ratings", ratedHorses);
-    // priceHorses = assig---nOdds(ratedHorses); // Adds odds based on ability
-    priceHorses = assignFormOdds(ratedHorses, rDist); // Adds odds based on form
-    
+    // Rating and Odds
+    const ratedHorses = getHorseRatings(raceHorses, rDist, rGoing);
+    priceHorses = assignFormOdds(ratedHorses, rDist);
 
+    console.log("Lineup", lineups[racenum]);
+    console.log("Race Horses", raceHorses);
+    console.log("Priced Horses", priceHorses);
 
-    console.log("This Lineup", lineups[racenum]);
-    console.log("These raceHorses", raceHorses);
-    console.log("These prices", priceHorses);
-    
-    // Set Racecard Headers
+    // Random Draw Numbers (1 to N)
+    const drawNumbers = shuffleArray([...Array(entries.length)].map((_, i) => i + 1));
+
+    // Combine all data for display
+    let racecardData = entries.map((entry, i) => {
+        const horse = horseData.find(h => h.name === entry.horseName);
+        const pricedHorse = priceHorses.find(h => h.name === horse.name);
+        const oddsValue = convertFractionalOddsToDecimal(pricedHorse.odds);
+
+        return {
+            draw: drawNumbers[i],
+            horseName: horse.name,
+            age: horse.age,
+            trainer: entry.trainer,
+            form: horse.form,
+            odds: pricedHorse.odds,
+            oddsValue: oddsValue
+        };
+    });
+
+    // Sort by shortest odds (favorites first)
+    racecardData.sort((a, b) => a.oddsValue - b.oddsValue);
+
+    // Set Table Headers
     racecardHeader.innerHTML = `
         <tr>
-            <th>No.</th>
+            <th>Number</th>
             <th>Horse</th>
             <th>Trainer</th>
             <th>Form</th>
             <th>Odds</th>
-            <th>Rating</th>
-            <th>raceRating</th>
             <th>Bet</th>
-        </tr>`
+        </tr>`;
 
-    entries.forEach((entry, index) => {
-        const horse = horseData.find(h => h.name === entry.horseName);
-        const pricedHorse = priceHorses[index]; // Get the horse with odds added
-        console.log("Priced Horse", pricedHorse)
+    // Render Racecard
+    racecardData.forEach((runner, index) => {
         const row = `
             <tr>
-                <td>${index + 1}</td>
-                <td>${entry.horseName}  <span class='text-body-secondary small-font'>(${horse.age})</td>
-                <td>${entry.trainer}</td>
+                <td>${runner.draw}</td>
+                <td>${runner.horseName} <span class='text-body-secondary small-font'>(${runner.age})</span></td>
+                <td>${runner.trainer}</td>
                 <td>
-                <a href="#" class="form-link" data-horse-name="${horse.name}">${horse.form}</a>
+                    <a href="#" class="form-link" data-horse-name="${runner.horseName}">${runner.form}</a>
                 </td>
-                <td>${pricedHorse.odds}</td> <!-- odds now correctly displayed -->
-                <td>${horse.rating}</td>
-                <td>${pricedHorse.raceRating}</td>
-                <td>${horse.bestDist}</td>
+                <td>${runner.odds}</td>
+                <td>-</td>
             </tr>
         `;
         racecardBody.innerHTML += row;
@@ -118,17 +126,15 @@ export function showRacecard (racenum) {
     currentRatedHorses = ratedHorses;
     currentRacePrizes = rPrizes;
 
-    // Event Listener for form and showing full history
-
+    // Event listeners for horse form links
     document.querySelectorAll('.form-link').forEach(link => {
-        link.addEventListener('click', function(event) {
+        link.addEventListener('click', function (event) {
             event.preventDefault();
             const horseName = this.getAttribute('data-horse-name');
             showHistoryModal(horseName);
         });
     });
 
-    // nextRaceBtn.textContent = "Next Race";
     nextRaceBtn.disabled = true;
     startBtn.disabled = false;
 }
@@ -270,7 +276,10 @@ function distanceToFurlongs(distStr) {
     [1, 3], [4, 11], [2, 5], [4, 9], [8, 15], [4, 7], [8, 13], [4, 6], [4, 5],
     [5, 6], [10, 11], [1, 1], [11, 10], [5, 4], [6, 5], [11, 8], [7, 5], [6, 4],
     [3, 2], [13, 8], [7, 4], [15, 8], [2, 1], [9, 4], [5, 2], [11, 4], [3, 1],
-    [10, 3], [7, 2], [4, 1], [9, 2], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1],
+    [10, 3], [7, 2], [4, 1], [9, 2], [5, 1], [11, 2], [6, 1], [13, 2], [7, 1], 
+    [15, 2], [8, 1], [17, 2], [9, 1], [10, 1], [11, 1],
+    [12, 1], [14, 1], [16, 1], [18, 1], [20, 1], [22, 1], [25, 1], [28, 1],
+    [33, 1], [40, 1], [50, 1], [66, 1], [80, 1], [100, 1]
 ];
 
 const commonOddsWithProb = commonFractionalOdds.map(([num, denom]) => {
@@ -345,8 +354,10 @@ function simulateRace(horses) {
 function displayResults(finishingOrder) {
     
     racecardBody.innerHTML = "";
-
+    console.log("PriceHorses", priceHorses)
     finishingOrder.forEach((horse, index) => {
+        priceHorses.forEach(h => console.log("Available odds:", h.name, h.odds));
+        
         const odds = priceHorses.find(h => h.name === horse.name)?.odds || "?";
 
     // Set Racecard Headers
@@ -554,6 +565,7 @@ function assignFormOdds(raceHorses, targetDistanceStr) {
 
     const formScores = raceHorses.map(horse => {
         let score = 0;
+        if (!horse.history.length) score = 5
         if (horse.history && horse.history.length) {
             for (let race of horse.history) {
                 const histDist = distanceToFurlongs(race.distance);
@@ -568,6 +580,23 @@ function assignFormOdds(raceHorses, targetDistanceStr) {
                 }
             }
         }
+        console.log("Form score=", score);
+        // Adjust Score for age
+        if (horse.age === 4) score += 1;
+        else if (horse.age === 5) score += 2;
+        else if (horse.age >= 6 && horse.age <= 8) score += 3;
+        else if (horse.age === 9) score += 1;
+        else if (horse.age === 10) score += 0.5;
+        
+        console.log("Age & score=", horse.name, horse.age, score);
+        
+        // Adjust Score for fitness
+        if (horse.rest === 1) score += 1;
+        else if (horse.rest === 2) score += 3;
+        else if (horse.rest > 2) score+= 1
+
+        console.log("Rest & score=", horse.name, horse.rest, score);
+
         return { horse, score };
     });
 
@@ -600,7 +629,7 @@ function assignFormOdds(raceHorses, targetDistanceStr) {
         }, { diff: Infinity });
 
         return {
-            horseName: entry.horse.name,
+            name: entry.horse.name,
             odds: `${bestMatch.num}/${bestMatch.denom}`,
             impliedProb: entry.adjustedProb
         };
@@ -608,7 +637,7 @@ function assignFormOdds(raceHorses, targetDistanceStr) {
 
     console.log("Final Assigned Odds:");
     assignedOdds.forEach(o => {
-        console.log(`${o.horseName}: ${o.odds} (prob: ${o.impliedProb.toFixed(3)})`);
+        console.log(`${o.name}: ${o.odds} (prob: ${o.impliedProb.toFixed(3)})`);
     });
 
     return assignedOdds;
