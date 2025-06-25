@@ -156,28 +156,43 @@ export function computerSelect(playerName, meetingNumber) {
  
         const nearDist = getNearDistances (g1Dist)
 
-        const eligible = playerHorses
-            .filter(h => !selectedHorses.has(h.name))
-            .map(horse => {
-                 const moneyAtDist = (horse.history || []).reduce((sum, h) => {
-                    if (h.distance === g1Dist) {
-                        return sum + (h.winnings || 0);
-                    } else if (nearDist.includes(h.distance)) {
-                        return sum + (h.winnings || 0) / 2;
-                    }
-                    return sum;
-            }, 0);
-                return { ...horse, moneyAtDist };
-            })
-            .sort((a, b) => b.moneyAtDist - a.moneyAtDist) // Most money won first
-            .slice(0, 3); // Top 3 horses
+// 🔄 Sort all eligible horses by money at or near distance
+const gradedEligible = playerHorses
+    .filter(h => !selectedHorses.has(h.name))
+    .map(horse => {
+        const moneyAtDist = (horse.history || []).reduce((sum, h) => {
+            if (h.distance === g1Dist) {
+                return sum + (h.winnings || 0);
+            } else if (nearDist.includes(h.distance)) {
+                return sum + (h.winnings || 0) / 2;
+            }
+            return sum;
+        }, 0);
+        return { ...horse, moneyAtDist };
+    })
+    .sort((a, b) => b.moneyAtDist - a.moneyAtDist);
 
-        for (let horse of eligible) {
-            if (entriesPerRace[g1Index] >= 3) break;
-            raceEntries[g1Index].push({ playerName, horseName: horse.name });
+    if (gradedEligible.length === 0) continue;
+
+    const topHorse = gradedEligible[0];
+    raceEntries[g1Index].push({ playerName, horseName: topHorse.name });
+    entriesPerRace[g1Index]++;
+    selectedHorses.add(topHorse.name);
+
+    // 🧠 Conditional logic to add 2nd and 3rd horses
+    for (let i = 1; i < gradedEligible.length && entriesPerRace[g1Index] < 3; i++) {
+        const challenger = gradedEligible[i];
+        const diff = topHorse.moneyAtDist - challenger.moneyAtDist;
+
+        const threshold = topHorse.moneyAtDist * 0.25; // ≤25% below top horse
+        const randomPass = Math.random() < 0.5; // 50% random chance
+
+        if (diff <= threshold && randomPass) {
+            raceEntries[g1Index].push({ playerName, horseName: challenger.name });
             entriesPerRace[g1Index]++;
-            selectedHorses.add(horse.name);
+            selectedHorses.add(challenger.name);
         }
+    }
     }
 
     const restPriority = [2, 3, 4, 5, 6]; // preferred order of rest values
@@ -248,6 +263,37 @@ export function computerSelect(playerName, meetingNumber) {
     }
 }
 
+export function fillEmptyRacesWithTiredHorses(playerName, meetingNumber) {
+    const playerHorses = horseData.filter(h => h.owner === playerName);
+    const startIndex = meetingNumber * 6;
+
+    for (let localIndex = 0; localIndex < 6; localIndex++) {
+        if (raceEntries[localIndex].filter(e => e.playerName === playerName).length > 0) continue;
+
+        const globalRaceIndex = startIndex + localIndex;
+        const raceDistance = raceData.distances[globalRaceIndex];
+
+        // Try rest == 1 first
+        let backupHorse = playerHorses.find(h => h.rest === 1 && !raceEntries.some(r => r.find(e => e.horseName === h.name)));
+
+        // If none found, try rest == 0
+        if (!backupHorse) {
+            backupHorse = playerHorses.find(h => h.rest === 0 && !raceEntries.some(r => r.find(e => e.horseName === h.name)));
+        }
+
+        if (backupHorse) {
+            raceEntries[localIndex].push({
+                playerName,
+                horseName: backupHorse.name
+            });
+            console.log(`Fallback entry: ${backupHorse.name} added to race ${localIndex} for ${playerName}`);
+        } else {
+            console.warn(`No tired horses available to fill empty race ${localIndex} for ${playerName}`);
+        }
+    }
+}
+
+
 export function getRestIndicator(rest) {
 
     let color;
@@ -278,12 +324,16 @@ export function getRestIndicator(rest) {
 
 // Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘
 export function getBestFinishSymbol(text) {
+    //    console.log("getting Best Finish Symbol for", text)
     if (typeof text !== 'string') return '';  // Guard against non-string values 
     if (text.includes("1")) return "🏆";
     if (text.includes("2")) return "🥈";
     if (text.includes("3")) return "🥉";
-    if (text.includes("0")) return "❌";
     if (["4th", "5th", "6th"].some(pos => text.includes(pos))) return "🟤";
+    if (text.includes("th")) return "❌";
+    if (text.includes("8")) return "❌";
+    if (text.includes("9")) return "❌";
+    if (text.includes("0")) return "❌";
     return "";
 }
 
