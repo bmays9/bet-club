@@ -41,6 +41,7 @@ import {
 export let meeting_number = 0;
 export let raceTime = ["1:15", "1:50", "2:25", "3:00", "3:35", "4:10"];
 let players = [];
+let season = 0;
 const TOTALHORSES = 144;
 export let going = [];
 let selectedRaceIndex = 0;
@@ -249,7 +250,8 @@ function displayStable(currentPlayerIndex) {
     let confirmBtn = document.getElementById("confirm-selections");
     confirmBtn.disabled = true; // Initially disable
     let testBtn = document.getElementById("auto-selections");
-
+    testBtn.disabled = true
+    
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
     const distanceKeys = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
@@ -340,8 +342,8 @@ function displayStable(currentPlayerIndex) {
                 break;
             }
         }
-
-        const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : "➤";
+        // ➪" ➤"
+        const entrySymbol = enteredRaceIndex !== null ? `${enteredRaceIndex + 1}` : " ➤";
         const rowClass = enteredRaceIndex !== null ? "table-active" : "";
 
         stableHtml += `
@@ -407,7 +409,6 @@ function displayStable(currentPlayerIndex) {
                 
                 // Check if all races have been entered and enable the button
                 let check = allRacesHaveEntries();
-                console.log("ARHE", check);
                 if (allRacesHaveEntries()) {
                     confirmBtn.disabled = false;
                 } else {
@@ -548,8 +549,14 @@ function closeModal() {
 }
 
 export function incrementMeetingNumber() {
-    meeting_number++;
-}
+    if (meeting_number < raceData.meetings.length - 1) {
+        meeting_number++;
+    } else {
+        meeting_number = 0;
+        season++;
+    }
+
+    }
 
 
 export async function runHorseRacing(players) {

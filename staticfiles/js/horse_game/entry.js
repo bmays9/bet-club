@@ -274,11 +274,11 @@ export function fillEmptyRacesWithTiredHorses(playerName, meetingNumber) {
         const raceDistance = raceData.distances[globalRaceIndex];
 
         // Try rest == 1 first
-        let backupHorse = playerHorses.find(h => h.rest === 1 && !raceEntries.some(r => r.find(e => e.horseName === h.name)));
+        let backupHorse = playerHorses.find(h => h.rest === 1 && !raceEntries.flat().some(e => e.horseName === h.name));
 
         // If none found, try rest == 0
         if (!backupHorse) {
-            backupHorse = playerHorses.find(h => h.rest === 0 && !raceEntries.some(r => r.find(e => e.horseName === h.name)));
+            backupHorse = playerHorses.find(h => h.rest === 0 && !raceEntries.flat().some(e => e.horseName === h.name));
         }
 
         if (backupHorse) {
@@ -322,14 +322,14 @@ export function getRestIndicator(rest) {
     ">${displayRest}</span>`;
 }
 
-// Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘
+// Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘🞅
 export function getBestFinishSymbol(text) {
     //    console.log("getting Best Finish Symbol for", text)
     if (typeof text !== 'string') return '';  // Guard against non-string values 
     if (text.includes("1")) return "🏆";
     if (text.includes("2")) return "🥈";
     if (text.includes("3")) return "🥉";
-    if (["4th", "5th", "6th"].some(pos => text.includes(pos))) return "🟤";
+    if (["4th", "5th", "6th"].some(pos => text.includes(pos))) return "🞅";
     if (text.includes("th")) return "❌";
     if (text.includes("8")) return "❌";
     if (text.includes("9")) return "❌";
