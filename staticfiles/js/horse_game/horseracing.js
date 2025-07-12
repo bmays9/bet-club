@@ -79,7 +79,7 @@ export function displayGameState(array) {
     document.getElementById('page-info').style.display = 'block';
     document.getElementById('race-screen').style.display = 'none';
     document.getElementById('page-info').innerHTML = ""
-    
+
     if (!raceData || !raceData.distances) {
         console.error("Race data is not loaded yet.");
         return;
@@ -224,7 +224,7 @@ function displayRaceSelections() {
     document.addEventListener("DOMContentLoaded", function() {
         addDistanceFormSymbols();
     });
-    
+
     // ✅ Add click handlers right after rendering
     document.querySelectorAll('.race-row').forEach(row => {
         row.addEventListener('click', function() {
@@ -251,13 +251,19 @@ function displayStable(currentPlayerIndex) {
     confirmBtn.disabled = true; // Initially disable
     let testBtn = document.getElementById("auto-selections");
     testBtn.disabled = true
-    
+
     let playerHorses = horseData.filter(horse => horse.owner === playerName);
 
     const distanceKeys = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
     const distanceToFurlongs = {
-        "5f": 5, "1m": 8, "1m2f": 10, "1m4f": 12,
-        "2m": 16, "2m4f": 20, "3m": 24, "4m": 32
+        "5f": 5,
+        "1m": 8,
+        "1m2f": 10,
+        "1m4f": 12,
+        "2m": 16,
+        "2m4f": 20,
+        "3m": 24,
+        "4m": 32
     };
 
     if (!playerData[currentPlayerIndex].human) {
@@ -265,6 +271,7 @@ function displayStable(currentPlayerIndex) {
             computerAutoSelect(playerData[currentPlayerIndex].name, meeting_number);
         } else {
             computerSelect(playerData[currentPlayerIndex].name, meeting_number);
+            console.log("RaceEntries after computer select:", raceEntries);
             fillEmptyRacesWithTiredHorses(playerData[currentPlayerIndex].name, meeting_number);
         }
         displayRaceSelections(); // Update selections
@@ -304,37 +311,37 @@ function displayStable(currentPlayerIndex) {
     // Loop over player's horses and display stable data
     for (let i = 0; i < playerHorses.length; i++) {
         const horse = playerHorses[i];
-                // Defines fitness colouring
+        // Defines fitness colouring
         const restIndicator = getRestIndicator(horse.rest);
 
         let distanceResults = distanceKeys.map(distKey => {
-    // Filter history entries matching the current distance string
-        const historyAtDistance = horse.history.filter(entry => entry.distance === distKey);
+            // Filter history entries matching the current distance string
+            const historyAtDistance = horse.history.filter(entry => entry.distance === distKey);
 
-        // Find the best (lowest) finishing position
-        let bestPosition = null;
-        historyAtDistance.forEach(entry => {
-        if (!bestPosition || entry.position < bestPosition) {
-            bestPosition = entry.position;
-        }
-    });
+            // Find the best (lowest) finishing position
+            let bestPosition = null;
+            historyAtDistance.forEach(entry => {
+                if (!bestPosition || entry.position < bestPosition) {
+                    bestPosition = entry.position;
+                }
+            });
 
-    // Convert the best position to a label (e.g., "1st", "2nd")
-        //console.log("Best Position is", bestPosition)
-        //console.log("History At a distance is", historyAtDistance)
-        let posLabel = "";
-        if (bestPosition === 1) posLabel = "1st";
-        else if (bestPosition === 2) posLabel = "2nd";
-        else if (bestPosition === 3) posLabel = "3rd";  
-        else if ([4, 5, 6].includes(bestPosition)) posLabel = bestPosition + "th";
-        else if (bestPosition > 6) posLabel = "0";
-        else if (bestPosition === 0) posLabel = "0";
-        else posLabel = "";  // No races at this distance
-        return `<td>${getBestFinishSymbol(posLabel)}</td>`;
-    }).join('');
+            // Convert the best position to a label (e.g., "1st", "2nd")
+            //console.log("Best Position is", bestPosition)
+            //console.log("History At a distance is", historyAtDistance)
+            let posLabel = "";
+            if (bestPosition === 1) posLabel = "1st";
+            else if (bestPosition === 2) posLabel = "2nd";
+            else if (bestPosition === 3) posLabel = "3rd";
+            else if ([4, 5, 6].includes(bestPosition)) posLabel = bestPosition + "th";
+            else if (bestPosition > 6) posLabel = "0";
+            else if (bestPosition === 0) posLabel = "0";
+            else posLabel = ""; // No races at this distance
+            return `<td>${getBestFinishSymbol(posLabel)}</td>`;
+        }).join('');
 
 
-        
+
         let enteredRaceIndex = null;
         for (let j = 0; j < 6; j++) {
             if (raceEntries[j].some(entry => entry.horseName === horse.name)) {
@@ -383,124 +390,146 @@ function displayStable(currentPlayerIndex) {
     });
 
     // Event listener for horse selection
-    document.querySelectorAll('.horse-entry-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            if (selectedRaceIndex === null) {
-                alert("Please select a race first.");
-                return;
-            }
+ document.querySelectorAll('.horse-entry-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        if (selectedRaceIndex === null) {
+            alert("Please select a race first.");
+            return;
+        }
 
-            const horseName = this.getAttribute('data-horse-name');
-            playerName = playerData[currentPlayerIndex].name;
-            console.log("Horsename:", horseName);
-            console.log("Playername:", playerName);
+        const horseName = this.getAttribute('data-horse-name');
+        console.log("the horse name is:", horseName)
+        playerName = playerData[currentPlayerIndex].name;
 
+        let alreadyEntered = false;
+        console.log("Checking if horse is already entered...");
+        console.log("RaceEntries Length:", raceEntries.length);
+        console.log("Horse:", horseName, "Player:", playerName);
+
+        for (let i = 0; i < 6; i++) {
+            console.log(`\n⏺️ Race ${i + 1} Entries BEFORE filtering:`, raceEntries[i]);
+
+            raceEntries[i] = raceEntries[i].filter(entry => {
+                console.log(`🔍 Checking entry:`, entry);
+        if (entry.horseName === horseName && entry.playerName === playerName) {
+            console.log(`❌ Match found! Removing entry:`, entry);
+            alreadyEntered = true;
+            return false; // Remove this entry
+        }
+        return true;
+        });
+
+            console.log(`✅ Race ${i + 1} Entries AFTER filtering:`, raceEntries[i]);
+        }
+
+        console.log("Already Entered Result:", alreadyEntered);
+
+        if (alreadyEntered) {
+            console.log(`${horseName} removed from all races for ${playerName}`);
+        } else {
             const entered = enterHorse(playerName, horseName, selectedRaceIndex);
             console.log("Entered: ", entered);
+
             if (entered) {
-                
-                selectedRaceIndex ++;
-                if (selectedRaceIndex == 6)  {
-                    selectedRaceIndex = 0
+                selectedRaceIndex++;
+                if (selectedRaceIndex === 6) {
+                    selectedRaceIndex = 0;
                 }
-
-                displayRaceSelections(); // Update selections
-                displayStable(currentPlayerIndex); // Re-render stable
-                
-                // Check if all races have been entered and enable the button
-                let check = allRacesHaveEntries();
-                if (allRacesHaveEntries()) {
-                    confirmBtn.disabled = false;
-                } else {
-                    confirmBtn.disabled = true;
-                }
-            }
-        });
-    });
-
-    // event listener for testing
-    testBtn.onclick = function() {
-        playerName = playerData[currentPlayerIndex].name;
-        playerHorses = horseData.filter(horse => horse.owner === playerName);
-
-        // Clear existing entries without reassigning
-        for (let i = 0; i < 6; i++) {
-            raceEntries[i] = [];
-        }
-
-        // Add the first 6 horses to each of the 6 races (1 per race)
-        for (let i = 0; i < 6; i++) {
-            const horse = playerHorses[i];
-            if (horse) {
-                raceEntries[i].push({
-                    playerName,
-                    horseName: horse.name
-                });
             }
         }
 
+        // Update UI regardless of add/remove
         displayRaceSelections();
         displayStable(currentPlayerIndex);
 
-        if (confirmBtn) {
-            confirmBtn.disabled = false; // enable the finish button
-        }
-    };
+        // Check if all races have been entered and enable the button
+        confirmBtn.disabled = !allRacesHaveEntries();
+    });
+}); // 
 
-    // Confirm button to save entries and move to the next player
-    confirmBtn.onclick = function() {
-        const playerName = playerData[currentPlayerIndex].name;
+// event listener for testing
+testBtn.onclick = function() {
+    playerName = playerData[currentPlayerIndex].name;
+    playerHorses = horseData.filter(horse => horse.owner === playerName);
 
-        const raceLineup = [];
+    // Clear existing entries without reassigning
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i] = [];
+    }
 
-        if (lineups.length === 0) {
-            // Initialize the 6 races
-            for (let i = 0; i < 6; i++) {
-                lineups.push([]); // one array for each race
-            }
-        }
-
-        for (let i = 0; i < 6; i++) {
-            const race = raceEntries[i];
-            race.forEach(entry => {
-                lineups[i].push({
-                    race: i,
-                    horseName: entry.horseName,
-                    trainer: entry.playerName
-                });
+    // Add the first 6 horses to each of the 6 races (1 per race)
+    for (let i = 0; i < 6; i++) {
+        const horse = playerHorses[i];
+        if (horse) {
+            raceEntries[i].push({
+                playerName,
+                horseName: horse.name
             });
         }
-
-        // Clear race entries for next player
-        for (let i = 0; i < 6; i++) {
-            raceEntries[i] = [];
-        }
-
-        currentPlayerIndex++;
-
-        if (currentPlayerIndex >= playerData.length) {
-            console.log("Ready to show first race", lineups)
-            // Hide setup screens
-            
-            document.getElementById("race-selections").style.display = "none";
-            document.getElementById("player-selections").style.display = "none";
-            document.getElementById("player-stable").style.display = "none";
-            document.getElementById('page-info').style.display = "none";
-            showRacecard(0);
-
-        } else {
-            displayRaceSelections();
-            displayStable(currentPlayerIndex);
-            this.disabled = true;
-        }
-    };
-
-    // Ensure the button is updated correctly if all races have entries
-    if (allRacesHaveEntries()) {
-        confirmBtn.disabled = false;
-    } else {
-        confirmBtn.disabled = true;
     }
+
+    displayRaceSelections();
+    displayStable(currentPlayerIndex);
+
+    if (confirmBtn) {
+        confirmBtn.disabled = false; // enable the finish button
+    }
+};
+
+// Confirm button to save entries and move to the next player
+confirmBtn.onclick = function() {
+    const playerName = playerData[currentPlayerIndex].name;
+
+    const raceLineup = [];
+
+    if (lineups.length === 0) {
+        // Initialize the 6 races
+        for (let i = 0; i < 6; i++) {
+            lineups.push([]); // one array for each race
+        }
+    }
+
+    for (let i = 0; i < 6; i++) {
+        const race = raceEntries[i];
+        race.forEach(entry => {
+            lineups[i].push({
+                race: i,
+                horseName: entry.horseName,
+                trainer: entry.playerName
+            });
+        });
+    }
+
+    // Clear race entries for next player
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i] = [];
+    }
+
+    currentPlayerIndex++;
+
+    if (currentPlayerIndex >= playerData.length) {
+        console.log("Ready to show first race", lineups)
+        // Hide setup screens
+
+        document.getElementById("race-selections").style.display = "none";
+        document.getElementById("player-selections").style.display = "none";
+        document.getElementById("player-stable").style.display = "none";
+        document.getElementById('page-info').style.display = "none";
+        showRacecard(0);
+
+    } else {
+        displayRaceSelections();
+        displayStable(currentPlayerIndex);
+        this.disabled = true;
+    }
+};
+
+// Ensure the button is updated correctly if all races have entries
+if (allRacesHaveEntries()) {
+    confirmBtn.disabled = false;
+} else {
+    confirmBtn.disabled = true;
+}
 }
 
 export function showHistoryModal(horseName) {
@@ -556,7 +585,7 @@ export function incrementMeetingNumber() {
         season++;
     }
 
-    }
+}
 
 
 export async function runHorseRacing(players) {
@@ -572,4 +601,3 @@ export async function runHorseRacing(players) {
 
     endOfSeasonUpdate(horseData);
 }
-

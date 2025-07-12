@@ -156,21 +156,21 @@ export function computerSelect(playerName, meetingNumber) {
  
         const nearDist = getNearDistances (g1Dist)
 
-// 🔄 Sort all eligible horses by money at or near distance
-const gradedEligible = playerHorses
-    .filter(h => !selectedHorses.has(h.name))
-    .map(horse => {
-        const moneyAtDist = (horse.history || []).reduce((sum, h) => {
-            if (h.distance === g1Dist) {
-                return sum + (h.winnings || 0);
-            } else if (nearDist.includes(h.distance)) {
+    // 🔄 Sort all eligible horses by money at or near distance
+    const gradedEligible = playerHorses
+        .filter(h => !selectedHorses.has(h.name))
+        .map(horse => {
+            const moneyAtDist = (horse.history || []).reduce((sum, h) => {
+                if (h.distance === g1Dist) {
+                    return sum + (h.winnings || 0);
+                } else if (nearDist.includes(h.distance)) {
                 return sum + (h.winnings || 0) / 2;
-            }
-            return sum;
-        }, 0);
-        return { ...horse, moneyAtDist };
-    })
-    .sort((a, b) => b.moneyAtDist - a.moneyAtDist);
+                }
+                return sum;
+            }, 0);
+            return { ...horse, moneyAtDist };
+        })
+        .sort((a, b) => b.moneyAtDist - a.moneyAtDist);
 
     if (gradedEligible.length === 0) continue;
 
@@ -195,7 +195,7 @@ const gradedEligible = playerHorses
     }
     }
 
-    const restPriority = [2, 3, 4, 5, 6]; // preferred order of rest values
+    const restPriority = [2, 3, 4, 5, 6, 1, 0]; // preferred order of rest values
 
     const prioritizedHorses = [];
     for (let restValue of restPriority) {
@@ -266,26 +266,31 @@ const gradedEligible = playerHorses
 export function fillEmptyRacesWithTiredHorses(playerName, meetingNumber) {
     const playerHorses = horseData.filter(h => h.owner === playerName);
     const startIndex = meetingNumber * 6;
+    const allEntries = Object.values(raceEntries).flat();
+
+    // 🔐 Build a set of horse names already used
+    const usedHorseNames = new Set(allEntries.map(e => e.horseName));
 
     for (let localIndex = 0; localIndex < 6; localIndex++) {
-        if (raceEntries[localIndex].filter(e => e.playerName === playerName).length > 0) continue;
+        if ((raceEntries[localIndex] || []).some(e => e.playerName === playerName)) continue;
 
-        const globalRaceIndex = startIndex + localIndex;
-        const raceDistance = raceData.distances[globalRaceIndex];
+        let backupHorse = playerHorses.find(h =>
+            h.rest === 1 && !usedHorseNames.has(h.name)
+        );
 
-        // Try rest == 1 first
-        let backupHorse = playerHorses.find(h => h.rest === 1 && !raceEntries.flat().some(e => e.horseName === h.name));
-
-        // If none found, try rest == 0
         if (!backupHorse) {
-            backupHorse = playerHorses.find(h => h.rest === 0 && !raceEntries.flat().some(e => e.horseName === h.name));
+            backupHorse = playerHorses.find(h =>
+                h.rest === 0 && !usedHorseNames.has(h.name)
+            );
         }
 
         if (backupHorse) {
+            raceEntries[localIndex] = raceEntries[localIndex] || [];
             raceEntries[localIndex].push({
                 playerName,
                 horseName: backupHorse.name
             });
+            usedHorseNames.add(backupHorse.name); // ✅ Mark as used
             console.log(`Fallback entry: ${backupHorse.name} added to race ${localIndex} for ${playerName}`);
         } else {
             console.warn(`No tired horses available to fill empty race ${localIndex} for ${playerName}`);

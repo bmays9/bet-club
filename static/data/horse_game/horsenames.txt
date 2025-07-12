@@ -14,6 +14,7 @@ Alfie Flowers
 Alkaline Duo
 Alkurinchi
 Alpha Destroyer
+Alpha Reward
 Altiora
 Alvarillo
 Alydar
@@ -35,12 +36,16 @@ Astro Blitz
 Atlanta Dream
 Aurora Jinx
 Autumn Boxer
+Aveiro Sun
 Ballybawn Flow
+Banhoek Red
+Bashiri
 Basilico
 Bellagio Deal
 Beltrain
 Bergsson
 Bergvall
+Biarritz
 Big Burrows
 Biloxi Parish
 Bistro Kid
@@ -59,6 +64,7 @@ Bojack Power
 Bold Meteor
 Botanical
 Bowl Me Over
+Boxing Glass
 Bravo To Nero
 Bridge Too Far
 Brighton Belle
@@ -67,6 +73,7 @@ Brixton Smile
 Broadrunner
 Buananotte
 Bullet Chain
+Burlington
 Butragueno
 Buzzkill
 California Chrome
@@ -80,11 +87,15 @@ Carbonetra
 Carnevale
 Carruso
 Castlegrace
+Catch The Flight
 Cavanaugh Park
+Caymanche
 Celestial Speedster
 Cellar Door
 Celtic Song
+Centrifugal Force
 Chamonix
+Chancery Lane
 Chaperone
 Chautauqua
 Chuchotement Bleu
@@ -94,6 +105,7 @@ Collyanna
 Comet Warrior
 Complexity
 Concerto
+Coniston Export
 Consortium
 Constitution Hall
 Corbeau Secret
@@ -102,6 +114,7 @@ Cosmic Inferno
 Cosmic Sprinter
 Count Me Out
 Crack The Code
+Cresta Hill
 Criminal Beat
 Crimson Gale
 Crimson Titan
@@ -172,8 +185,10 @@ Galactic Sprinter
 Gallopin Des Chance
 Gepeto
 Get To The Money
+Getaway Bridge
 Getaway Smoke
 Ghostzapper
+Global Funk
 Going For Gold
 Gold Or Bronze
 Golden Milchik
@@ -225,6 +240,7 @@ Infinity Jet
 Infinityorbust
 Iniesta
 Inkwell
+Instant Fanatic
 Inta Orbit
 Inverted Sun
 Iron Mallet
@@ -232,6 +248,7 @@ Iron Stallion
 Iron Thunder
 Istabrack
 Jacksonville
+Jadeja
 J'adore
 Jargon Buster
 Jetstream Fury
@@ -242,6 +259,7 @@ Jubilee Bravo
 Jupyter Express
 Justify
 Kauto Scar
+Kayamandi
 Kendall's Rap
 King Ezekial
 King Scraper
@@ -249,6 +267,7 @@ Kopek De Maude
 Krakatoan
 Krystalline
 Kyoto Embrace
+La Canourgue
 La Rochelle
 Lake Coniston
 Lamela
@@ -265,6 +284,7 @@ Lucid Dream
 Luhblinah
 Lunar Racer
 Lunar Rocket
+Luxor Show
 Made In York
 Madrid Maestro
 Magellan
@@ -277,6 +297,7 @@ Marjoom
 Master Francis
 MeetMeAtSix
 Melbourne Beret
+Merlot Supernova
 Metallic Sparkle
 Meteor Fury
 Meteor Shower
@@ -284,6 +305,7 @@ Mexican Marvel
 Midnight Charger
 Midnight Miracle
 Midnight Warrior
+Million Archers
 Minella Fortune
 Minella Reaction
 Mine's A Half
@@ -295,6 +317,7 @@ Mister Cranston
 Mitrovic
 Monday Flowers
 Monoplastic
+Mont Brisson
 Montre Fondue
 Montrose Pier 
 More Or Less
@@ -337,11 +360,13 @@ Out To Get Yer
 Outback Larry
 Outerbelly
 Palinka
+Palmeiras
 Papillon de Minuit
 Passenger Forty
 Pedrovia
 Pegasus Fire
 Pegasus Lightning
+Penedono
 Peralta Six
 Percy For Mercy
 Petit Coquin
@@ -351,6 +376,7 @@ Phoenix Stride
 Photographic
 Pizaglo
 Planet Infusion
+Port Ghalib
 Portman Road
 Poured It Over
 Practical Jest
@@ -388,6 +414,7 @@ Red Rumble
 Red Titan Charger
 Red Tuxedo
 Red Violin
+Rendora
 Risque Tout
 Riverside Dancer
 Roaring Lion
@@ -409,6 +436,7 @@ Scandinavia
 Scholar's Mate
 Scoutabout
 Sea For All
+Seabreeze Cometh
 Shadow Racer
 Shadowstrike
 Shallow
@@ -418,13 +446,14 @@ Silk Riches
 Silver Blaze
 Silver Streaker
 Simmering Sun
+Simposium
 Sizing Aurora
 Sizing Sweden
 Skyfire Charger
 Skyward Blitz
 Slovak Drama
+So Let It Rain
 Solar Eruption
-Solar Stampede
 Solar Storm
 Solaris King
 Solarium
@@ -436,20 +465,16 @@ Special Agent
 Spectacular Bid
 Speed Demon
 Split Tension
+Springfontein
 Sprinkler
 Sprinter Sacred
-Stalaze Chancer
 Stamp The Card
-Starborn Creek
-Stardust Streak
-Starlight Cometh
 Starlit Victory
-Starshot Express
 State Mantra
+Stellenbosch
 Stolen Memory
 Storm Chaser
 Storm Rider
-Stormchaser Racer
 Street Sense
 Strong Respite
 Succession
@@ -468,12 +493,13 @@ Telecom
 Tempura Flyer
 Tendulkar
 Tennessee Target
+Terrestrial
 Thanksamillion
 The Better Half
 The Big Show
 The Cometaire
 The Crimson Streak
-The Crows Nest
+The Crow's Nest
 The Dark Crusader
 The Dimestore Kid
 The Infernal Streak
@@ -515,6 +541,7 @@ Turbonica Jazz
 Turling Comet
 Twente Minutes
 Under The Influence
+Underarmer
 Undercooked
 Unintended
 Up The Bracket
@@ -538,6 +565,7 @@ Warhole Bounty
 Warhorse Titan
 Warp Speed
 Warrior Pride
+Waterside
 Wendory
 Western Mochi
 Westwood Drive
@@ -560,8 +588,10 @@ Yosemite
 Young Diva
 Young Magician
 YouveBeenWarned
+Zalaque
 Zambour
 Zealand
 Zenyatta
 Zidane
 Zondervan
+Zablanx
