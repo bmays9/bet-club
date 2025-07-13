@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- content starts here -->
+
+<h2>Create Group</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create Group</button>
+</form>
+
+
+<!-- content ends here -->
+{% endblock content %}

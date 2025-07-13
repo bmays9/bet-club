@@ -45,7 +45,7 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://8000-bmays9-betclub-ccohq2qfp0f.ws-eu118.gitpod.io",  # Add your Gitpod domain
+    "https://8000-bmays9-betclub-1ck08jddohy.ws-eu120.gitpod.io",  # Add your Gitpod domain
     "https://*.herokuapp.com"
 ]
 
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'game_horse',
+    'groups',
     'lms',
     'score_predict',
 ]

@@ -57,17 +57,17 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Play</a>
               <div class="dropdown-menu">
-                <a class="dropdown-item" href="../horse.html">Horse Racing</a>
+                <a class="dropdown-item" href="/horse.html">Horse Racing</a>
               </div>
             </li>
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Create Game</a>
+              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Groups</a>
               <div class="dropdown-menu">
-                <a class="dropdown-item" href="#">LMS</a>
-                <a class="dropdown-item" href="#">Another action</a>
-                <a class="dropdown-item" href="#">Something else here</a>
+                <a class="dropdown-item" href="{% url 'my_groups' %}">My Groups</a>
+                <a class="dropdown-item" href="{% url 'create_group' %}">Create A Group</a>
+                <a class="dropdown-item" href="{% url 'join_group' %}">Join A Group</a>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="#">Separated link</a>
+                <a class="dropdown-item" href="#">Search Groups</a>
               </div>
             </li>
             {% if user.is_authenticated %}

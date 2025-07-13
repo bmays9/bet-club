@@ -26,4 +26,5 @@ urlpatterns = [
     path("horse.html", horse_view, name="horse"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    path('groups/', include('groups.urls')),
 ]

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- content starts here -->
+
+<h2>My Groups</h2>
+<ul>
+  {% for group in groups %}
+    <li><a href="{% url 'group_home' group.id %}">{{ group.name }}</a></li>
+  {% empty %}
+    <li>You are not in any groups.</li>
+  {% endfor %}
+</ul>
+
+<!-- content ends here -->
+{% endblock content %}
