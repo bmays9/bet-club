@@ -16,7 +16,26 @@ LEAGUE_ORDER = {
     "EL2": "League Two"
 }
 
-VALID_WEEKDAYS = [4, 5, 6, 0]  # Weekend Fixtures | Friday=4, Saturday=5, Sunday=6, Monday=0
+def get_fixture_groups(user):
+    today = now().date()
+    weekday = today.weekday()
+
+    # Define date ranges
+    weekend_days = [4, 5, 6, 0]  # Fri–Mon
+    midweek_days = [1, 2, 3]     # Tue–Thu
+
+    weekend_fixtures = Fixture.objects.filter(
+        date__week_day__in=[6, 7, 1, 2]  # Django week_day: Sunday=1, Saturday=7
+    )
+
+    midweek_fixtures = Fixture.objects.filter(
+        date__week_day__in=[3, 4, 5]
+    )
+
+    return {
+        "Weekend": weekend_fixtures,
+        "Midweek": midweek_fixtures,
+    }
 
 class FixtureList(generic.ListView):
     

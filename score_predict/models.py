@@ -55,7 +55,12 @@ class Prediction(models.Model):
 
 
 class Game(models.Model):
+    GAME_TYPE_CHOICES = [
+        ("Weekend", "Weekend"),
+        ("Midweek", "Midweek"),
+    ]
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, related_name='score_games')
+    game_type = models.CharField(max_length=10, choices=GAME_TYPE_CHOICES)
     week = models.PositiveIntegerField()
     start_date = models.DateField()
     end_date = models.DateField()
