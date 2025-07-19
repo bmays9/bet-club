@@ -52,3 +52,54 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+
+document.getElementById("submit-scores").addEventListener("click", function () {
+    const predictions = [];
+    const entryFee = document.getElementById("entryfee-sp").value;
+
+    const scoreInputs = document.querySelectorAll(".score-input");
+
+    const groupedByFixture = {};
+
+    scoreInputs.forEach(input => {
+        const fixtureId = input.dataset.fixtureId;
+        const team = input.dataset.team;
+        const score = parseInt(input.value);
+
+        if (!groupedByFixture[fixtureId]) {
+            groupedByFixture[fixtureId] = {};
+        }
+        groupedByFixture[fixtureId][team] = score;
+    });
+
+    for (const [fixtureId, scores] of Object.entries(groupedByFixture)) {
+        if (scores.home != null && scores.away != null) {
+            predictions.push({
+                fixture_id: fixtureId,
+                home_score: scores.home,
+                away_score: scores.away
+            });
+        }
+    }
+
+    fetch("/submit-predictions/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+            predictions,
+            entry_fee: entryFee
+        })
+    }).then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              alert("Predictions submitted!");
+              window.location.reload();
+          } else {
+              alert("Failed to submit.");
+          }
+      });
+});

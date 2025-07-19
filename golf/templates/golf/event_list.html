@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- content starts here -->
+
+<h2>Recent and Upcoming Golf Events</h2>
+<ul>
+  {% for event in events %}
+    <li>
+      <strong>{{ event.name }}</strong> – {{ event.start_date }} to {{ event.end_date }}<br>
+      {{ event.course }} ({{ event.tour.tour_name }})
+    </li>
+  {% empty %}
+    <li>No events found in this time window.</li>
+  {% endfor %}
+</ul>
+
+
+{% endblock content %}

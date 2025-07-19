@@ -21,10 +21,11 @@ from .views import horse_view, home_view  # Import the view
 
 urlpatterns = [
     path("", home_view, name="index"),
-    path("scores/", include("score_predict.urls"), name="scores"),
     path("home/", home_view, name="home"),
     path("horse.html", horse_view, name="horse"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    path("golf/", include("golf.urls")),
     path('groups/', include('groups.urls')),
+    path("scores/", include("score_predict.urls"), name="scores"),
 ]

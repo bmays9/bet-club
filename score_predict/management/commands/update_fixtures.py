@@ -1,99 +1,104 @@
 import requests
-import datetime
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from score_predict.models import Fixture
 from django.conf import settings
 import os
 
-API_KEY = os.getenv("API_FOOTBALL_KEY")
-BASE_URL = "https://v3.football.api-sports.io/"
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+RAPIDAPI_SOFA_HOST = os.environ.get('RAPIDAPI_SOFA_HOST')
+
+#BASE_URL = "https://v3.football.api-sports.io/"
 
 HEADERS = {
-    'x-rapidapi-key': API_KEY,
-    'x-rapidapi-host': 'v3.football.api-sports.io'
+    "X-RapidAPI-Key": RAPIDAPI_KEY,
+    "X-RapidAPI-Host": RAPIDAPI_SOFA_HOST
 }
 
-season = 2021
-
-LEAGUES = {
-    39: "PL",
-    40: "CH",
-    41: "L1",
-    42: "L2"
+# SofaScore uses competition IDs for leagues:
+ENGLISH_LEAGUES = {
+    "Premier League": {"short_name": "EPL", "tournament_id": 17, "season_id": 76986},
+    "Championship": {"short_name": "ECH", "tournament_id": 18, "season_id": 77347},
+    "League One": {"short_name": "EL1", "tournament_id": 24, "season_id": 77352},
+    "League Two": {"short_name": "EL2", "tournament_id": 25, "season_id": 77351},
 }
+
+def get_next_fixtures():
+    
+    fixtures = []
+
+    for league_name, ids in ENGLISH_LEAGUES.items():
+        url = "https://sofascore.p.rapidapi.com/tournaments/get-next-matches"
+            
+        querystring = {
+            "tournamentId": str(ids["tournament_id"]),
+            "seasonId": str(ids["season_id"]),
+            "pageIndex": "0"
+        }
+        response = requests.get(url, headers=HEADERS, params=querystring)
+
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get("events", [])
+
+            for fixture in events:
+                fixtures.append({
+                    "fixture_id": fixture["id"],
+                    "league_id": ids["tournament_id"],
+                    "league_short_name": ids["short_name"],
+                    "date": datetime.utcfromtimestamp(fixture["startTimestamp"]),
+                    "home_team": fixture["homeTeam"]["name"],
+                    "away_team": fixture["awayTeam"]["name"],
+                    "home_colour": fixture.get("homeTeam", {}).get("teamColors", {}).get("primary"),
+                    "home_text": fixture.get("homeTeam", {}).get("teamColors", {}).get("text"),
+                    "away_colour": fixture.get("awayTeam", {}).get("teamColors", {}).get("primary"),
+                    "away_text": fixture.get("awayTeam", {}).get("teamColors", {}).get("text"),
+                    "final_result_only": fixture.get("finalResultOnly", False),
+                    "status_code": fixture.get("status", {}).get("code"),
+                    "status_description": fixture.get("status", {}).get("description"),
+                })
+        else:
+            print(f"Error fetching fixtures for {league_name}: {response.status_code}")
+
+    return fixtures
+
+def store_fixtures(fixtures):
+    saved = 0
+    for f in fixtures:
+        _, created = Fixture.objects.update_or_create(
+            fixture_id=f["fixture_id"],
+            defaults={
+                "league_id": f["league_id"],
+                "league_short_name": f["league_short_name"],
+                "date": f["date"],
+                "home_team": f["home_team"],
+                "away_team": f["away_team"],
+                "home_colour": f.get("home_colour"),
+                "home_text": f.get("home_text"),
+                "away_colour": f.get("away_colour"),
+                "away_text": f.get("away_text"),
+                "final_result_only": f.get("final_result_only", False),
+                "status_code": f.get("status_code"),
+                "status_description": f.get("status_description"),
+                "home_score": None,
+                "away_score": None,
+                "result": "N"
+            }
+        )
+        if created:
+            saved += 1
+    print(f"{saved} new fixtures saved.")
+
 
 class Command(BaseCommand):
-    help = "Fetch and store fixtures & results from API-Football"
-
-    def fetch_fixtures(self, date_from, date_to):
-        fixtures = []
-        for league_id in LEAGUES.keys():
-            url = f"{BASE_URL}fixtures"
-            params = {
-                "league": league_id,
-                "season": season,
-                "from": date_from,
-                "to": date_to,
-            }
-            response = requests.get(url, headers=HEADERS, params=params)
-            data = response.json()
-            if "response" in data:
-                fixtures.extend(data["response"])
-        print(response.text)
-        print(fixtures)
-
-        return fixtures
+    help = 'Fetch next fixtures for English leagues'
 
     def handle(self, *args, **kwargs):
-        # today = datetime.date.today()
-        today = datetime.date.today().replace(year=season + 1)
-        past_week = (today - datetime.timedelta(days=10)).strftime('%Y-%m-%d')
-        next_week = (today + datetime.timedelta(days=10)).strftime('%Y-%m-%d')
-        print(past_week)
-        print(next_week)
+        fixtures = get_next_fixtures()
+        store_fixtures(fixtures)
+        for f in fixtures:
+            self.stdout.write(f"{f['league']}: {f['home_team']} vs {f['away_team']} on {f['date']}")
 
-        # Fetch past results
-        past_results = self.fetch_fixtures(past_week, today)
-        self.store_fixtures(past_results, is_result=True)
 
-        # Fetch upcoming fixtures
-        upcoming_fixtures = self.fetch_fixtures(today, next_week)
-        self.store_fixtures(upcoming_fixtures, is_result=False)
 
-    def store_fixtures(self, fixtures, is_result):
-        for fixture in fixtures:
-            league_id = fixture["league"]["id"]
-            fixture_id = fixture["fixture"]["id"]
-            date = fixture["fixture"]["date"]
-            home_team = fixture["teams"]["home"]["name"]
-            away_team = fixture["teams"]["away"]["name"]
-            home_score = fixture["goals"]["home"]
-            away_score = fixture["goals"]["away"]
 
-            result = None
-            if is_result and home_score is not None and away_score is not None:
-                if home_score > away_score:
-                    result = 'H'
-                elif home_score < away_score:
-                    result = 'A'
-                else:
-                    result = 'D'
-
-            obj, created = Fixture.objects.update_or_create(
-                fixture_id=fixture_id,
-                defaults={
-                    "league_id": league_id,
-                    "league_short_name": LEAGUES.get(league_id),
-                    "date": date,
-                    "home_team": home_team,
-                    "away_team": away_team,
-                    "home_score": home_score,
-                    "away_score": away_score,
-                    "result": result,
-                }
-            )
-
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Added {home_team} vs {away_team} ({LEAGUES.get(league_id)})"))
-            else:
-                self.stdout.write(self.style.SUCCESS(f"Updated {home_team} vs {away_team} ({LEAGUES.get(league_id)})"))

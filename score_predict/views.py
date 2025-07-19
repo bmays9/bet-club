@@ -1,16 +1,19 @@
-from collections import defaultdict, OrderedDict
-from django.utils.timezone import now
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.db import transaction
+from .models import Prediction, Fixture, Game
+from django.utils.dateparse import parse_date
+from decimal import Decimal
 from django.views import generic
-from .models import Fixture
-from django.utils.timezone import make_aware, localtime
-from datetime import datetime
+import json
+from datetime import date
 
 LEAGUE_ORDER = {
-    "PL": "Premier League",
-    "CH": "Championship",
-    "L1": "League One",
-    "L2": "League Two"
+    "EPL": "Premier League",
+    "ECH": "Championship",
+    "EL1": "League One",
+    "EL2": "League Two"
 }
 
 VALID_WEEKDAYS = [4, 5, 6, 0]  # Weekend Fixtures | Friday=4, Saturday=5, Sunday=6, Monday=0
@@ -50,3 +53,59 @@ class FixtureList(generic.ListView):
 
         context["fixture_list"] = ordered_grouped
         return context
+
+
+@login_required
+@transaction.atomic
+def submit_predictions(request):
+    if request.method == "POST":
+        user = request.user
+        data = request.POST
+
+        # Extract predicted fixture IDs and scores from form
+        predicted_fixtures = {}
+        for key, value in data.items():
+            if key.startswith("fixture_") and value.isdigit():
+                parts = key.split("_")
+                fixture_id = parts[1]
+                team = parts[2]  # 'home' or 'away'
+                predicted_fixtures.setdefault(fixture_id, {})[team] = int(value)
+
+        # Fetch only the fixtures the user submitted predictions for
+        fixture_ids = predicted_fixtures.keys()
+        fixtures = Fixture.objects.filter(id__in=fixture_ids)
+
+        # Get or create the current game (e.g. ScorePredict game for the week)
+        game, _ = Game.objects.get_or_create(
+            week=1,  # You can dynamically set this based on date
+            defaults={
+                'start_date': timezone.now().date(),
+                'end_date': timezone.now().date() + timedelta(days=2),
+                'entry_fee': Decimal(data.get('entry_fee', '5.00'))
+            }
+        )
+
+        # Add user to the game if not already
+        game.players.add(user)
+
+        # Create/update predictions
+        for fixture in fixtures:
+            scores = predicted_fixtures[str(fixture.id)]
+            home_score = scores.get('home')
+            away_score = scores.get('away')
+
+            if home_score is not None and away_score is not None:
+                Prediction.objects.update_or_create(
+                    player=user,
+                    fixture=fixture,
+                    defaults={
+                        'predicted_home_score': home_score,
+                        'predicted_away_score': away_score
+                    }
+                )
+
+        messages.success(request, "Your predictions have been submitted!")
+        return redirect('score_predict:fixtures')  # Update with your real redirect
+
+    else:
+        return redirect('score_predict:fixtures')
