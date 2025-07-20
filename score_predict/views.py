@@ -2,12 +2,15 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db import transaction
-from .models import Prediction, Fixture, Game
+from .models import GameTemplate, GameInstance, Prediction, Fixture
+from collections import defaultdict, OrderedDict
+from groups.models import UserGroup
 from django.utils.dateparse import parse_date
+from django.utils.timezone import make_aware, get_current_timezone
 from decimal import Decimal
 from django.views import generic
 import json
-from datetime import date
+from datetime import date, datetime
 
 LEAGUE_ORDER = {
     "EPL": "Premier League",
@@ -38,6 +41,47 @@ def get_fixture_groups(user):
     }
 
 class FixtureList(generic.ListView):
+    template_name = "score_predict/fixtures.html"
+    model = Fixture
+    context_object_name = "fixtures"
+
+    def get_queryset(self):
+        selected_tab = self.request.GET.get("tab", "weekend")
+        today = datetime.now(get_current_timezone()).date()
+
+        # Get the next GameTemplate of the selected type
+        next_template = (
+            GameTemplate.objects
+            .filter(game_type__iexact=selected_tab, end_date__gte=today)
+            .order_by("start_date")
+            .first()
+        )
+
+        self.selected_template = next_template  # Save for use in context
+
+        if next_template:
+            return Fixture.objects.filter(gametemplate=next_template).order_by("date")
+        return Fixture.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        grouped = defaultdict(list)
+
+        for fixture in self.object_list:
+            if fixture.league_short_name in LEAGUE_ORDER:
+                grouped[fixture.league_short_name].append(fixture)
+
+        ordered_grouped = OrderedDict()
+        for key in LEAGUE_ORDER.keys():
+            if key in grouped:
+                ordered_grouped[LEAGUE_ORDER[key]] = grouped[key]
+
+        context["fixture_list"] = ordered_grouped
+        context["selected_tab"] = self.request.GET.get("tab", "weekend")
+        context["game_template"] = self.selected_template
+        return context
+
+class FixtureOLDDDList(generic.ListView):
     
     template_name = "score_predict/fixtures.html"
     model = Fixture
@@ -45,14 +89,14 @@ class FixtureList(generic.ListView):
 
     def get_queryset(self):
         # Simulated "today" in 2021 season
-        today_real = datetime.today()
-        today_fake = datetime(2021, today_real.month, today_real.day)
+        today_real = datetime.now(get_current_timezone())
+        today_fake = datetime(2025, today_real.month, today_real.day)
 
         # Make it timezone-aware if using USE_TZ
         today_fake_aware = make_aware(today_fake)
 
         return Fixture.objects.filter(
-            date__gte=today_fake_aware
+            date__gte=today_fake
         ).order_by("date")
 
     def get_context_data(self, **kwargs):
@@ -60,71 +104,58 @@ class FixtureList(generic.ListView):
         grouped = defaultdict(list)
 
         for fixture in self.object_list:
-            weekday = fixture.date.weekday()
-            if fixture.league_short_name in LEAGUE_ORDER and weekday in VALID_WEEKDAYS:
+            if fixture.league_short_name in LEAGUE_ORDER:
                 grouped[fixture.league_short_name].append(fixture)
 
-        # Use OrderedDict to preserve custom league order
         ordered_grouped = OrderedDict()
         for key in LEAGUE_ORDER.keys():
             if key in grouped:
                 ordered_grouped[LEAGUE_ORDER[key]] = grouped[key]
 
         context["fixture_list"] = ordered_grouped
+        context["selected_tab"] = self.request.GET.get("tab", "weekend")
         return context
 
-
 @login_required
-@transaction.atomic
+##@transaction.atomic
 def submit_predictions(request):
     if request.method == "POST":
         user = request.user
-        data = request.POST
+        group_id = request.POST.get("group_id")
+        template_slug = request.POST.get("template_slug")  # e.g. "midweek-2025-wk30"
+        predictions_data = request.POST.get("predictions")  # sent as JSON or form data
 
-        # Extract predicted fixture IDs and scores from form
-        predicted_fixtures = {}
-        for key, value in data.items():
-            if key.startswith("fixture_") and value.isdigit():
-                parts = key.split("_")
-                fixture_id = parts[1]
-                team = parts[2]  # 'home' or 'away'
-                predicted_fixtures.setdefault(fixture_id, {})[team] = int(value)
+        group = get_object_or_404(UserGroup, id=group_id)
+        game_template = get_object_or_404(GameTemplate, slug=template_slug)
 
-        # Fetch only the fixtures the user submitted predictions for
-        fixture_ids = predicted_fixtures.keys()
-        fixtures = Fixture.objects.filter(id__in=fixture_ids)
-
-        # Get or create the current game (e.g. ScorePredict game for the week)
-        game, _ = Game.objects.get_or_create(
-            week=1,  # You can dynamically set this based on date
-            defaults={
-                'start_date': timezone.now().date(),
-                'end_date': timezone.now().date() + timedelta(days=2),
-                'entry_fee': Decimal(data.get('entry_fee', '5.00'))
-            }
+        # 🔑 Create or fetch the GameInstance for this group and template
+        game_instance, created = GameInstance.objects.get_or_create(
+            template=game_template,
+            group=group,
+            defaults={"entry_fee": Decimal("5.00")}
         )
 
-        # Add user to the game if not already
-        game.players.add(user)
+        # 🔁 Loop through and save predictions (fixtures with user predictions only)
+        for item in predictions_data:
+            fixture_id = item.get("fixture_id")
+            home_score = item.get("home_score")
+            away_score = item.get("away_score")
 
-        # Create/update predictions
-        for fixture in fixtures:
-            scores = predicted_fixtures[str(fixture.id)]
-            home_score = scores.get('home')
-            away_score = scores.get('away')
+            fixture = get_object_or_404(Fixture, id=fixture_id)
 
-            if home_score is not None and away_score is not None:
-                Prediction.objects.update_or_create(
-                    player=user,
-                    fixture=fixture,
-                    defaults={
-                        'predicted_home_score': home_score,
-                        'predicted_away_score': away_score
-                    }
-                )
+            prediction, _ = Prediction.objects.update_or_create(
+                game_instance=game_instance,
+                player=user,
+                fixture=fixture,
+                defaults={
+                    "predicted_home_score": home_score,
+                    "predicted_away_score": away_score,
+                }
+            )
 
-        messages.success(request, "Your predictions have been submitted!")
-        return redirect('score_predict:fixtures')  # Update with your real redirect
+        # 👥 Add the player to the game instance if not already added
+        game_instance.players.add(user)
 
-    else:
-        return redirect('score_predict:fixtures')
+        return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
+
+    return JsonResponse({"error": "Invalid request method"}, status=400)

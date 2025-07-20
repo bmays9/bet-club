@@ -5,10 +5,10 @@
 <div class="container mx-auto p-4">
     <ul class="nav nav-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" data-bs-toggle="tab" href="#weekend" aria-selected="true" role="tab">Weekend</a>
+    <a class="nav-link {% if selected_tab == 'weekend' %}active{% endif %}" data-bs-toggle="tab" href="?tab=weekend"" aria-selected="true" role="tab">Weekend</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" data-bs-toggle="tab" href="#midweek" aria-selected="false" role="tab" tabindex="-1">Midweek</a>
+    <a class="nav-link {% if selected_tab == 'midweek' %}active{% endif %}" data-bs-toggle="tab" href="?tab=midweek" aria-selected="false" role="tab">Midweek</a>
   </li>
   <li class="nav-item" role="presentation">
     <a class="nav-link" href="#" aria-selected="false" tabindex="-1" role="tab">Entered</a>

@@ -56,11 +56,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
 document.getElementById("submit-scores").addEventListener("click", function () {
     const predictions = [];
-    const entryFee = document.getElementById("entryfee-sp").value;
 
     const scoreInputs = document.querySelectorAll(".score-input");
-
     const groupedByFixture = {};
+
+    // Optional: Replace with how you store these in JS (e.g. via data attributes)
+    const groupId = document.getElementById("group-id").value;  // or data-group-id attribute
+    const gameTemplateId = document.getElementById("game-template-id").value;  // or data-template-id
 
     scoreInputs.forEach(input => {
         const fixtureId = input.dataset.fixtureId;
@@ -90,16 +92,18 @@ document.getElementById("submit-scores").addEventListener("click", function () {
             "X-CSRFToken": getCookie("csrftoken"),
         },
         body: JSON.stringify({
-            predictions,
-            entry_fee: entryFee
+            group_id: groupId,
+            game_template_id: gameTemplateId,
+            predictions: predictions
         })
-    }).then(response => response.json())
-      .then(data => {
-          if (data.success) {
-              alert("Predictions submitted!");
-              window.location.reload();
-          } else {
-              alert("Failed to submit.");
-          }
-      });
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Predictions submitted!");
+            window.location.reload();
+        } else {
+            alert("Failed to submit: " + (data.error || "Unknown error"));
+        }
+    });
 });
