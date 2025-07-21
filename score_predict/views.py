@@ -79,42 +79,9 @@ class FixtureList(generic.ListView):
         context["fixture_list"] = ordered_grouped
         context["selected_tab"] = self.request.GET.get("tab", "weekend")
         context["game_template"] = self.selected_template
+        context["user_groups"] = self.request.user.joined_groups.all()
         return context
 
-class FixtureOLDDDList(generic.ListView):
-    
-    template_name = "score_predict/fixtures.html"
-    model = Fixture
-    context_object_name = "fixtures"
-
-    def get_queryset(self):
-        # Simulated "today" in 2021 season
-        today_real = datetime.now(get_current_timezone())
-        today_fake = datetime(2025, today_real.month, today_real.day)
-
-        # Make it timezone-aware if using USE_TZ
-        today_fake_aware = make_aware(today_fake)
-
-        return Fixture.objects.filter(
-            date__gte=today_fake
-        ).order_by("date")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        grouped = defaultdict(list)
-
-        for fixture in self.object_list:
-            if fixture.league_short_name in LEAGUE_ORDER:
-                grouped[fixture.league_short_name].append(fixture)
-
-        ordered_grouped = OrderedDict()
-        for key in LEAGUE_ORDER.keys():
-            if key in grouped:
-                ordered_grouped[LEAGUE_ORDER[key]] = grouped[key]
-
-        context["fixture_list"] = ordered_grouped
-        context["selected_tab"] = self.request.GET.get("tab", "weekend")
-        return context
 
 @login_required
 ##@transaction.atomic

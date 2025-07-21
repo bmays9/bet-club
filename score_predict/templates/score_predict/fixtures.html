@@ -4,118 +4,130 @@
 <!-- content starts here -->
 <div class="container mx-auto p-4">
     <ul class="nav nav-tabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <a class="nav-link {% if selected_tab == 'weekend' %}active{% endif %}" data-bs-toggle="tab" href="?tab=weekend"" aria-selected="true" role="tab">Weekend</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link {% if selected_tab == 'midweek' %}active{% endif %}" data-bs-toggle="tab" href="?tab=midweek" aria-selected="false" role="tab">Midweek</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" href="#" aria-selected="false" tabindex="-1" role="tab">Entered</a>
-  </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Choose Leagues</a>
-    <div class="dropdown-menu">
-      <h6 class="dropdown-header">Available Leagues</h6>
-      <a class="dropdown-item" href="#">English</a>
-      <a class="dropdown-item" href="#">TBC</a>
-      <a class="dropdown-item" href="#">TBC</a>
-      <div class="dropdown-divider"></div>
-      <a class="dropdown-item" href="#">TBC</a>
-    </div>
-  </li>
-</ul>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if selected_tab == 'weekend' %}active{% endif %}" data-bs-toggle="tab" href="?tab=weekend"" aria-selected="true" role="tab">Weekend</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if selected_tab == 'midweek' %}active{% endif %}" data-bs-toggle="tab" href="?tab=midweek" aria-selected="false" role="tab">Midweek</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="#" aria-selected="false" tabindex="-1" role="tab">Entered</a>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Choose Leagues</a>
+            <div class="dropdown-menu">
+                <h6 class="dropdown-header">Available Leagues</h6>
+                <a class="dropdown-item" href="#">English</a>
+                <a class="dropdown-item" href="#">TBC</a>
+                <a class="dropdown-item" href="#">TBC</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="#">TBC</a>
+            </div>
+        </li>
+    </ul>
+</div>
 <div id="myTabContent" class="tab-content">
-  <div class="tab-pane fade active show" id="weekend" role="tabpanel">
-    <p>Upcoming weekend Fixtures. 3 group members entered</p>
-    <p>
-      <button disabled id="submit-scores" class="btn btn-primary">Submit</button>
-      <label class="col-form-label mt-4" for="entryfee-sp">Amount (£):</label>
-      <input type="text" class="entry-fee" placeholder="5.00" id="entryfee-sp">
-    </p>
-  </div>
-  <div class="tab-pane fade" id="midweek" role="tabpanel">
-    <p>Upcoming weekend Fixtures. Make selections to enter.</p>
-  </div>
-  <div class="tab-pane fade" id="dropdown1">
-    <p></p>
-  </div>
-  <div class="tab-pane fade" id="dropdown2">
-    <p></p>
-  </div>
+    <div class="tab-pane fade active show" id="weekend" role="tabpanel">
+    </div>
+    <div class="tab-pane fade" id="midweek" role="tabpanel">
+    </div>
+    <div class="tab-pane fade" id="dropdown1">
+        <p></p>
+    </div>
+    <div class="tab-pane fade" id="dropdown2">
+        <p></p>
+    </div>
+</div>
+<!-- Hide submission button if user is not logged in-->
+<div class="container mx-auto p-4">
+    <div class="row justify-content-md-center">
+      {% if user.is_authenticated %}
+        <div class="col">
+          <p><button id="submit-scores" class="btn btn-primary">Submit</button></p>
+        </div>
+        <div class="col">
+            <p>Entry fee = £5.00</p>
+        </div>
+        <div class="col">
+            {% if user_groups %}
+            <label for="group-select"></label>
+            <select id="sp-group-select" name="group_id" class="form-select">
+                {% for group in user_groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <p>You have not joined any groups.</p>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>You are not logged in.</p>
+        {% endif %}
+    </div>
 </div>
 
-    <div class="accordion small-font" id="accordionExample">
-      {% for league_name, fixtures in fixture_list.items %}
-        <div class="accordion-item border-0">
-          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+<div class="accordion small-font" id="accordionExample">
+    {% for league_name, fixtures in fixture_list.items %}
+    <div class="accordion-item border-0">
+        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
             <div class="accordion-button d-grid" style="grid-template-columns: 1fr 40px 40px 40px;"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#collapse{{ forloop.counter }}"
-                 aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
-                 aria-controls="collapse{{ forloop.counter }}">
-              
-              <!-- League name (left-aligned) -->
-              <span class="fw-bold">{{ league_name }}</span>
-    
-              <!-- H D A buttons (fixed-width columns) -->
-              <span class="text-center prediction-cell" data-result="H">H</span>
-              <span class="text-center prediction-cell" data-result="D">D</span>
-              <span class="text-center prediction-cell" data-result="A">A</span>
-    
+                data-bs-toggle="collapse"
+                data-bs-target="#collapse{{ forloop.counter }}"
+                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-controls="collapse{{ forloop.counter }}">
+                <!-- League name (left-aligned) -->
+                <span class="fw-bold">{{ league_name }}</span>
+                <!-- H D A buttons (fixed-width columns) -->
+                <span class="text-center prediction-cell" data-result="H">H</span>
+                <span class="text-center prediction-cell" data-result="D">D</span>
+                <span class="text-center prediction-cell" data-result="A">A</span>
             </div>
-          </h2>
-    
-          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
-               aria-labelledby="heading{{ forloop.counter }}"
-               data-bs-parent="#accordionExample">
+        </h2>
+        <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+            aria-labelledby="heading{{ forloop.counter }}"
+            data-bs-parent="#accordionExample">
             <div class="accordion-body py-2 px-3">
-              {% if fixtures %}
-              <ul class="list-group list-group-flush">
-                {% for fixture in fixtures %}
-                <li class="list-group-item d-flex flex-row py-1 px-2">
-                  <!-- LEFT: Fixture info -->
-                  <div class="flex-grow-1 date-font">
-                    <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
-                
-                    <!-- Home Team and Home Score Prediction -->
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                      <div class="fixture">{{ fixture.home_team }}</div>
-                      <input type="number" min="0" placeholder="H"
-                             class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                             data-fixture-id="{{ fixture.id }}" data-team="home">
-                    </div>
-                
-                    <!-- Away Team and Away Score Prediction -->
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="fixture">{{ fixture.away_team }}</div>
-                      <input type="number" min="0" placeholder="A"
-                             class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                             data-fixture-id="{{ fixture.id }}" data-team="away">
-                    </div>
-                  </div>
-                </li>
-                {% endfor %}
-              </ul>
-              {% else %}
+                {% if fixtures %}
+                <ul class="list-group list-group-flush">
+                    {% for fixture in fixtures %}
+                    <li class="list-group-item d-flex flex-row py-1 px-2">
+                        <!-- LEFT: Fixture info -->
+                        <div class="flex-grow-1 date-font">
+                            <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
+                            <!-- Home Team and Home Score Prediction -->
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <div class="fixture">{{ fixture.home_team }}</div>
+                                <input type="number" min="0" placeholder="H"
+                                    class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                                    data-fixture-id="{{ fixture.id }}" data-team="home">
+                            </div>
+                            <!-- Away Team and Away Score Prediction -->
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="fixture">{{ fixture.away_team }}</div>
+                                <input type="number" min="0" placeholder="A"
+                                    class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                                    data-fixture-id="{{ fixture.id }}" data-team="away">
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
                 <p class="mb-0">No fixtures available for this league.</p>
-              {% endif %}
+                {% endif %}
             </div>
-          </div>
         </div>
-      {% endfor %}
     </div>
-    
+    {% endfor %}
+</div>
 <script>
-function toggleCollapse(id) {
-    var section = document.getElementById(id);
-    section.classList.toggle("hidden");
-}
+    function toggleCollapse(id) {
+        var section = document.getElementById(id);
+        section.classList.toggle("hidden");
+    }
 </script>
-
 <!-- content ends here -->
 {% endblock content %}
-
 {% block additional %}
 <script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
 {% endblock additional %}

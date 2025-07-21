@@ -55,6 +55,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 document.getElementById("submit-scores").addEventListener("click", function () {
+    
+    if (!allLeaguesValid()) {
+        alert("Each league must have exactly one prediction for H, D, and A.");
+        return;
+    }
+
+    // Continue with submission logic if validation passed
     const predictions = [];
 
     const scoreInputs = document.querySelectorAll(".score-input");
@@ -107,3 +114,28 @@ document.getElementById("submit-scores").addEventListener("click", function () {
         }
     });
 });
+
+function allLeaguesValid() {
+    const leagueBlocks = document.querySelectorAll(".accordion-item");
+
+    for (const leagueBlock of leagueBlocks) {
+        const resultTypes = ["H", "D", "A"];
+        for (const result of resultTypes) {
+            const cells = leagueBlock.querySelectorAll(`.prediction-cell[data-result="${result}"]`);
+            let greenCount = 0;
+
+            cells.forEach(cell => {
+                if (cell.classList.contains("green")) {
+                    greenCount++;
+                }
+            });
+
+            // If not exactly one green cell per result in this league, fail validation
+            if (greenCount !== 1) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
