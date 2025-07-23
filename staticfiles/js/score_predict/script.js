@@ -61,6 +61,8 @@ document.getElementById("submit-scores").addEventListener("click", function () {
         return;
     }
 
+    console.log("Submitting Scores!");
+
     // Continue with submission logic if validation passed
     const predictions = [];
 
@@ -68,8 +70,19 @@ document.getElementById("submit-scores").addEventListener("click", function () {
     const groupedByFixture = {};
 
     // Optional: Replace with how you store these in JS (e.g. via data attributes)
-    const groupId = document.getElementById("group-id").value;  // or data-group-id attribute
-    const gameTemplateId = document.getElementById("game-template-id").value;  // or data-template-id
+    const groupSelect = document.getElementById("sp-group-select");  // or data-group-id attribute
+    const fixtureContainer = document.getElementById("fixture-container");
+    console.log("Group Select:", groupSelect);
+    const selectedGroupId = groupSelect.options[groupSelect.selectedIndex].value;
+    console.log("Selected Group ID:", selectedGroupId);
+
+    if (!groupSelect || !fixtureContainer) {
+       console.error("Required DOM elements not found");
+    return;
+    }
+
+    const groupId = groupSelect.value;
+    const gameTemplateId = fixtureContainer.dataset.templateId;
 
     scoreInputs.forEach(input => {
         const fixtureId = input.dataset.fixtureId;
@@ -83,7 +96,7 @@ document.getElementById("submit-scores").addEventListener("click", function () {
     });
 
     for (const [fixtureId, scores] of Object.entries(groupedByFixture)) {
-        if (scores.home != null && scores.away != null) {
+        if (!isNaN(scores.home) && !isNaN(scores.away)) {
             predictions.push({
                 fixture_id: fixtureId,
                 home_score: scores.home,
@@ -92,14 +105,22 @@ document.getElementById("submit-scores").addEventListener("click", function () {
         }
     }
 
-    fetch("/submit-predictions/", {
+    // ✅ Log the full payload before submission
+    const payload = {
+        group_id: selectedGroupId,
+        game_template_id: gameTemplateId,
+        predictions: predictions
+    };
+    console.log("Submitting predictions JSON:", payload);
+
+    fetch("/scores/submit-predictions/", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": getCookie("csrftoken"),
         },
         body: JSON.stringify({
-            group_id: groupId,
+            group_id: selectedGroupId,
             game_template_id: gameTemplateId,
             predictions: predictions
         })
@@ -138,4 +159,22 @@ function allLeaguesValid() {
     }
 
     return true;
+}
+
+function getCookie(name) {
+  // Django requires CSRF tokens for POST requests made via JavaScript. 
+  
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }

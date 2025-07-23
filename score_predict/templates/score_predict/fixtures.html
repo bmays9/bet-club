@@ -50,23 +50,24 @@
         </div>
         <div class="col">
             {% if user_groups %}
-            <label for="group-select"></label>
-            <select id="sp-group-select" name="group_id" class="form-select">
-                {% for group in user_groups %}
+                <label for="sp-group-select"></label>
+                <select id="sp-group-select" name="group_id" class="form-select">
+            {% for group in user_groups %}
                 <option value="{{ group.id }}">{{ group.name }}</option>
-                {% endfor %}
-            </select>
+            {% endfor %}
+                </select>
             {% else %}
-            <p>You have not joined any groups.</p>
+                <p>You have not joined any groups.</p>
             {% endif %}
-        </div>
+            </div>
         {% else %}
         <p>You are not logged in.</p>
         {% endif %}
     </div>
 </div>
 
-<div class="accordion small-font" id="accordionExample">
+<div id="fixture-container" data-template-id="{{ game_template.id }}">
+  <div class="accordion small-font" id="accordionExample">
     {% for league_name, fixtures in fixture_list.items %}
     <div class="accordion-item border-0">
         <h2 class="accordion-header" id="heading{{ forloop.counter }}">
@@ -119,6 +120,7 @@
         </div>
     </div>
     {% endfor %}
+  </div>
 </div>
 <script>
     function toggleCollapse(id) {

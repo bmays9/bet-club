@@ -87,13 +87,20 @@ class FixtureList(generic.ListView):
 ##@transaction.atomic
 def submit_predictions(request):
     if request.method == "POST":
-        user = request.user
-        group_id = request.POST.get("group_id")
-        template_slug = request.POST.get("template_slug")  # e.g. "midweek-2025-wk30"
-        predictions_data = request.POST.get("predictions")  # sent as JSON or form data
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
 
+        user = request.user
+        data = json.loads(request.body)
+
+        group_id = data.get("group_id")
+        template_id = data.get("game_template_id")  # JSON sends `game_template_id`
+        predictions_data = data.get("predictions")
+        
         group = get_object_or_404(UserGroup, id=group_id)
-        game_template = get_object_or_404(GameTemplate, slug=template_slug)
+        game_template = get_object_or_404(GameTemplate, id=template_id)
 
         # 🔑 Create or fetch the GameInstance for this group and template
         game_instance, created = GameInstance.objects.get_or_create(
