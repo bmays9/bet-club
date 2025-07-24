@@ -111,7 +111,10 @@ document.getElementById("submit-scores").addEventListener("click", function () {
         game_template_id: gameTemplateId,
         predictions: predictions
     };
-    console.log("Submitting predictions JSON:", payload);
+    console.log("Submitting predictions JSON:", JSON.stringify(payload));
+    const jsonCheck = isJsonString(JSON.stringify(payload))
+    console.log("JSON Check:", jsonCheck);
+
 
     fetch("/scores/submit-predictions/", {
         method: "POST",
@@ -127,11 +130,11 @@ document.getElementById("submit-scores").addEventListener("click", function () {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            alert("Predictions submitted!");
-            window.location.reload();
+        if (data.status === "success") {
+          alert("Predictions submitted!");
+          window.location.reload();
         } else {
-            alert("Failed to submit: " + (data.error || "Unknown error"));
+          alert("Failed to submit: " + (data.error || "Unknown error"));
         }
     });
 });
@@ -177,4 +180,13 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+function isJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
 }
