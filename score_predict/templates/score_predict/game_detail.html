@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<!-- content starts here -->
+<div class="container mx-auto p-4">
+    <div class="row">
+        <div class="col">
+            <h4>{{ game.group.name }}</h4>
+        </div>
+        <div class="col">
+            <p class="small-font">{{ game }}</p>
+        </div>
+    </div>
+    <p><strong>Entries:</strong> {{ game.players.count }}</p>
+
+    {% for entry in entries %}
+    <div class="accordion mb-3 border shadow-sm">
+        <div class="accordion-header fw-bold bg-light p-3" data-bs-toggle="collapse" data-bs-target="#player-{{ forloop.counter }}">
+        {{ forloop.counter }}. {{ entry.player.username }} – {{ entry.total_score }} pts
+        </div>
+        <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
+            <div class="accordion-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                    <th>League</th>
+                    <th>Home Team</th>
+                    <th> </th>
+                    <th> </th>
+                    <th>Away Team</th>
+                    <th>Prediction</th>
+                    <th>Pred Score/th>
+                    <th>Pts</th>
+                </tr>
+                </thead>
+                <tbody>
+                    {% for prediction in entry.predictions %}
+                    <tr>
+                        <td>{{ prediction.fixture.league.name }}</td>
+                        <td>{{ prediction.fixture.home_team }}</td>
+                        <td>{{ prediction.fixture.home_score|default:"–" }}</td>
+                        <td>{{ prediction.fixture.away_score|default:"–" }}</td>
+                        <td>{{ prediction.fixture.away_team }}</td>
+                        <td>
+                        {% with h=prediction.predicted_home_score a=prediction.predicted_away_score %}
+                            {% if h > a %}H{% elif a > h %}A{% else %}D{% endif %}
+                        {% endwith %}
+                        </td>
+                        <td>{{ prediction.predicted_home_score }}–{{ prediction.predicted_away_score }}</td>
+                        <td>{{ prediction.score }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+        </div>
+        {% endfor %}
+    </div>
+
+<!-- content ends here -->
+{% endblock content %}
+{% block additional %}
+<!-- content ends here <script type="module" src="{% static 'js/score_predict/script.js' %}"></script> -->
+{% endblock additional %}

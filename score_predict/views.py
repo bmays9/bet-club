@@ -1,9 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.generic.detail import DetailView
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
-from .models import GameTemplate, GameInstance, Prediction, Fixture
+from .models import GameTemplate, GameInstance, Prediction, Fixture, GameEntry
 from collections import defaultdict, OrderedDict
 from groups.models import UserGroup
 from django.utils.dateparse import parse_date
@@ -80,10 +82,32 @@ class FixtureList(generic.ListView):
         context["fixture_list"] = ordered_grouped
         context["selected_tab"] = self.request.GET.get("tab", "weekend")
         context["game_template"] = self.selected_template
-        if self.request.user.is_authenticated:
-            context["user_groups"] = self.request.user.joined_groups.all()
+
+        user = self.request.user
+
+        if user.is_authenticated:
+            user_groups = self.request.user.joined_groups.all()
+            group_entries = []
+
+            for group in user_groups:
+                try:
+                    game_instance = GameInstance.objects.get(template=self.selected_template, group=group)
+                    num_players = game_instance.players.count()
+                    has_entered = user in game_instance.players.all()
+                except GameInstance.DoesNotExist:
+                    num_players = 0
+                    has_entered = False
+
+                group_entries.append({
+                    "group": group,
+                    "num_players": num_players,
+                    "has_entered": has_entered,
+                })
+
+            context["group_entries"] = group_entries
         else:
-            context["user_groups"] = []
+            context["group_entries"] = []
+
         return context
 
 
@@ -149,52 +173,49 @@ def submit_predictions(request):
 
 
 @login_required
-##@transaction.atomic
-def submit_predictions_theold_way(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+def game_summary(request, group_id, template_slug):
+    group = get_object_or_404(UserGroup, id=group_id)
+    template = get_object_or_404(GameTemplate, slug=template_slug)
+    try:
+        game = GameInstance.objects.get(group=group, template=template)
+        player_count = game.players.count()
+        pot = player_count * game.entry_fee
+        has_entered = request.user in game.players.all()
+    except GameInstance.DoesNotExist:
+        player_count = 0
+        pot = 0
+        has_entered = False
 
-        user = request.user
-        data = json.loads(request.body)
+    return JsonResponse({
+        "player_count": player_count,
+        "pot": str(pot),
+        "has_entered": has_entered,
+        "game_id": game.id if has_entered else None
+    })
 
-        group_id = data.get("group_id")
-        template_id = data.get("game_template_id")  # JSON sends `game_template_id`
-        predictions_data = data.get("predictions", [])
-        
-        group = get_object_or_404(UserGroup, id=group_id)
-        game_template = get_object_or_404(GameTemplate, id=template_id)
+class GameDetailView(DetailView):
+    model = GameInstance
+    template_name = "score_predict/game_detail.html"
+    context_object_name = "game"
 
-        # 🔑 Create or fetch the GameInstance for this group and template
-        game_instance, created = GameInstance.objects.get_or_create(
-            template=game_template,
-            group=group,
-            defaults={"entry_fee": Decimal("5.00")}
-        )
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        game = self.object
 
-        # 🔁 Loop through and save predictions (fixtures with user predictions only)
-        for item in predictions_data:
-            fixture_id = item.get("fixture_id")
-            home_score = item.get("home_score")
-            away_score = item.get("away_score")
+        entries = GameEntry.objects.filter(game=game).select_related('player')
+        prediction_data = []
 
-            fixture = get_object_or_404(Fixture, id=fixture_id)
+        for entry in entries:
+            predictions = Prediction.objects.filter(game_instance=game, player=entry.player)
+            prediction_data.append({
+                'player': entry.player,
+                'total_score': entry.total_score,
+                'predictions': predictions,
+            })
 
-            prediction, _ = Prediction.objects.update_or_create(
-                game_instance=game_instance,
-                player=user,
-                fixture=fixture,
-                defaults={
-                    "predicted_home_score": home_score,
-                    "predicted_away_score": away_score,
-                }
-            )
+        entries = GameEntry.objects.filter(game=game).select_related('player').prefetch_related(
+        Prefetch('predictions', queryset=Prediction.objects.select_related('fixture'))
+        ).order_by('-total_score')
 
-        # 👥 Add the player to the game instance if not already added
-        game_instance.players.add(user)
-
-        return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
-
-    return JsonResponse({"error": "Invalid request method"}, status=400)
+        context['entries'] = prediction_data
+        return context

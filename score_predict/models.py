@@ -73,6 +73,12 @@ class GameInstance(models.Model):
         return f"{self.template.slug} - {self.group.name}"
 
 class Prediction(models.Model):
+    RESULT_CHOICES = [
+        ('H', 'Home Win'),
+        ('D', 'Draw'),
+        ('A', 'Away Win'),
+        ('N', 'Not Played')
+    ]
     ## Individual fixture prediction, 
     game_instance = models.ForeignKey(GameInstance, on_delete=models.CASCADE, related_name="predictions")
     player = models.ForeignKey(User, on_delete=models.CASCADE, related_name="score_predictions")
@@ -80,6 +86,7 @@ class Prediction(models.Model):
     score = models.IntegerField(default=0)
     predicted_home_score = models.IntegerField()
     predicted_away_score = models.IntegerField()
+    predicted_result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True, default='N')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
