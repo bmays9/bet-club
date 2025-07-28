@@ -193,25 +193,33 @@ function isJsonString(str) {
     return true;
 }
 
-console.log("Script loaded");
 const groupSelect = document.getElementById("sp-group-select");
-    if (groupSelect) {
-        groupSelect.addEventListener("change", function () {
-            const groupId = this.value;
-            const templateSlug = document.getElementById("game-template-slug").value;
-            console.log("Group has changed", templateSlug);
-            
-            fetch(`/scores/game-summary/${groupId}/${templateSlug}/`)
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById("game-summary").innerHTML = `
-                        <div class="card p-3 mt-3">
-                            <p>Entries: ${data.player_count}</p>
-                            <p>Prize Pot: £${data.pot}</p>
-                            <p>Status: ${data.has_entered ? "You have entered" : "Not entered"}</p>
-                            ${data.has_entered ? `<a href="/scores/game/${data.game_id}/" class="btn btn-primary">View Game</a>` : ""}
-                        </div>
-                    `;
-                });
-        });
-    }
+
+function loadGameSummary(groupId, templateSlug) {
+    fetch(`/scores/game-summary/${groupId}/${templateSlug}/`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("game-summary").innerHTML = `
+                <div class="card p-3 mt-3">
+                    <p>Entries: ${data.player_count}</p>
+                    <p>Prize Pot: £${data.pot}</p>
+                    <p>Status: ${data.has_entered ? "You have entered" : "Not entered"}</p>
+                    ${data.has_entered ? `<a href="/scores/game/${data.game_id}/" class="btn btn-primary">View Game</a>` : ""}
+                </div>
+            `;
+        })
+        .catch(err => console.error("Error loading game summary:", err));
+}
+
+
+if (groupSelect) {
+    const templateSlug = document.getElementById("game-template-slug").value;
+
+    // 🔹 Load for the initially selected group at page load
+    loadGameSummary(groupSelect.value, templateSlug);
+
+    // 🔹 Load again when user changes dropdown
+    groupSelect.addEventListener("change", function () {
+        loadGameSummary(this.value, templateSlug);
+    });
+}

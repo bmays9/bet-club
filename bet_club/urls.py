@@ -18,13 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from game_horse import views as horse_views
 from .views import horse_view, home_view  # Import the view
+from bank.views import money_list
 
 urlpatterns = [
-    path("", home_view, name="index"),
+    path("", money_list, name="index"),   # homepage → money_list,
     path("home/", home_view, name="home"),
     path("horse.html", horse_view, name="horse"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    path("bank/", include("bank.urls")),
     path("golf/", include("golf.urls")),
     path('groups/', include('groups.urls')),
     path("scores/", include("score_predict.urls"), name="scores"),

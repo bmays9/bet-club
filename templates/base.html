@@ -35,9 +35,8 @@
         <div class="collapse navbar-collapse" id="navbarColor01">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
-              <a class="nav-link {% if request.path == home_url %}active{%endif%}" href="{% url 'home' %}">Home</a>
-                <span class="visually-hidden">(current)</span>
-              </a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" 
+              href="{% url 'index' %}">Home</a>
             </li>
             <li class="nav-item">
               <a class="nav-link {% if request.path == scores_url %}active{%endif%}" href="{% url 'scores' %}">ScorePredict</a>
