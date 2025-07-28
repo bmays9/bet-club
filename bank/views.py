@@ -3,8 +3,20 @@ from django.contrib.auth.decorators import login_required
 from .models import BankBalance
 from groups.models import UserGroup  # adjust import if needed
 
-@login_required
+
 def money_list(request):
+    if not request.user.is_authenticated:
+        # Option 1: Redirect to login page
+        # return redirect('login')
+
+        # Option 2: Or just show empty page or message
+        return render(request, "bank/money_list.html", {
+            "user_groups": [],
+            "selected_group": None,
+            "balances": [],
+            "not_logged_in": True,
+        })
+
     user_groups = UserGroup.objects.filter(members=request.user)  # or your relation logic
     selected_group_id = request.GET.get("group")
 

@@ -22,7 +22,7 @@ from bank.views import money_list
 
 urlpatterns = [
     path("", money_list, name="index"),   # homepage → money_list,
-    path("home/", home_view, name="home"),
+    path("home/", money_list, name="home"),
     path("horse.html", horse_view, name="horse"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
