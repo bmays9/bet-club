@@ -84,6 +84,7 @@ class Prediction(models.Model):
     player = models.ForeignKey(User, on_delete=models.CASCADE, related_name="score_predictions")
     fixture = models.ForeignKey(Fixture, on_delete=models.CASCADE, related_name="fixture")
     score = models.IntegerField(default=0)
+    alternate_score = models.IntegerField(default=0)
     predicted_home_score = models.IntegerField()
     predicted_away_score = models.IntegerField()
     predicted_result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True, default='N')

@@ -22,7 +22,7 @@
         <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
             <div class="accordion-body">
             <div class="table-responsive">
-                <table class="table table-sm table-striped align-middle">
+                <table class="table table-sm table-striped align-middle small-font">
                 <thead>
                     <tr>
                     <th>League</th>
@@ -38,7 +38,7 @@
                 <tbody>
                     {% for prediction in entry.predictions %}
                     <tr>
-                        <td>{{ prediction.fixture.league.name }}</td>
+                        <td>{{ prediction.fixture.league_short_name }}</td>
                         <td>{{ prediction.fixture.home_team }}</td>
                         <td>{{ prediction.fixture.home_score|default:"–" }}</td>
                         <td>{{ prediction.fixture.away_score|default:"–" }}</td>
