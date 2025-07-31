@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>LMS Dashboard</h2>
+
+{% if entries_with_rounds %}
+  <div class="list-group">
+    {% for item in entries_with_rounds %}
+      <div class="list-group-item">
+        <h5>{{ item.entry.game.name }} 
+            <span class="badge bg-secondary">{{ item.entry.game.get_league_display }}</span>
+        </h5>
+        <p>Group: {{ item.entry.game.group.name }}</p>
+
+        {% if item.next_round %}
+          <p>Round {{ item.next_round.round_number }}: 
+            {{ item.next_round.start_date|date:"D d M, H:i" }} → {{ item.next_round.end_date|date:"D d M, H:i" }}
+          </p>
+          {% if item.existing_pick %}
+            <p>Your pick: <strong>{{ item.existing_pick.team_name }}</strong></p>
+          {% else %}
+            <a href="{% url 'lms_make_pick' item.entry.game.id %}" class="btn btn-sm btn-primary">
+              Make Pick
+            </a>
+          {% endif %}
+        {% else %}
+          <p>No upcoming rounds available.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>You’re not entered into any active LMS games yet.</p>
+{% endif %}
+{% endblock %}

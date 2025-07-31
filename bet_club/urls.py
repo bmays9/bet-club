@@ -29,5 +29,6 @@ urlpatterns = [
     path("bank/", include("bank.urls")),
     path("golf/", include("golf.urls")),
     path('groups/', include('groups.urls')),
+    path("lms/", include("lms.urls")),
     path("scores/", include("score_predict.urls"), name="scores"),
 ]

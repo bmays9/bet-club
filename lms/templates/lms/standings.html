@@ -1,0 +1,33 @@
+<h2>{{ game.name }} - Standings</h2>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Player</th>
+      <th>Status</th>
+      <th>Last Pick</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in entries %}
+      <tr>
+        <td>{{ entry.user.username }}</td>
+        <td>
+          {% if entry.alive %}
+            <span class="badge bg-success">Alive</span>
+          {% else %}
+            <span class="badge bg-danger">Eliminated (Round {{ entry.eliminated_round }})</span>
+          {% endif %}
+        </td>
+        <td>
+          {% with entry.picks.last as last_pick %}
+            {% if last_pick %}
+              {{ last_pick.team_name }} ({{ last_pick.result }})
+            {% else %}
+              No pick yet
+            {% endif %}
+          {% endwith %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

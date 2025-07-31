@@ -1,0 +1,19 @@
+<h2>{{ game.name }} - Round {{ round.round_number }}</h2>
+<p>Pick your team from the fixtures below:</p>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.team_name }}
+  <button type="submit" class="btn btn-primary mt-3">Submit Pick</button>
+</form>
+
+<hr>
+<h3>Upcoming Fixtures</h3>
+<ul>
+  {% for fixture in fixtures %}
+    <li>{{ fixture.start_time|date:"D d M H:i" }}:
+        {{ fixture.home_team }} vs {{ fixture.away_team }}</li>
+  {% empty %}
+    <li>No fixtures available for this round.</li>
+  {% endfor %}
+</ul>

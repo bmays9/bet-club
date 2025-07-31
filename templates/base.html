@@ -52,7 +52,7 @@
               <a class="nav-link {% if request.path == scores_url %}active{%endif%}" href="{% url 'scores' %}">ScorePredict</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">LMS</a>
+              <a class="nav-link {% if request.path == scores_url %}active{%endif%}" href="{% url 'lms_dashboard' %}">LMS</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">Football Season</a>
