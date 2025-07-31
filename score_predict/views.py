@@ -4,7 +4,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic.detail import DetailView
 from django.db import transaction
 from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from .models import GameTemplate, GameInstance, Prediction, Fixture, GameEntry
 from collections import defaultdict, OrderedDict
 from groups.models import UserGroup
@@ -219,3 +219,6 @@ class GameDetailView(DetailView):
 
         context['entries'] = prediction_data
         return context
+
+def points_scoring(request):
+    return render(request, 'score_predict/scoring.html')
