@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Create a New LMS Game</h2>
+<form method="post">
+    {% csrf_token %}
+    <div>
+        <label for="group">Select Group:</label>
+        <select name="group" id="group" required>
+            {% for group in user_groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Create Game</button>
+</form>
+{% endblock %}

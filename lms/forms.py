@@ -22,3 +22,8 @@ class LMSPickForm(forms.Form):
             choices.append((f.away_team, f"{f.home_team} vs {f.away_team} (A)"))
         
         self.fields["team_name"].widget.choices = choices
+
+class LMSGameForm(forms.ModelForm):
+    class Meta:
+        model = LMSGame
+        fields = ["name", "league"]

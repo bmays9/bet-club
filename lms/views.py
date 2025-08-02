@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import LMSGame, LMSRound, LMSEntry, LMSGame, LMSPick
-from .forms import LMSPickForm
+from .forms import LMSPickForm, LMSGameForm
 from groups.models import UserGroup
 
 
@@ -119,3 +119,19 @@ def lms_game_detail(request, game_id):
         "entries": entries,
         "other_games": other_games,
     })
+
+@login_required
+def create_game(request, group_id):
+    group = UserGroup.objects.get(id=group_id)
+
+    if request.method == "POST":
+        form = LMSGameForm(request.POST)
+        if form.is_valid():
+            game = form.save(commit=False)
+            game.group = group
+            game.save()
+            return redirect("lms_dashboard")
+    else:
+        form = LMSGameForm()
+
+    return render(request, "lms/create_game.html", {"form": form, "group": group})

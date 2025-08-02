@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Last Man Standing - {{ game.league.name }}</h2>
+    <p><strong>Group:</strong> {{ game.group.name }}</p>
+
+    <div class="mb-3">
+        <form method="get" action="{% url 'lms_dashboard' %}">
+        <label for="group-select">Switch Game:</label>
+        <select id="group-select" class="form-select" onchange="window.location.href=this.value;">
+        <option value="{% url 'lms_game_detail' game.id %}">{{ game.league.name }}</option>
+        {% for g in other_games %}
+        <option value="{% url 'lms_game_detail' g.id %}">{{ g.league.name }}</option>
+        {% endfor %}
+        </select>
+        </form>
+    </div>
+
+
+    <p><strong>Status:</strong> 
+        {% if round.is_active %}
+            Round {{ round.number }} (Open for Picks)
+        {% else %}
+            Waiting for next round
+        {% endif %}
+    </p>
+
+    <hr>
+
+    <!-- Show player’s pick option if alive -->
+    {% if entry.alive %}
+        {% if not user_pick %}
+            <div class="alert alert-info">
+                You haven’t made a pick for this round yet.
+                <a href="{% url 'lms_make_pick' game.id round.id %}" class="btn btn-primary btn-sm ms-2">Make Your Pick</a>
+            </div>
+        {% else %}
+            <div class="alert alert-success">
+                You picked <strong>{{ user_pick.team.name }}</strong> this round.
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-danger">
+            You are out of this game. Better luck next time!
+        </div>
+    {% endif %}
+
+    <hr>
+
+    <!-- Show standings -->
+    <h4>Standings</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Status</th>
+                <th>Last Pick</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.user.username }}</td>
+                <td>
+                    {% if entry.alive %}
+                        <span class="badge bg-success">Alive</span>
+                    {% else %}
+                        <span class="badge bg-danger">Out</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% with pick=entry.picks.last %}
+                        {% if pick %}
+                            {{ pick.team.name }} (Round {{ pick.round.number }})
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center">No players yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

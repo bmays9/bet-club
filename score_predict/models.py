@@ -101,6 +101,7 @@ class GameEntry(models.Model):
     game = models.ForeignKey(GameInstance, on_delete=models.CASCADE)
     player = models.ForeignKey(User, on_delete=models.CASCADE)
     total_score = models.IntegerField(default=0)
+    alt_score = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ('game', 'player')
