@@ -39,7 +39,7 @@ class Fixture(models.Model):
     away_colour = models.CharField(max_length=7, null=True, blank=True)
     away_text = models.CharField(max_length=7, null=True, blank=True)
     final_result_only = models.BooleanField(default=False, null=True, blank=True)
-    status_code = models.IntegerField(null=True, blank=True)
+    status_code = models.IntegerField(null=True, blank=True) 
     status_description = models.CharField(max_length=50, null=True, blank=True)
     home_score = models.IntegerField(null=True, blank=True)
     away_score = models.IntegerField(null=True, blank=True)

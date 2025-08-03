@@ -202,20 +202,17 @@ class GameDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         game = self.object
 
-        entries = GameEntry.objects.filter(game=game).select_related('player')
-        prediction_data = []
+        # Prefetch predictions for all entries in one go
+        entries = GameEntry.objects.filter(game=game).select_related('player').order_by('-total_score')
 
+        prediction_data = []
         for entry in entries:
-            predictions = Prediction.objects.filter(game_instance=game, player=entry.player)
+            predictions = Prediction.objects.filter(game_instance=game, player=entry.player).select_related('fixture')
             prediction_data.append({
                 'player': entry.player,
                 'total_score': entry.total_score,
                 'predictions': predictions,
             })
-
-        entries = GameEntry.objects.filter(game=game).select_related('player').prefetch_related(
-        Prefetch('predictions', queryset=Prediction.objects.select_related('fixture'))
-        ).order_by('-total_score')
 
         context['entries'] = prediction_data
         return context

@@ -2,6 +2,7 @@
 from django.core.management.base import BaseCommand
 from score_predict.models import Fixture, Prediction, GameEntry
 from django.db import transaction
+from score_predict.management.commands.update_scores import update_scores
 import requests
 
 # import shared constants from update_fixtures
@@ -31,12 +32,10 @@ class Command(BaseCommand):
             matches = response.json().get("events", [])
             for match in matches:
                 fixture_id = match["id"]
+                
                 status = match["status"]["type"]
                 home_score = match.get("homeScore", {}).get("current")
                 away_score = match.get("awayScore", {}).get("current")
-
-                if status != "finished":
-                    continue
 
                 try:
                     fixture = Fixture.objects.get(fixture_id=fixture_id)
@@ -44,22 +43,11 @@ class Command(BaseCommand):
                     continue  # skip fixtures not in our DB
 
                 with transaction.atomic():
-                    fixture.status = "finished"
+                    fixture.status_code = match["status"]["code"]  # e.g. 100 for finished
+                    fixture.status_description = status            # e.g. "finished"
                     fixture.home_score = home_score
                     fixture.away_score = away_score
                     fixture.save()
-
-                    predictions = Prediction.objects.filter(fixture=fixture)
-                    for prediction in predictions:
-                        points = self.calculate_points(prediction, fixture)
-                        prediction.points_awarded = points
-                        prediction.save()
-
-                        entry = GameEntry.objects.get(game=prediction.game_instance, player=prediction.player)
-                        entry.total_score += points
-                        entry.save()
-
-        self.stdout.write(self.style.SUCCESS("Fixture results and predictions updated!"))
 
         self.stdout.write(self.style.SUCCESS("Fixture results updated! Now updating scores..."))
         update_scores(stdout=self.stdout)  # call score update after fixtures updated

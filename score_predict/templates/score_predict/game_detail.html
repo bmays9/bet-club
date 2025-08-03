@@ -35,7 +35,6 @@
                 </tr>
               </thead>
               <tbody> {% for prediction in entry.predictions %} <tr>
-                  <td>{{ prediction.fixture.league.name }}</td>
                   <td>{{ prediction.fixture.league_short_name }}</td>
                   <td>{{ prediction.fixture.home_team }}</td>
                   <td>{{ prediction.fixture.home_score|default_if_none:"–" }}</td>
