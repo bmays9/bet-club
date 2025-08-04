@@ -2,6 +2,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from groups.models import UserGroup
+from decimal import Decimal
 from score_predict.models import Fixture  # reuse your existing fixture model
 
 
@@ -13,10 +14,10 @@ class LMSGame(models.Model):
         ("L2", "League Two"),
     ]
 
-    name = models.CharField(max_length=100)
+    entry_fee = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, related_name="lms_games")
     league = models.CharField(max_length=3, choices=LEAGUE_CHOICES)
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True) #True is active, False is completed
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,6 +1,7 @@
 # lms/forms.py
 from django import forms
 from .models import LMSPick, LMSRound, LMSGame
+from groups.models import UserGroup
 
 class LMSPickForm(forms.Form):
     team_name = forms.CharField(widget=forms.RadioSelect)  # radio buttons for fixtures
@@ -23,7 +24,17 @@ class LMSPickForm(forms.Form):
         
         self.fields["team_name"].widget.choices = choices
 
-class LMSGameForm(forms.ModelForm):
+class CreateLMSGameForm(forms.ModelForm):
+    group = forms.ModelChoiceField(
+        queryset=None,
+        label="Select Group",
+    )
+
     class Meta:
         model = LMSGame
-        fields = ["name", "league"]
+        fields = ["entry_fee", "league", "group"]
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user")
+        super().__init__(*args, **kwargs)
+        self.fields["group"].queryset = UserGroup.objects.filter(members=user)

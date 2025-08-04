@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import LMSGame, LMSRound, LMSEntry, LMSGame, LMSPick
-from .forms import LMSPickForm, LMSGameForm
+from .forms import LMSPickForm, CreateLMSGameForm
 from groups.models import UserGroup
 
 
@@ -99,7 +99,7 @@ def lms_dashboard(request):
 
 def lms_game_detail(request, game_id):
     game = get_object_or_404(LMSGame, id=game_id)
-    round_obj = game.rounds.filter(is_active=True).first()
+    round_obj = game.rounds.filter(completed=False).first()
     entry = LMSEntry.objects.filter(user=request.user, game=game).first()
 
     user_pick = None
@@ -109,7 +109,7 @@ def lms_game_detail(request, game_id):
     entries = LMSEntry.objects.filter(game=game).select_related("user")
 
     # Get all unfinished games in this group (for dropdown/tabs)
-    other_games = LMSGame.objects.filter(group=game.group, finished=False).exclude(id=game.id)
+    other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
 
     return render(request, "lms/game_detail.html", {
         "game": game,
@@ -121,17 +121,13 @@ def lms_game_detail(request, game_id):
     })
 
 @login_required
-def create_game(request, group_id):
-    group = UserGroup.objects.get(id=group_id)
-
+def create_game(request):
     if request.method == "POST":
-        form = LMSGameForm(request.POST)
+        form = CreateLMSGameForm(request.POST, user=request.user)
         if form.is_valid():
-            game = form.save(commit=False)
-            game.group = group
-            game.save()
-            return redirect("lms_dashboard")
+            game = form.save()
+            return redirect("lms_game_detail", game.id)
     else:
-        form = LMSGameForm()
+        form = CreateLMSGameForm(user=request.user)
 
-    return render(request, "lms/create_game.html", {"form": form, "group": group})
+    return render(request, "lms/create_game.html", {"form": form})
