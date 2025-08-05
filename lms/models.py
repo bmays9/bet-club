@@ -9,9 +9,9 @@ from score_predict.models import Fixture  # reuse your existing fixture model
 class LMSGame(models.Model):
     LEAGUE_CHOICES = [
         ("EPL", "Premier League"),
-        ("CH", "Championship"),
-        ("L1", "League One"),
-        ("L2", "League Two"),
+        ("ECH", "Championship"),
+        ("EL1", "League One"),
+        ("EL2", "League Two"),
     ]
 
     entry_fee = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
@@ -19,27 +19,22 @@ class LMSGame(models.Model):
     league = models.CharField(max_length=3, choices=LEAGUE_CHOICES)
     active = models.BooleanField(default=True) #True is active, False is completed
     created_at = models.DateTimeField(auto_now_add=True)
+    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='lms_winner')
 
     def __str__(self):
-        return f"{self.name} ({self.get_league_display()} - {self.group.name})"
+        return f"{self.active} ({self.get_league_display()} - {self.group.name} - {self.winner})"
 
 
 class LMSRound(models.Model):
     game = models.ForeignKey(LMSGame, on_delete=models.CASCADE, related_name="rounds")
     round_number = models.PositiveIntegerField()
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
+    start_date = models.DateTimeField() # start time of the first fixture
+    end_date = models.DateTimeField() # 4 hours after the last fixture
     completed = models.BooleanField(default=False)
-
-    def get_fixtures(self):
-        return Fixture.objects.filter(
-            league=self.game.league,
-            start_time__gte=self.start_date,
-            start_time__lte=self.end_date
-        ).order_by("start_time")
+    fixtures = models.ManyToManyField(Fixture, related_name="lms_rounds", blank=True)
 
     def __str__(self):
-        return f"{self.game.name} - Round {self.round_number}"
+        return f"{self.game} - Round {self.round_number}"
 
 
 class LMSEntry(models.Model):

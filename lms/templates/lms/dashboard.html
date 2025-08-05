@@ -1,53 +1,56 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<h2>LMS Dashboard</h2>
+<h2>Your LMS Games</h2>
 
+<!-- Joined Games -->
 {% if entries_with_rounds %}
-  <div class="list-group">
+  <h3>Games You Have Joined</h3>
+  <ul class="list-group mb-4">
     {% for item in entries_with_rounds %}
-      <div class="list-group-item">
-        <h5>{{ item.entry.game.name }} 
-            <span class="badge bg-secondary">{{ item.entry.game.get_league_display }}</span>
-        </h5>
-        <p>Group: {{ item.entry.game.group.name }}</p>
-
+      <li class="list-group-item">
+        <strong>{{ item.entry.game.get_league_display }}</strong> 
+        — Round {% if item.next_round %}{{ item.next_round.round_number }}{% else %}N/A{% endif %}
         {% if item.next_round %}
-          <p>Round {{ item.next_round.round_number }}: 
-            {{ item.next_round.start_date|date:"D d M, H:i" }} → {{ item.next_round.end_date|date:"D d M, H:i" }}
-          </p>
-          {% if item.existing_pick %}
-            <p>Your pick: <strong>{{ item.existing_pick.team_name }}</strong></p>
-          {% else %}
-            <a href="{% url 'lms_make_pick' item.entry.game.id %}" class="btn btn-sm btn-primary">
-              Make Pick
-            </a>
-          {% endif %}
-        {% else %}
-          <p>No upcoming rounds available.</p>
+          ({{ item.next_round.start_date|date:"M d, Y H:i" }} – {{ item.next_round.end_date|date:"M d, Y H:i" }})
         {% endif %}
-      </div>
+
+        {% if item.existing_pick %}
+          <span class="badge bg-success ms-2">Picked: {{ item.existing_pick.team_name }}</span>
+        {% else %}
+          <span class="badge bg-warning text-dark ms-2">No pick made yet</span>
+        {% endif %}
+
+        <a href="{% url 'lms_game_detail' item.entry.game.id %}" class="btn btn-sm btn-outline-secondary float-end">View Game</a>
+      </li>
     {% endfor %}
-  </div>
+  </ul>
 {% else %}
-  <p>You’re not entered into any active LMS games yet.</p>
+  <p>You have not joined any LMS games yet.</p>
 {% endif %}
 
-<a href="{% url 'lms_create_game' %}" class="btn btn-success mb-3">+ Create New Game</a>
+<hr>
 
-{% if games %}
-    <ul>
-    {% for game in games %}
-        <li>
-            <a href="{% url 'lms_game_detail' game.id %}">
-                {{ game.name }} ({{ game.get_league_display }})
-            </a>
-        </li>
-    {% endfor %}
-    </ul>
+<!-- Joinable Games -->
+<h3>Games Available to Join</h3>
+
+{% if joinable_games %}
+  <ul class="list-group">
+{% for item in joinable_games %}
+  <tr>
+    <td>{{ item.game.get_league_display }}</td>
+    <td>Round 1 starts: {{ item.round1.start_date|date:"M d, Y" }}</td>
+    <td>
+      <a href="{% url 'lms_pick' item.game.id item.round1.id %}" class="btn btn-sm btn-outline-primary">
+    Join
+  </a>
+</td>
+  </tr>
+{% endfor %}
+  </ul>
 {% else %}
-    <p>No games available. Why not <a href="{% url 'lms_create_game' %}">create one</a>?</p>
-  
+  <p>No LMS games are currently open for joining.</p>
 {% endif %}
 
 {% endblock %}

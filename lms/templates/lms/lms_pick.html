@@ -1,19 +1,75 @@
-<h2>{{ game.name }} - Round {{ round.round_number }}</h2>
-<p>Pick your team from the fixtures below:</p>
+{% extends "base.html" %}
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.team_name }}
-  <button type="submit" class="btn btn-primary mt-3">Submit Pick</button>
+{% block content %}
+<h2>Make Your Pick for {{ round.game.get_league_display }} Round {{ round.round_number }}</h2>
+
+<p>Round starts: {{ round.start_date|date:"M d, Y H:i" }}</p>
+<p>Round ends: {{ round.end_date|date:"M d, Y H:i" }}</p>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Fixture Date</th>
+                <th>Home Team</th>
+                <th>Away Team</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% comment %} Get list of previously picked teams {% endcomment %}
+        {% with picked_teams=entry.picks.values_list('team_name', flat=True) %}
+            {% for fixture in fixtures %}
+                <tr>
+                    <td>{{ fixture.date|date:"M d, H:i" }}</td>
+
+                    {# Home team cell #}
+                    <td>
+                        {% if fixture.home_team in picked_teams %}
+                            <span class="text-muted">{{ fixture.home_team }} (Picked)</span>
+                        {% else %}
+                            <a href="#" class="select-team" data-team="{{ fixture.home_team }}">{{ fixture.home_team }}</a>
+                        {% endif %}
+                    </td>
+
+                    {# Away team cell #}
+                    <td>
+                        {% if fixture.away_team in picked_teams %}
+                            <span class="text-muted">{{ fixture.away_team }} (Picked)</span>
+                        {% else %}
+                            <a href="#" class="select-team" data-team="{{ fixture.away_team }}">{{ fixture.away_team }}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        {% endwith %}
+        </tbody>
+    </table>
+
+    <div class="mb-3">
+        <label for="id_team_name" class="form-label">Selected Team</label>
+        {{ form.team_name }}
+        <div class="form-text">Click a team name above to select.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit Pick</button>
 </form>
 
-<hr>
-<h3>Upcoming Fixtures</h3>
-<ul>
-  {% for fixture in fixtures %}
-    <li>{{ fixture.start_time|date:"D d M H:i" }}:
-        {{ fixture.home_team }} vs {{ fixture.away_team }}</li>
-  {% empty %}
-    <li>No fixtures available for this round.</li>
-  {% endfor %}
-</ul>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const links = document.querySelectorAll('.select-team');
+    const input = document.querySelector('#id_team_name');
+
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const team = this.getAttribute('data-team');
+            input.value = team;
+            input.focus();
+        });
+    });
+});
+</script>
+
+{% endblock %}
