@@ -1,75 +1,62 @@
+
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<h2>Make Your Pick for {{ round.game.get_league_display }} Round {{ round.round_number }}</h2>
-
-<p>Round starts: {{ round.start_date|date:"M d, Y H:i" }}</p>
-<p>Round ends: {{ round.end_date|date:"M d, Y H:i" }}</p>
-
-<form method="post" novalidate>
-    {% csrf_token %}
-
+    
     <table class="table table-bordered">
         <thead>
             <tr>
                 <th>Fixture Date</th>
                 <th>Home Team</th>
+                <th>v</th>
                 <th>Away Team</th>
             </tr>
         </thead>
         <tbody>
-        {% comment %} Get list of previously picked teams {% endcomment %}
-        {% with picked_teams=entry.picks.values_list('team_name', flat=True) %}
-            {% for fixture in fixtures %}
-                <tr>
-                    <td>{{ fixture.date|date:"M d, H:i" }}</td>
+        {% for fixture in fixtures %}
+            <tr>
+                <td>{{ fixture.date|date:"M d, H:i" }}</td>
 
-                    {# Home team cell #}
-                    <td>
-                        {% if fixture.home_team in picked_teams %}
-                            <span class="text-muted">{{ fixture.home_team }} (Picked)</span>
-                        {% else %}
-                            <a href="#" class="select-team" data-team="{{ fixture.home_team }}">{{ fixture.home_team }}</a>
-                        {% endif %}
-                    </td>
-
-                    {# Away team cell #}
-                    <td>
-                        {% if fixture.away_team in picked_teams %}
-                            <span class="text-muted">{{ fixture.away_team }} (Picked)</span>
-                        {% else %}
-                            <a href="#" class="select-team" data-team="{{ fixture.away_team }}">{{ fixture.away_team }}</a>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-        {% endwith %}
+                <td>
+                    {% if fixture.home_team in used_teams %}
+                        <span class="text-muted">{{ fixture.home_team }} (Picked)</span>
+                    {% else %}
+                        <a href="#" class="select-team btn btn-outline-primary btn-sm" 
+                           data-team="{{ fixture.home_team }}">
+                            {{ fixture.home_team }}
+                        </a>
+                    {% endif %}
+                </td>
+                <td>v</td>
+                <td>
+                    {% if fixture.away_team in used_teams %}
+                        <span class="text-muted">{{ fixture.away_team }} (Picked)</span>
+                    {% else %}
+                        <a href="#" class="select-team btn btn-outline-primary btn-sm" 
+                           data-team="{{ fixture.away_team }}">
+                            {{ fixture.away_team }}
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
         </tbody>
     </table>
 
+    <input type="hidden" id="id_team_name" name="team_name">
+
     <div class="mb-3">
-        <label for="id_team_name" class="form-label">Selected Team</label>
+        <label class="form-label">Selected Team:</label>
+        <span id="selected-team-label" class="fw-bold text-primary">None</span>
         {{ form.team_name }}
         <div class="form-text">Click a team name above to select.</div>
     </div>
-
-    <button type="submit" class="btn btn-primary">Submit Pick</button>
+    <p><strong>DEBUG team_name (submitted):</strong> {{ request.POST.team_name }}</p>
+    <button type="submit" class="btn btn-success" id="submit-btn" disabled>Submit Pick</button>
+    <pre>DEBUG team_name: {{ request.POST.team_name }}</pre>
 </form>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const links = document.querySelectorAll('.select-team');
-    const input = document.querySelector('#id_team_name');
-
-    links.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const team = this.getAttribute('data-team');
-            input.value = team;
-            input.focus();
-        });
-    });
-});
-</script>
-
+{# Load external script #}
+<script src="{% static 'js/lms/script.js' %}"></script>
 {% endblock %}

@@ -1,56 +1,79 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block content %}
-<h2>Your LMS Games</h2>
 
-<!-- Joined Games -->
-{% if entries_with_rounds %}
-  <h3>Games You Have Joined</h3>
-  <ul class="list-group mb-4">
+<h2>Your Games</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th>League</th>
+      <th>Group</th>
+      <th>Current Round</th>
+      <th>Your Pick</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
     {% for item in entries_with_rounds %}
-      <li class="list-group-item">
-        <strong>{{ item.entry.game.get_league_display }}</strong> 
-        — Round {% if item.next_round %}{{ item.next_round.round_number }}{% else %}N/A{% endif %}
-        {% if item.next_round %}
-          ({{ item.next_round.start_date|date:"M d, Y H:i" }} – {{ item.next_round.end_date|date:"M d, Y H:i" }})
-        {% endif %}
-
-        {% if item.existing_pick %}
-          <span class="badge bg-success ms-2">Picked: {{ item.existing_pick.team_name }}</span>
-        {% else %}
-          <span class="badge bg-warning text-dark ms-2">No pick made yet</span>
-        {% endif %}
-
-        <a href="{% url 'lms_game_detail' item.entry.game.id %}" class="btn btn-sm btn-outline-secondary float-end">View Game</a>
-      </li>
+      <tr>
+        <td>{{ item.entry.game.get_league_display }}</td>
+        <td>{{ item.entry.game.group.name }}</td>
+        <td>
+          {% if item.next_round %}
+            Round {{ item.next_round.round_number }} 
+            (starts {{ item.next_round.start_date|date:"M d, Y" }})
+          {% else %}
+            Completed
+          {% endif %}
+        </td>
+        <td>
+          {% if item.existing_pick %}
+            {{ item.existing_pick.team_name }}
+          {% else %}
+            Not yet picked
+          {% endif %}
+        </td>
+        <td>
+          {% if item.next_round and not item.existing_pick %}
+            <a href="{% url 'lms_pick' item.entry.game.id item.next_round.id %}" 
+               class="btn btn-sm btn-primary">Make Pick</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">You haven't joined any games yet.</td></tr>
     {% endfor %}
-  </ul>
-{% else %}
-  <p>You have not joined any LMS games yet.</p>
-{% endif %}
+  </tbody>
+</table>
 
-<hr>
 
-<!-- Joinable Games -->
-<h3>Games Available to Join</h3>
-
-{% if joinable_games %}
-  <ul class="list-group">
-{% for item in joinable_games %}
-  <tr>
-    <td>{{ item.game.get_league_display }}</td>
-    <td>Round 1 starts: {{ item.round1.start_date|date:"M d, Y" }}</td>
-    <td>
-      <a href="{% url 'lms_pick' item.game.id item.round1.id %}" class="btn btn-sm btn-outline-primary">
-    Join
-  </a>
-</td>
-  </tr>
-{% endfor %}
-  </ul>
-{% else %}
-  <p>No LMS games are currently open for joining.</p>
-{% endif %}
+<h2>Joinable Games</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th>League</th>
+      <th>Group</th>
+      <th>Round 1 Start</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in joinable_games %}
+      <tr>
+        <td>{{ item.game.get_league_display }}</td>
+        <td>{{ item.game.group.name }}</td>
+        <td>{{ item.round1.start_date|date:"M d, Y" }}</td>
+        <td>
+          <a href="{% url 'lms_pick' item.game.id item.round1.id %}" 
+             class="btn btn-sm btn-outline-primary">Join</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No games available to join right now.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p>
+<a href="{% url 'lms_create_game' %}" class="btn btn-success mb-3">+ Create New Game</a>
+</p>
 
 {% endblock %}

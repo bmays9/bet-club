@@ -17,52 +17,65 @@ def lms_pick(request, game_id, round_id):
     game = get_object_or_404(LMSGame, id=game_id)
     round = get_object_or_404(LMSRound, id=round_id, game=game)
 
-    # Get or create entry for the user
     entry, created = LMSEntry.objects.get_or_create(game=game, user=request.user)
 
     if not entry.alive:
         messages.error(request, "You have been eliminated from this game.")
         return redirect("lms_game_detail", game_id=game.id)
 
-    # Check if user already made a pick this round
     if LMSPick.objects.filter(entry=entry, round=round).exists():
         messages.warning(request, "You have already made a pick for this round.")
         return redirect("lms_game_detail", game_id=game.id)
 
     if request.method == "POST":
+        print("DEBUG POST DATA:", request.POST)  # 👈 log form data
+
         form = LMSPickForm(request.POST, game=game, round=round, entry=entry)
         if form.is_valid():
             team_name = form.cleaned_data["team_name"]
+            print("DEBUG VALID TEAM:", team_name)  # 👈 log chosen team
 
-            # Ensure team not already picked in earlier rounds
             if entry.picks.filter(team_name=team_name).exists():
                 messages.error(request, f"You already picked {team_name} in a previous round.")
             else:
-                # Create pick
-                LMSPick.objects.create(
-                    entry=entry,
-                    round=round,
-                    fixture=round.get_fixtures().filter(
-                        home_team=team_name
-                    ).first() or round.get_fixtures().filter(
-                        away_team=team_name
-                    ).first(),
-                    team_name=team_name
-                )
-                messages.success(request, f"You picked {team_name} for this round.")
-                return redirect("lms_game_detail", game_id=game.id)
+                fixture = round.fixtures.filter(
+                    home_team=team_name
+                ).first() or round.fixtures.filter(
+                    away_team=team_name
+                ).first()
+
+                print("DEBUG MATCHED FIXTURE:", fixture)  # 👈 log fixture
+
+                if fixture:
+                    LMSPick.objects.create(
+                        entry=entry,
+                        round=round,
+                        fixture=fixture,
+                        team_name=team_name
+                    )
+                    messages.success(request, f"You picked {team_name} for this round.")
+                    return redirect("lms_game_detail", game_id=game.id)
+                else:
+                    messages.error(request, "No fixture found for that team.")
+        else:
+            print("DEBUG FORM ERRORS:", form.errors)  # 👈 log form errors
+
     else:
         form = LMSPickForm(game=game, round=round, entry=entry)
 
-    fixtures = round.get_fixtures()
+    fixtures = round.fixtures.all()
+    user_picks = LMSPick.objects.filter(entry__user=request.user, entry__game=game)
+    used_teams = [pick.team_name for pick in user_picks]
 
     return render(request, "lms/lms_pick.html", {
         "game": game,
         "round": round,
         "entry": entry,
         "fixtures": fixtures,
+        "used_teams": used_teams,
         "form": form,
     })
+
 
 def lms_dashboard(request):
     now = timezone.now()
@@ -109,8 +122,10 @@ def lms_dashboard(request):
     for game in potential_games:
         round1 = game.rounds.filter(round_number=1).first()
         if round1 and round1.start_date > now:
-            game.next_round = round1  # handy for template
-            joinable_games.append(game)
+            joinable_games.append({
+                "game": game,
+                "round1": round1,
+            })
 
     for game in potential_games:
         round1 = game.rounds.filter(round_number=1).first()  # instead of get()
