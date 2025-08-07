@@ -1,18 +1,20 @@
 {% extends "base.html" %}
 {% load static %}
+{% load lms_tags %}
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Last Man Standing{{ game.league.name }}</h2>
+    <h2>Last Man Standing</h2>
+    <h3>{{ league_display_name }}</h3>
     <p><strong>Group:</strong> {{ game.group.name }}</p>
 
     <div class="mb-3">
         <form method="get" action="{% url 'lms_dashboard' %}">
         <label for="group-select">Switch Game:</label>
         <select id="group-select" class="form-select" onchange="window.location.href=this.value;">
-        <option value="{% url 'lms_game_detail' game.id %}">{{ game.league.name }}</option>
+        <option value="{% url 'lms_game_detail' game.id %}">{{ league_display_name }}</option>
         {% for g in other_games %}
-        <option value="{% url 'lms_game_detail' g.id %}">{{ g.league.name }}</option>
+        <option value="{% url 'lms_game_detail' g.id %}">{{ g.league.display_name }}</option>
         {% endfor %}
         </select>
         </form>
@@ -23,7 +25,7 @@
         {% if round.is_active %}
             Round {{ round.number }} (Open for Picks)
         {% else %}
-            Waiting for next round
+            Waiting for for matches to be played
         {% endif %}
     </p>
 
@@ -38,7 +40,7 @@
             </div>
         {% else %}
             <div class="alert alert-success">
-                You picked <strong>{{ user_pick.team.name }}</strong> this round.
+                You have picked <strong>{{ user_pick.team_name }}</strong> in this round.
             </div>
         {% endif %}
     {% else %}
@@ -50,42 +52,109 @@
     <hr>
 
     <!-- Show standings -->
-    <h4>Standings</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Player</th>
-                <th>Status</th>
-                <th>Last Pick</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in entries %}
-            <tr>
-                <td>{{ entry.user.username }}</td>
-                <td>
-                    {% if entry.alive %}
-                        <span class="badge bg-success">Alive</span>
+    <h4>Player Status</h4>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Player</th>
+            <th>Status</th>
+            <th>Last Pick</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in entries %}
+        <tr>
+            <td>{{ entry.user.username }}</td>
+            <td>
+                {% if entry.alive %}
+                    <span class="badge bg-success">Alive</span>
+                {% else %}
+                    <span class="badge bg-danger">Out</span>
+                {% endif %}
+            </td>
+            <td>
+                {% with pick=entry.picks.last %}
+                    {% if pick and pick.round.number < round.number %}
+                        {{ pick.team_name }} (Round {{ pick.round.number }})
+                    {% elif pick and not round.is_active %}
+                        {{ pick.team.name }} (Round {{ pick.round.number }})
                     {% else %}
-                        <span class="badge bg-danger">Out</span>
+                        -
                     {% endif %}
-                </td>
-                <td>
-                    {% with pick=entry.picks.last %}
-                        {% if pick %}
-                            {{ pick.team.name }} (Round {{ pick.round.number }})
-                        {% else %}
-                            -
-                        {% endif %}
-                    {% endwith %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="text-center">No players yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                {% endwith %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3" class="text-center">No players yet.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 </div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Player</th>
+      {% for rnd in rounds %}
+        <th>Round {{ rnd.round_number }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in picks_table %}
+    <tr>
+      <td>{{ row.player }}</td>
+      {% for pick in row.picks %}
+        <td>
+          {% if pick %}
+            {{ pick.team.name }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+<h4 class="mt-4">Picks by Round</h4>
+<table class="table table-bordered table-sm">
+    <thead>
+        <tr>
+            <th>Player</th>
+            {% for r in rounds %}
+                <th>Round {{ r.number }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in entries %}
+        <tr>
+            <td>{{ entry.user.username }}</td>
+            {% for r in rounds %}
+                {% if r.completed %}
+                    {% with pick=picks_by_entry_and_round|get_item:entry|get_item:r %}
+                        <td>
+                            {% if pick %}
+                                {{ pick.team.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endwith %}
+                {% else %}
+                    <td>-</td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+    </div>
+
+
 {% endblock %}

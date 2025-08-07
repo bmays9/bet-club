@@ -1,25 +1,54 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const links = document.querySelectorAll('.select-team');
     const input = document.querySelector('#id_team_name');
     const button = document.querySelector('button[type="submit"]');
+    const label = document.getElementById('selected-team-label');
+    const toast = new bootstrap.Toast(toastEl, {
+        delay: 4000
+        });
 
-    // keep button disabled initially
     button.disabled = true;
 
     links.forEach(link => {
-        link.addEventListener('click', function(e) {
+        link.addEventListener('click', function (e) {
             e.preventDefault();
             const team = this.getAttribute('data-team');
             input.value = team;
+            button.disabled = false;
 
-            // update UI label
-            const label = document.getElementById('selected-team-label');
             if (label) {
                 label.textContent = team;
             }
 
-            // enable submit button once a team is selected
-            button.disabled = false;
+            document.querySelectorAll('.team-selected').forEach(el => {
+                el.classList.remove('team-selected');
+            });
+
+            this.classList.add('team-selected');
         });
     });
+
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (e) {
+        if (!input.value) {
+            e.preventDefault();
+            showToast("Please select a team before submitting.", true);
+        } else {
+            showToast(`You picked ${input.value}!`, false);
+        }
+    });
+
+    function showToast(message, isError) {
+        const toastEl = document.getElementById('pickToast');
+        const toastBody = toastEl.querySelector('.toast-body');
+
+        toastBody.textContent = message;
+
+        // Change color based on error or success
+        toastEl.classList.remove('bg-success', 'bg-danger');
+        toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
+
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    }
 });

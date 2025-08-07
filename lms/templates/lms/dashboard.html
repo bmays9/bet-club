@@ -36,6 +36,10 @@
           {% if item.next_round and not item.existing_pick %}
             <a href="{% url 'lms_pick' item.entry.game.id item.next_round.id %}" 
                class="btn btn-sm btn-primary">Make Pick</a>
+          {% elif item.existing_pick %}
+            <a href="{% url 'lms_game_detail' item.entry.game.id %}" 
+               class="btn btn-sm btn-primary">View Game</a>
+
           {% endif %}
         </td>
       </tr>

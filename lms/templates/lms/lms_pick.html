@@ -4,6 +4,8 @@
 
 {% block content %}
     
+<form method="post" novalidate>
+    {% csrf_token %}
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -22,7 +24,7 @@
                     {% if fixture.home_team in used_teams %}
                         <span class="text-muted">{{ fixture.home_team }} (Picked)</span>
                     {% else %}
-                        <a href="#" class="select-team btn btn-outline-primary btn-sm" 
+                        <a href="#" class="select-team btn btn-outline-primary btn-sm select-team team-selectable" 
                            data-team="{{ fixture.home_team }}">
                             {{ fixture.home_team }}
                         </a>
@@ -33,7 +35,7 @@
                     {% if fixture.away_team in used_teams %}
                         <span class="text-muted">{{ fixture.away_team }} (Picked)</span>
                     {% else %}
-                        <a href="#" class="select-team btn btn-outline-primary btn-sm" 
+                        <a href="#" class="select-team btn btn-outline-primary btn-sm select-team team-selectable" 
                            data-team="{{ fixture.away_team }}">
                             {{ fixture.away_team }}
                         </a>
@@ -44,18 +46,27 @@
         </tbody>
     </table>
 
-    <input type="hidden" id="id_team_name" name="team_name">
-
     <div class="mb-3">
         <label class="form-label">Selected Team:</label>
         <span id="selected-team-label" class="fw-bold text-primary">None</span>
-        {{ form.team_name }}
+        <input type="hidden" id="id_team_name" name="team_name">
         <div class="form-text">Click a team name above to select.</div>
     </div>
-    <p><strong>DEBUG team_name (submitted):</strong> {{ request.POST.team_name }}</p>
+    
     <button type="submit" class="btn btn-success" id="submit-btn" disabled>Submit Pick</button>
-    <pre>DEBUG team_name: {{ request.POST.team_name }}</pre>
+
 </form>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div id="pickToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        Pick submitted successfully!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
 
 {# Load external script #}
 <script src="{% static 'js/lms/script.js' %}"></script>

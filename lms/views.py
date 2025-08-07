@@ -10,6 +10,7 @@ from .models import LMSGame, LMSRound, LMSEntry, LMSGame, LMSPick
 from .forms import LMSPickForm, CreateLMSGameForm
 from groups.models import UserGroup
 from score_predict.models import Fixture
+from collections import defaultdict
 
 
 @login_required
@@ -153,16 +154,61 @@ def lms_game_detail(request, game_id):
         user_pick = LMSPick.objects.filter(entry=entry, round=round_obj).first()
 
     entries = LMSEntry.objects.filter(game=game).select_related("user")
+    rounds = game.rounds.order_by("round_number")
 
-    # Get all unfinished games in this group (for dropdown/tabs)
+    # Map league code to display name
+    LEAGUE_DISPLAY_NAMES = {
+        "EPL": "Premier League",
+        "CH": "Championship",
+        "L1": "League One",
+        "L2": "League Two",
+    }
+    league_display_name = LEAGUE_DISPLAY_NAMES.get(game.league, game.league)
+
+    # Preload all picks for this game
+    all_picks = LMSPick.objects.filter(entry__game=game).select_related("entry__user", "round").order_by("round__round_number")
+
+
+    # Organize picks by entry and round
+    picks_by_entry_and_round = defaultdict(dict)
+    for pick in all_picks:
+        picks_by_entry_and_round[pick.entry][pick.round] = pick
+
+    # Other active games in the same group
     other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
 
-    return render(request, "lms/game_detail.html", {
+    # Prepare a structure:
+    picks_table = []
+    for entry in entries:
+        row = {"player": entry.user.username, "picks": []}
+    for rnd in rounds:
+        pick = picks_by_entry_and_round.get(entry, {}).get(rnd)
+        row["picks"].append(pick)
+    picks_table.append(row)
+
+    import pprint
+    pprint.pprint({
         "game": game,
+        "league_display_name": league_display_name,
         "round": round_obj,
         "entry": entry,
         "user_pick": user_pick,
         "entries": entries,
+        "rounds": rounds,
+        "picks_table": picks_table,
+        "picks_by_entry_and_round": picks_by_entry_and_round,
+        "other_games": other_games,
+    })
+
+    return render(request, "lms/game_detail.html", {
+        "game": game,
+        "league_display_name": league_display_name,
+        "round": round_obj,
+        "entry": entry,
+        "user_pick": user_pick,
+        "entries": entries,
+        "rounds": rounds,
+        "picks_by_entry_and_round": picks_by_entry_and_round,
         "other_games": other_games,
     })
 

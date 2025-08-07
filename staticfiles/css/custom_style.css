@@ -93,6 +93,18 @@ main {
     font-weight: bold;
   }
 
+  /******* LMS **********/
+  .team-selectable {
+    cursor: pointer;
+  }
+
+  .team-selected {
+    background-color: #d4edda; /* light green */
+    font-weight: bold;
+    color: #155724; /* dark green text */
+  }
+
+
 
 /*==================================================== Horse Racing */
 
