@@ -3,9 +3,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const input = document.querySelector('#id_team_name');
     const button = document.querySelector('button[type="submit"]');
     const label = document.getElementById('selected-team-label');
-    const toast = new bootstrap.Toast(toastEl, {
-        delay: 4000
-        });
 
     button.disabled = true;
 
@@ -49,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
         toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
 
         const toast = new bootstrap.Toast(toastEl);
-        toast.show();
+        toast.show()
+        delay: 4000;
     }
 });
