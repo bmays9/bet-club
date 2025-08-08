@@ -120,13 +120,6 @@ def lms_dashboard(request):
 
     # Filter joinable games where round 1 exists and hasn't started yet
     joinable_games = []
-    for game in potential_games:
-        round1 = game.rounds.filter(round_number=1).first()
-        if round1 and round1.start_date > now:
-            joinable_games.append({
-                "game": game,
-                "round1": round1,
-            })
 
     for game in potential_games:
         round1 = game.rounds.filter(round_number=1).first()  # instead of get()
@@ -159,9 +152,9 @@ def lms_game_detail(request, game_id):
     # Map league code to display name
     LEAGUE_DISPLAY_NAMES = {
         "EPL": "Premier League",
-        "CH": "Championship",
-        "L1": "League One",
-        "L2": "League Two",
+        "ECH": "Championship",
+        "EL1": "League One",
+        "EL2": "League Two",
     }
     league_display_name = LEAGUE_DISPLAY_NAMES.get(game.league, game.league)
 
@@ -187,6 +180,7 @@ def lms_game_detail(request, game_id):
     picks_table.append(row)
 
     import pprint
+    
     pprint.pprint({
         "game": game,
         "league_display_name": league_display_name,

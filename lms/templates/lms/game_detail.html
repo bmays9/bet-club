@@ -14,7 +14,7 @@
         <select id="group-select" class="form-select" onchange="window.location.href=this.value;">
         <option value="{% url 'lms_game_detail' game.id %}">{{ league_display_name }}</option>
         {% for g in other_games %}
-        <option value="{% url 'lms_game_detail' g.id %}">{{ g.league.display_name }}</option>
+        <option value="{% url 'lms_game_detail' g.id %}">{{ g.get_league_display }}</option>
         {% endfor %}
         </select>
         </form>
@@ -58,7 +58,7 @@
         <tr>
             <th>Player</th>
             <th>Status</th>
-            <th>Last Pick</th>
+            <th>Picked?</th>
         </tr>
     </thead>
     <tbody>
@@ -74,8 +74,12 @@
             </td>
             <td>
                 {% with pick=entry.picks.last %}
-                    {% if pick and pick.round.number < round.number %}
-                        {{ pick.team_name }} (Round {{ pick.round.number }})
+                    {% if pick and pick.round.number == round.number and not round.is_active %}
+                        Team Selected
+                    {% elif pick and pick.round.number == round.number and round.is_active %}
+                        {{ pick.team_name }}
+                    {% elif pick and pick.round.number < round.number %}
+                        {{ pick.team_name }} picked in Round {{ pick.round.number }})
                     {% elif pick and not round.is_active %}
                         {{ pick.team.name }} (Round {{ pick.round.number }})
                     {% else %}
