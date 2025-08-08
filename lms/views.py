@@ -172,12 +172,13 @@ def lms_game_detail(request, game_id):
 
     # Prepare a structure:
     picks_table = []
-    for entry in entries:
-        row = {"player": entry.user.username, "picks": []}
-    for rnd in rounds:
-        pick = picks_by_entry_and_round.get(entry, {}).get(rnd)
-        row["picks"].append(pick)
-    picks_table.append(row)
+    if entries.exists():
+        for entry in entries:
+            row = {"player": entry.user.username, "picks": []}
+            for rnd in rounds:
+                pick = picks_by_entry_and_round.get(entry, {}).get(rnd)
+                row["picks"].append(pick)
+            picks_table.append(row)
 
     import pprint
     
@@ -254,7 +255,7 @@ def create_game(request):
             if not created_round:
                 print("DEBUG: No valid fixture block found within 30 days.")
 
-            return redirect("lms_game_detail", game.id)
+            return redirect("lms_dashboard")
     else:
         form = CreateLMSGameForm(user=request.user)
 

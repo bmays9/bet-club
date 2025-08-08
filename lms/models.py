@@ -1,6 +1,7 @@
 # lms/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from groups.models import UserGroup
 from decimal import Decimal
 from score_predict.models import Fixture  # reuse your existing fixture model
@@ -33,8 +34,13 @@ class LMSRound(models.Model):
     completed = models.BooleanField(default=False)
     fixtures = models.ManyToManyField(Fixture, related_name="lms_rounds", blank=True)
 
+    @property
+    def is_active(self):
+        """Round is active if the current time is after its start date."""
+        return timezone.now() >= self.start_date
+
     def __str__(self):
-        return f"{self.game} - Round {self.round_number}"
+        return f"{self.game} - Round {self.round_number} | Active = { self.is_active }"
 
 
 class LMSEntry(models.Model):
