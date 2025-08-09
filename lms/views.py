@@ -77,7 +77,7 @@ def lms_pick(request, game_id, round_id):
         "form": form,
     })
 
-
+@login_required
 def lms_dashboard(request):
     now = timezone.now()
 
@@ -136,7 +136,7 @@ def lms_dashboard(request):
     }
     return render(request, "lms/dashboard.html", context)
 
-
+@login_required
 def lms_game_detail(request, game_id):
     game = get_object_or_404(LMSGame, id=game_id)
     round_obj = game.rounds.filter(completed=False).first()

@@ -1,0 +1,57 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% load math_tags %}
+{% block content %}
+<!-- content starts here -->
+<div class="container mx-auto p-4">
+
+  <!-- score_predict/templates/score_predict/game_history.html -->
+<h2>Game History</h2>
+
+<form method="get">
+    <label for="group">Select Group:</label>
+    <select name="group" id="group" onchange="this.form.submit()">
+        {% for group in groups %}
+            <option value="{{ group.id }}" {% if group == selected_group %}selected{% endif %}>
+                {{ group.name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+{% if games %}
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>Game</th>
+                <th>Winner</th>
+                <th>Entrants</th>
+                <th>Entry Fee</th>
+                <th>Prize Pot</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in games %}
+                <tr>
+                    <td>
+                        <a href="{% url 'game_detail' game.id %}">
+                            {{ game.template.name }}
+                        </a>
+                    </td>
+                    <td>{{ game.winner.username }}</td>
+                    <td>{{ game.entries.count }}</td>
+                    <td>£{{ game.entry_fee }}</td>
+                    <td>£{{ game.entries.count|multiply:game.entry_fee }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No completed games for this group.</p>
+{% endif %}
+
+
+</div>
+<!-- content ends here --> 
+ {% endblock content %} 
+

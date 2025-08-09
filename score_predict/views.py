@@ -219,3 +219,36 @@ class GameDetailView(DetailView):
 
 def points_scoring(request):
     return render(request, 'score_predict/scoring.html')
+
+
+@login_required
+def game_history(request):
+    # Groups the user belongs to
+    groups = UserGroup.objects.filter(members=request.user)
+    # groups = request.user.joined_groups.all()
+
+    # Get selected group from query params (default to first group)
+    group_id = request.GET.get("group")
+    selected_group = None
+    games = []
+
+    if groups.exists():
+        if group_id:
+            selected_group = groups.filter(id=group_id).first()
+        else:
+            selected_group = groups.first()
+
+        # Get completed games for that group (winner is not None)
+        games = (
+            GameInstance.objects.filter(group=selected_group)
+            .exclude(winner__isnull=True)
+            .select_related("winner", "template")
+            .order_by("-id")
+        )
+
+    context = {
+        "groups": groups,
+        "selected_group": selected_group,
+        "games": games,
+    }
+    return render(request, "score_predict/game_history.html", context)
