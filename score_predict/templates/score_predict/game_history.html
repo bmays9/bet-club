@@ -20,28 +20,28 @@
 </form>
 
 {% if games %}
-    <table border="1" cellpadding="5">
+    <table border="1" cellpadding="5" class="table table-hover">
         <thead>
-            <tr>
-                <th>Game</th>
-                <th>Winner</th>
-                <th>Entrants</th>
-                <th>Entry Fee</th>
-                <th>Prize Pot</th>
+            <tr class="table-primary">
+                <th scope="col">Started</th>
+                <th scope="col">Players</th>
+                <th scope="col">Entry Fee</th>
+                <th scope="col">Winner</th>
+                <th scope="col">Prize</th>
+                <th scope="col">View</th>
             </tr>
         </thead>
         <tbody>
             {% for game in games %}
-                <tr>
-                    <td>
-                        <a href="{% url 'game_detail' game.id %}">
-                            {{ game.template.name }}
-                        </a>
-                    </td>
-                    <td>{{ game.winner.username }}</td>
-                    <td>{{ game.entries.count }}</td>
-                    <td>£{{ game.entry_fee }}</td>
-                    <td>£{{ game.entries.count|multiply:game.entry_fee }}</td>
+                <tr scope="row">
+                  <td>{{ game.game.template.start_date|date:"M d, Y" }}</td>
+                  <td>{{ game.player_count }}</td>
+                  <td>£{{ game.game.entry_fee }}</td>
+                  <td>{{ game.game.winner.username }}</td>
+                  <td>£{{ game.prize_pot }}</td>
+                  <td>
+                  <a href="{% url 'game_detail' game.game.id %}" class="btn btn-primary">View</a>
+                  </td>
                 </tr>
             {% endfor %}
         </tbody>

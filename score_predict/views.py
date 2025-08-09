@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.generic.detail import DetailView
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 from django.shortcuts import get_object_or_404, render
 from .models import GameTemplate, GameInstance, Prediction, Fixture, GameEntry
 from collections import defaultdict, OrderedDict
@@ -248,12 +248,24 @@ def game_history(request):
             GameInstance.objects.filter(group=selected_group)
             .exclude(winner__isnull=True)
             .select_related("winner", "template")
+             .annotate(player_count=Count('players'))  # Count the players M2M relation
             .order_by("-id")
         )
+        
+       # Add prize pot info for each game
+    games_with_pot = []
+    for game in games:
+        player_count = game.players.count()
+        prize_pot = player_count * game.entry_fee
+        games_with_pot.append({
+            'game': game,
+            'player_count': player_count,
+            'prize_pot': prize_pot,
+        })
 
     context = {
-        "groups": groups,
-        "selected_group": selected_group,
-        "games": games,
+        'groups': groups,
+        'selected_group': selected_group,
+        'games': games_with_pot,
     }
-    return render(request, "score_predict/game_history.html", context)
+    return render(request, 'score_predict/game_history.html', context)
