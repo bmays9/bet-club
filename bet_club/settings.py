@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'groups',
     'lms',
     'score_predict',
+    'updater',
 ]
 
 SITE_ID = 1
