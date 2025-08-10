@@ -18,12 +18,13 @@ class LMSGame(models.Model):
     entry_fee = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, related_name="lms_games")
     league = models.CharField(max_length=3, choices=LEAGUE_CHOICES)
-    active = models.BooleanField(default=True) #True is active, False is completed
+    active = models.BooleanField(default=True) #True is active, live game, False is completed
     created_at = models.DateTimeField(auto_now_add=True)
     winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='lms_winner')
 
     def __str__(self):
-        return f"{self.active} ({self.get_league_display()} - {self.group.name} - {self.winner})"
+        game_id = self.id
+        return f"{ game_id } | {self.active} ({self.get_league_display()} - {self.group.name} - {self.winner})"
 
 
 class LMSRound(models.Model):
@@ -40,14 +41,14 @@ class LMSRound(models.Model):
         return timezone.now() >= self.start_date
 
     def __str__(self):
-        return f"{self.game} - Round {self.round_number} | Active = { self.is_active }"
+        return f"{self.game} - Round {self.round_number} | Active = { self.is_active } | { self.start_date } - { self.end_date } Completed = { self.completed } "
 
 
 class LMSEntry(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(LMSGame, on_delete=models.CASCADE, related_name="entries")
     alive = models.BooleanField(default=True)
-    eliminated_round = models.IntegerField(blank=True, null=True)
+    eliminated_round = models.IntegerField(blank=True, null=True) # 0 = entered but didn't pick round 1
 
     class Meta:
         unique_together = ("user", "game")
@@ -72,4 +73,6 @@ class LMSPick(models.Model):
         unique_together = ("entry", "round")
 
     def __str__(self):
-        return f"{self.entry.user.username} - {self.team_name} (Round {self.round.round_number})"
+        group_name = self.entry.game.group.name
+        league_name = self.entry.game.get_league_display()
+        return f"{self.entry.user.username} - {league_name} - {self.team_name} (Round {self.round.round_number}) - Group: {group_name}"

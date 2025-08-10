@@ -8,8 +8,10 @@
     <tr>
       <th>League</th>
       <th>Group</th>
-      <th>Current Round</th>
+      <th>Game Status</th>
+      <th>Next Round</th>
       <th>Your Pick</th>
+      <th>Pick Status</th>
       <th>Action</th>
     </tr>
   </thead>
@@ -18,38 +20,52 @@
       <tr>
         <td>{{ item.entry.game.get_league_display }}</td>
         <td>{{ item.entry.game.group.name }}</td>
+        <td><a href="{% url 'lms_game_detail' item.entry.game.id %}" class="btn btn-sm btn-primary">View Game</a></td>
         <td>
           {% if item.next_round %}
-            Round {{ item.next_round.round_number }} 
-            (starts {{ item.next_round.start_date|date:"M d, Y" }})
+            Round {{ item.next_round.round_number }}
+            (starts {{ item.next_round.start_date|date:"M d" }})
           {% else %}
-            Completed
+            
           {% endif %}
         </td>
         <td>
-          {% if item.existing_pick %}
+          {% if item.existing_pick.team_name %}
             {{ item.existing_pick.team_name }}
           {% else %}
-            Not yet picked
+            <em>Not yet picked</em>
           {% endif %}
         </td>
         <td>
-          {% if item.next_round and not item.existing_pick %}
+          {% if item.status == "Alive" %}
+            <span class="badge bg-success">Alive</span>
+          {% elif item.status == "Out" %}
+            <span class="badge bg-danger">Out</span>
+          {% elif item.status == "Pending" %}
+            <span class="badge bg-warning">Pending</span>
+          {% elif item.status == "No Pick" %}
+            <span class="badge bg-secondary">No Pick</span>
+          {% else %}
+            <span class="badge bg-secondary">Unknown</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.next_round and item.status == "No Pick" %}
             <a href="{% url 'lms_pick' item.entry.game.id item.next_round.id %}" 
                class="btn btn-sm btn-primary">Make Pick</a>
-          {% elif item.existing_pick %}
-            <a href="{% url 'lms_game_detail' item.entry.game.id %}" 
-               class="btn btn-sm btn-primary">View Game</a>
-
+          {% elif item.existing_pick and not item.existing_pick.team_name %}
+            <a href="{% url 'lms_pick' item.entry.game.id item.next_round.id %}" 
+               class="btn btn-sm btn-primary">Make Pick</a>
+          {% else %}
+             
           {% endif %}
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="5">You haven't joined any games yet.</td></tr>
+      <tr><td colspan="6">You haven't joined any games yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>
-
 
 <h2>Joinable Games</h2>
 <table class="table">
@@ -77,15 +93,15 @@
     {% endfor %}
   </tbody>
 </table>
+
 <p>
-<a href="{% url 'lms_create_game' %}" class="btn btn-success mb-3">+ Create New Game</a>
+  <a href="{% url 'lms_create_game' %}" class="btn btn-success mb-3">+ Create New Game</a>
 </p>
 
-
 {% else %}
-    <h2>Last Man Standing</h2>
-        <p>You are not logged in.</p>
-            <p><a href="{% url 'account_login' %}">Login</a>.</p>
+  <h2>Last Man Standing</h2>
+  <p>You are not logged in.</p>
+  <p><a href="{% url 'account_login' %}">Login</a>.</p>
 {% endif %}
 
 {% endblock %}

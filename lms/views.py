@@ -77,11 +77,10 @@ def lms_pick(request, game_id, round_id):
         "form": form,
     })
 
-@login_required
 def lms_dashboard(request):
     now = timezone.now()
 
-    # Games user has joined
+    #  live games that the user entered
     user_entries = (
         LMSEntry.objects
         .filter(user=request.user, game__active=True)
@@ -97,20 +96,41 @@ def lms_dashboard(request):
             .order_by("round_number")
             .first()
         )
+
         existing_pick = None
+        status = "No Pick"
+
         if next_round:
-            existing_pick = LMSPick.objects.filter(entry=entry, round=next_round).first()
+            existing_pick = LMSPick.objects.filter(entry=entry, round=next_round).select_related("fixture").first()
+
+        # Determine status based on entry fields and picks
+        if entry.eliminated_round == 0:
+            status = "Out (No pick in Round 1)"
+        elif not entry.alive:
+            status = f"Out (Round {entry.eliminated_round})"
+        elif existing_pick:
+            fixture = existing_pick.fixture
+            if fixture and getattr(fixture, "status", "").upper() == "FINISHED":
+                # Did the pick win?
+                if (fixture.home_team == existing_pick.team_name and fixture.home_score > fixture.away_score) or \
+                   (fixture.away_team == existing_pick.team_name and fixture.away_score > fixture.home_score):
+                    status = "Alive"
+                else:
+                    status = f"Out (Round {entry.eliminated_round})" if entry.eliminated_round else "Out"
+            else:
+                status = "Pending"
+        else:
+            status = "No Pick"
 
         entries_with_rounds.append({
             "entry": entry,
             "next_round": next_round,
             "existing_pick": existing_pick,
+            "status": status,
         })
 
-    # User's groups
     user_groups = request.user.joined_groups.all()
 
-    # Potential joinable games: active, user in group, not joined yet
     potential_games = (
         LMSGame.objects
         .filter(group__in=user_groups, active=True)
@@ -118,12 +138,9 @@ def lms_dashboard(request):
         .prefetch_related("rounds")
     )
 
-    # Filter joinable games where round 1 exists and hasn't started yet
     joinable_games = []
-
     for game in potential_games:
-        round1 = game.rounds.filter(round_number=1).first()  # instead of get()
-    
+        round1 = game.rounds.filter(round_number=1).first()
         if round1 and round1.start_date > now:
             joinable_games.append({
                 'game': game,
@@ -134,6 +151,13 @@ def lms_dashboard(request):
         "entries_with_rounds": entries_with_rounds,
         "joinable_games": joinable_games,
     }
+
+    import pprint
+    
+    pprint.pprint({
+        "entries_with_rounds": entries_with_rounds,
+        "joinable_games": joinable_games,
+    })
     return render(request, "lms/dashboard.html", context)
 
 @login_required
@@ -159,13 +183,16 @@ def lms_game_detail(request, game_id):
     league_display_name = LEAGUE_DISPLAY_NAMES.get(game.league, game.league)
 
     # Preload all picks for this game
-    all_picks = LMSPick.objects.filter(entry__game=game).select_related("entry__user", "round").order_by("round__round_number")
+    all_picks = LMSPick.objects.filter(
+        entry__game=game,
+        round__completed=True
+        ).select_related("entry__user", "round").order_by("round__round_number")
 
 
     # Organize picks by entry and round
     picks_by_entry_and_round = defaultdict(dict)
     for pick in all_picks:
-        picks_by_entry_and_round[pick.entry][pick.round] = pick
+        picks_by_entry_and_round[pick.entry.id][pick.round.id] = pick
 
     # Other active games in the same group
     other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
@@ -194,6 +221,10 @@ def lms_game_detail(request, game_id):
         "picks_by_entry_and_round": picks_by_entry_and_round,
         "other_games": other_games,
     })
+    print("Entries:", entries)
+    print("Rounds:", list(rounds))
+    print("Picks by entry and round:", picks_by_entry_and_round)
+
 
     return render(request, "lms/game_detail.html", {
         "game": game,
@@ -260,3 +291,16 @@ def create_game(request):
         form = CreateLMSGameForm(user=request.user)
 
     return render(request, "lms/create_game.html", {"form": form})
+
+def pick_is_correct(pick):
+    fixture = pick.fixture  # Assuming LMSPick has FK to Fixture
+    if not fixture or fixture.status != "FINISHED":
+        return None  # Result unknown yet
+
+    # If the team picked is the winner
+    if fixture.home_team == pick.team and fixture.home_score > fixture.away_score:
+        return True
+    if fixture.away_team == pick.team and fixture.away_score > fixture.home_score:
+        return True
+    return False
+

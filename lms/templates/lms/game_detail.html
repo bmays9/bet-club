@@ -2,6 +2,7 @@
 {% load static %}
 {% load lms_tags %}
 
+
 {% block content %}
 <div class="container mt-4">
     <h2>Last Man Standing</h2>
@@ -23,9 +24,10 @@
 
     <p><strong>Status:</strong> 
         {% if round.is_active %}
-            Round {{ round.number }} (Open for Picks)
+            Waiting for for matches to be played in Round {{ round.round_number }}
         {% else %}
-            Waiting for for matches to be played
+            Round {{ round.round_number }} | Open for Picks
+            
         {% endif %}
     </p>
 
@@ -36,7 +38,7 @@
         {% if not user_pick %}
             <div class="alert alert-info">
                 You haven’t made a pick for this round yet.
-                <a href="{% url 'lms_make_pick' game.id round.id %}" class="btn btn-primary btn-sm ms-2">Make Your Pick</a>
+                <a href="{% url 'lms_pick' game.id round.id %}" class="btn btn-primary btn-sm ms-2">Make Your Pick</a>
             </div>
         {% else %}
             <div class="alert alert-success">
@@ -72,21 +74,21 @@
                     <span class="badge bg-danger">Out</span>
                 {% endif %}
             </td>
-            <td>
-                {% with pick=entry.picks.last %}
-                    {% if pick and pick.round.number == round.number and not round.is_active %}
-                        Team Selected
-                    {% elif pick and pick.round.number == round.number and round.is_active %}
-                        {{ pick.team_name }}
-                    {% elif pick and pick.round.number < round.number %}
-                        {{ pick.team_name }} picked in Round {{ pick.round.number }})
-                    {% elif pick and not round.is_active %}
-                        {{ pick.team.name }} (Round {{ pick.round.number }})
-                    {% else %}
+            {% with round_picks=picks_by_entry_and_round|get_item:entry.id %}
+                {% with pick=round_picks|get_item:round.id %}
+                    <td>
+                        {% if pick %}
+                            {% if not round.is_active %}
+                                Team Selected
+                            {% else %}
+                                {{ pick.team_name }}
+                            {% endif %}
+                        {% else %}
                         -
-                    {% endif %}
+                        {% endif %}
+                    </td>
                 {% endwith %}
-            </td>
+            {% endwith %}
         </tr>
         {% empty %}
         <tr>
@@ -96,34 +98,7 @@
     </tbody>
 </table>
 </div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Player</th>
-      {% for rnd in rounds %}
-        <th>Round {{ rnd.round_number }}</th>
-      {% endfor %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in picks_table %}
-    <tr>
-      <td>{{ row.player }}</td>
-      {% for pick in row.picks %}
-        <td>
-          {% if pick %}
-            {{ pick.team.name }}
-          {% else %}
-            -
-          {% endif %}
-        </td>
-      {% endfor %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
+<p>Rounds: {% for r in rounds %}{{ r.round_number }} {% endfor %}</p>
 
 <h4 class="mt-4">Picks by Round</h4>
 <table class="table table-bordered table-sm">
@@ -131,30 +106,33 @@
         <tr>
             <th>Player</th>
             {% for r in rounds %}
-                <th>Round {{ r.number }}</th>
+                <th>Round {{ r.round_number }}</th>
             {% endfor %}
         </tr>
     </thead>
     <tbody>
         {% for entry in entries %}
-        <tr>
-            <td>{{ entry.user.username }}</td>
-            {% for r in rounds %}
-                {% if r.completed %}
-                    {% with pick=picks_by_entry_and_round|get_item:entry|get_item:r %}
-                        <td>
-                            {% if pick %}
-                                {{ pick.team.name }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+            <tr>
+                <td>{{ entry.user.username }}</td>
+                {% for r in rounds %}
+                    {% with round_picks=picks_by_entry_and_round|get_item:entry.id %}
+                        {% with pick=round_picks|get_item:r.id %}
+                            <td>
+                                 {% if r == round.round_number %}
+                                    <!-- For the last round, always show '-' -->
+                                    Hidden
+                                {% else %}
+                                    {% if pick %}
+                                        {{ pick.team_name }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        {% endwith %}
                     {% endwith %}
-                {% else %}
-                    <td>-</td>
-                {% endif %}
-            {% endfor %}
-        </tr>
+                {% endfor %}
+            </tr>
         {% endfor %}
     </tbody>
 </table>

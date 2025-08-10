@@ -4,4 +4,6 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    return dictionary.get(key)
+    if hasattr(dictionary, 'get'):
+        return dictionary.get(key)
+    return None  # or return dictionary if you prefer
