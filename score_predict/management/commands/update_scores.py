@@ -3,6 +3,7 @@ from score_predict.models import Fixture, Prediction, GameEntry, GameInstance
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Sum
+from django.db.models import Max
 
 def calculate_points(prediction, fixture):
     if prediction.predicted_home_score == fixture.home_score and prediction.predicted_away_score == fixture.away_score:
@@ -11,6 +12,27 @@ def calculate_points(prediction, fixture):
           (fixture.home_score < fixture.away_score and prediction.predicted_home_score < prediction.predicted_away_score) or
           (fixture.home_score == fixture.away_score and prediction.predicted_home_score == prediction.predicted_away_score)):
         return 5
+    return 0
+
+def calculate_alt_points(prediction, fixture):
+    if prediction.predicted_home_score == fixture.home_score and prediction.predicted_away_score == fixture.away_score:
+        return 10
+    else:
+        total_points = 0
+        result_points = 0
+        if ((fixture.home_score > fixture.away_score and prediction.predicted_home_score > prediction.predicted_away_score) or
+            (fixture.home_score < fixture.away_score and prediction.predicted_home_score < prediction.predicted_away_score) or
+            (fixture.home_score == fixture.away_score and prediction.predicted_home_score == prediction.predicted_away_score)):
+            result_points = 3
+
+        
+        home_goals_points = max(0, 3 - abs(fixture.home_score - prediction.predicted_home_score))
+        away_goals_points = max(0, 3 - abs(fixture.away_score - prediction.predicted_away_score))
+
+        total_points = result_points + home_goals_points + away_goals_points
+
+        return total_points
+
     return 0
 
 def update_scores(stdout=None):
@@ -29,65 +51,56 @@ def update_scores(stdout=None):
         predictions = Prediction.objects.filter(fixture=fixture)
         for prediction in predictions:
             points = calculate_points(prediction, fixture)
+            alt_points = calculate_alt_points(prediction, fixture)
             prediction.score = points
+            prediction.alternate_score = alt_points
             prediction.save()
 
         if stdout:
             stdout.write(f"Updated scores for Fixture {fixture.fixture_id}")
 
-    # ✅ Recalculate total scores for all entries
-    for entry in GameEntry.objects.all():
-        total_points = Prediction.objects.filter(
-            game_instance=entry.game,
-            player=entry.player
-        ).aggregate(total=Sum('score'))['total'] or 0
+    check_for_winners()
 
-        entry.total_score = total_points
-        entry.save()
 
-        if stdout:
-            stdout.write(f"Recalculated total score for {entry.player} in game {entry.game}")
-
-    # ✅ Check for winners, but only if not already set
+def check_for_winners(stdout=None):
     for game in GameInstance.objects.filter(winner__isnull=True):
         game_fixtures = Fixture.objects.filter(gametemplate=game.template)
         if not game_fixtures.exists():
             continue  # no fixtures linked, skip
 
         # Only decide winner if ALL fixtures are finished
-        if all(f.status_description == "finished" for f in game_fixtures):
-            highest_score = GameEntry.objects.filter(game=game).aggregate(top=Sum('total_score'))['top']
-            winners = GameEntry.objects.filter(game=game, total_score=highest_score)
+        if all(f.status_code == 100 for f in game_fixtures):
+            # Step 1: highest total_score
+            highest_total = GameEntry.objects.filter(game=game).aggregate(
+                top_total=Max('total_score')
+            )['top_total']
 
-        if winners.exists():
-            winner_users = [w.player for w in winners]  # list of User instances
-            # If multiple winners, pick the first one (or handle tie logic differently)
-            winner_user = winner_users[0]  
+            top_total_entries = GameEntry.objects.filter(
+            game=game,
+            total_score=highest_total
+            )   
 
-            game.winner = winner_user
-            game.save()
+            # Step 2: if more than one, check alt_score
+            if top_total_entries.count() > 1:
+                highest_alt = top_total_entries.aggregate(
+                    top_alt=Max('alt_score')
+                )['top_alt']
 
-            winner_names = ", ".join(user.username for user in winner_users)
-            if stdout:
-                stdout.write(f"Winner for {game} set to: {winner_names}")
+                winners = top_total_entries.filter(alt_score=highest_alt)
+            else:
+                winners = top_total_entries
 
+            # Step 3: assign winner(s)
+            if winners.exists():
+                winner_users = [w.player for w in winners]  # list of User instances
+                winner_user = winner_users[0]  # first one if you still want a single "official" winner
 
-def check_for_winners(stdout=None):
-    # Only games where all fixtures are finished
-    for game in GameInstance.objects.all():
-        fixtures = Fixture.objects.filter(game_instance=game)
-        if fixtures.exists() and all(f.status_description == "finished" for f in fixtures):
-            entries = GameEntry.objects.filter(game=game)
-            if entries.exists():
-                max_score = entries.aggregate(max_score=Sum('total_score'))['max_score']
-                top_entries = entries.filter(total_score=max_score)
-                winners = ", ".join(e.player.username for e in top_entries)
-
-                game.winner = winners
+                game.winner = winner_user
                 game.save()
 
+                winner_names = ", ".join(user.username for user in winner_users)
                 if stdout:
-                    stdout.write(f"Updated winner for {game}: {winners}")
+                    stdout.write(f"Winner for {game} set to: {winner_names}")
 
 
 class Command(BaseCommand):

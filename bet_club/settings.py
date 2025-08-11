@@ -37,7 +37,7 @@ if DEBUG:
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 ALLOWED_HOSTS = [
-    '8000-bmays9-betclub-1ck08jddohy.ws-eu120.gitpod.io',
+    '8000-bmays9-betclub-1ck08jddohy.ws-eu121.gitpod.io',
     'localhost,127.0.0.1',
     '127.0.0.1',
     '.herokuapp.com',
@@ -45,7 +45,7 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://8000-bmays9-betclub-1ck08jddohy.ws-eu120.gitpod.io",  # Add your Gitpod domain
+    "https://8000-bmays9-betclub-1ck08jddohy.ws-eu121.gitpod.io",  # Add your Gitpod domain
     "https://*.herokuapp.com"
 ]
 

@@ -15,7 +15,7 @@
     <strong>Entries:</strong> {{ game.players.count }}
   </p> {% for entry in entries %} <div class="accordion mb-3 border shadow-sm">
     <div class="accordion-header fw-bold bg-light p-3" data-bs-toggle="collapse" data-bs-target="#player-{{ forloop.counter }}">
-      {{ forloop.counter }}. {{ entry.player.username }} – {{ entry.total_score }} pts
+      {{ forloop.counter }}. {{ entry.player.username }} – {{ entry.total_score }} pts <span class="small-font"> {{ entry.alt_score }}</span>
     </div>
     <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
       <div class="accordion-body">
