@@ -70,7 +70,7 @@ class GameInstance(models.Model):
         unique_together = ("template", "group")
 
     def __str__(self):
-        return f"{self.template.slug} - {self.group.name}"
+        return f"{ self.id } - {self.template.slug} - {self.group.name} | Winner: { self.winner }"
 
 class Prediction(models.Model):
     RESULT_CHOICES = [
@@ -90,9 +90,6 @@ class Prediction(models.Model):
     predicted_result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True, default='N')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ("player", "fixture")
 
     def __str__(self):
         return f"{self.player.username} - {self.fixture} ({self.predicted_home_score}-{self.predicted_away_score})"

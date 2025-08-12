@@ -208,7 +208,7 @@ class GameDetailView(DetailView):
         game = self.object
 
         # Prefetch predictions for all entries in one go
-        entries = GameEntry.objects.filter(game=game).select_related('player').order_by('-total_score')
+        entries = GameEntry.objects.filter(game=game).select_related('player').order_by('-total_score', '-alt_score')
 
         prediction_data = []
         for entry in entries:
@@ -216,6 +216,7 @@ class GameDetailView(DetailView):
             prediction_data.append({
                 'player': entry.player,
                 'total_score': entry.total_score,
+                'alt_score': entry.alt_score,
                 'predictions': predictions,
             })
 

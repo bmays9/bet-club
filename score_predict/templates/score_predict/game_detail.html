@@ -13,46 +13,98 @@
   </div>
   <p>
     <strong>Entries:</strong> {{ game.players.count }}
-  </p> {% for entry in entries %} <div class="accordion mb-3 border shadow-sm">
-    <div class="accordion-header fw-bold bg-light p-3" data-bs-toggle="collapse" data-bs-target="#player-{{ forloop.counter }}">
-      {{ forloop.counter }}. {{ entry.player.username }} – {{ entry.total_score }} pts <span class="small-font"> {{ entry.alt_score }}</span>
+  </p> 
+  {% for entry in entries %}
+  <div class="accordion mb-3 border shadow-sm">
+    <div class="accordion-header bg-light p-3 fw-bold d-flex align-items-center"
+         data-bs-toggle="collapse"
+         data-bs-target="#player-{{ forloop.counter }}">
+
+      <!-- Fixed-width username column -->
+      <div class="username_sp">
+        {{ forloop.counter }}. {{ entry.player.username }}
+      </div>
+
+      <!-- Center: Total score -->
+      <div class="flex-grow-1 text-center">
+        {{ entry.total_score }} pts
+      </div>
+
+      <!-- Right: Alternate score -->
+      <div class="text-end small text-muted" style="width: 50px;">Tie:
+        {{ entry.alt_score }}
+      </div>
     </div>
+
     <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
       <div class="accordion-body">
         <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle">
-            <table class="table table-sm table-striped align-middle small-font">
-              <thead>
+          <table class="table table-sm table-striped align-middle small-font">
+            <thead>
+              <tr>
+                <th>League</th>
+                <th>Home Team</th>
+                <th></th>
+                <th></th>
+                <th>Away Team</th>
+                <th>Pred Res</th>
+                <th>Pred Score</th>
+                <th>Pts</th>
+                <th>Tie Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prediction in entry.predictions %}
                 <tr>
-                  <th>League</th>
-                  <th>Home Team</th>
-                  <th></th>
-                  <th></th>
-                  <th>Away Team</th>
-                  <th>Prediction</th>
-                  <th>Pred Score</th>
-                  <th>Pts</th>
-                </tr>
-              </thead>
-              <tbody> {% for prediction in entry.predictions %} <tr>
                   <td>{{ prediction.fixture.league_short_name }}</td>
                   <td>{{ prediction.fixture.home_team }}</td>
                   <td>{{ prediction.fixture.home_score|default_if_none:"–" }}</td>
                   <td>{{ prediction.fixture.away_score|default_if_none:"–" }}</td>
                   <td>{{ prediction.fixture.away_team }}</td>
-                  <td> {% with h=prediction.predicted_home_score a=prediction.predicted_away_score %} {% if h > a %}H{% elif a > h %}A{% else %}D{% endif %} {% endwith %} </td>
+                  <td>
+                    {% with h=prediction.predicted_home_score a=prediction.predicted_away_score %}
+                      {% if h > a %}H{% elif a > h %}A{% else %}D{% endif %}
+                    {% endwith %}
+                  </td>
                   <td>{{ prediction.predicted_home_score }}–{{ prediction.predicted_away_score }}</td>
-                  <td>{{ prediction.score }}</td>
-                </tr> {% endfor %} </tbody>
-            </table>
+                  <td>
+  <span class="score-circle
+    {% if prediction.score == 10 %}
+      score-green
+    {% elif prediction.score == 5 %}
+      score-orange
+    {% else %}
+      score-grey
+    {% endif %}
+  ">
+    {{ prediction.score }}
+    {% if prediction.score == 10 %}
+      <i class="bi bi-star-fill ms-1"></i>
+    {% elif prediction.score == 5 %}
+      <i class="bi bi-exclamation-circle-fill ms-1"></i>
+    {% else %}
+      <i class="bi bi-dash-circle-fill ms-1"></i>
+    {% endif %}
+  </span>
+</td>
+                  <td>{{ prediction.alternate_score }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div> {% endfor %}
+  </div>
+{% endfor %}
+</div>
+
+<div>
+ <ul class="nav nav-pills">
+  <li class="nav-item">
+     <a class="nav-link" href="{% url 'sp_scoring' %}">Scoring Explained</a>
+  </li>
+</ul>
 </div>
 <!-- content ends here --> 
  {% endblock content %} 
-
-{% block additional %}
-<script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
-{% endblock additional %}

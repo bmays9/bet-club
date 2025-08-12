@@ -2,33 +2,43 @@
 {% load static %}
 
 {% block content %}
+<div>
+ <ul class="nav nav-pills">
+  <li class="nav-item">
+     <a class="nav-link" href="{% url 'game_history' %}">Back to Game History</a>
+  </li>
+</ul>
+</div>
+
 <div class="container mt-4">
-  
- <h1>⚽ Football Prediction Scoring Rules</h1>
+
+ <h2>⚽ Score Predictions</h2>
+ 
+ <h3>Scoring Rules</h3>
 
   <p>
     Welcome to the football prediction game! Points are awarded for both the <strong>accuracy of your scoreline predictions</strong> and your ability to judge the overall match result. 
     Read below to see how you can rack up points and edge out the competition!
   </p>
 
-  <h2>Main Scoring System</h2>
+  <h3>Main Scoring System</h3>
   <ul>
     <li><span class="highlight">10 points</span> – Predict the <strong>exact score</strong> (e.g., 2–1 when the final score is 2–1).</li>
     <li><span class="highlight">5 points</span> – Predict the <strong>correct result</strong> only (home win, draw, or away win), but not the exact score.</li>
   </ul>
 
-  <h2>Tie-Breaker: Alternate Scoring System</h2>
+  <h3>Tie-Breaker: Alternate Scoring System</h3>
   <p>
     If two or more players finish with the same score, we use the <strong>alternate scoring system</strong> to decide the winner. This system rewards accuracy in smaller details of your prediction.
   </p>
 
-  <h3>1. Result Prediction (3 points)</h3>
+  <h5>1. Result Prediction (3 points)</h5>
   <p>
     Earn <span class="highlight">3 points</span> if you correctly predict whether the game ends in a home win, draw, or away win. 
     <br />Predict incorrectly? You score <span class="highlight">0</span>.
   </p>
 
-  <h3>2. Home Team Goals (up to 3 points)</h3>
+  <h5>2. Home Team Goals (up to 3 points)</h5>
   <p>
     Predict the number of goals scored by the home team. You start with <span class="highlight">3 points</span> for a perfect prediction, 
     but lose 1 point for every goal you’re off.  
@@ -39,8 +49,8 @@
     <br />Predict 2 goals and they score 1 → <strong>2 points</strong>  
     <br />Predict 4 goals and they score 0 → <strong>0 points</strong>  
   </div>
-
-  <h3>3. Away Team Goals (up to 3 points)</h3>
+<br>
+  <h5>3. Away Team Goals (up to 3 points)</h5>
   <p>
     Exactly the same system applies to the away team’s goals.
   </p>
@@ -50,7 +60,7 @@
     <br />3 (Result) + 3 (Home Goals) + 3 (Away Goals) = <strong>9 points</strong>.  
     <br />But… if you get the exact correct scoreline, you earn a <strong>bonus point</strong>, making it a total of <span class="highlight">10 points</span>!
   </div>
-
+<br>
   <h2>Final Word</h2>
   <p>
     This system rewards both bold and precise predictions. Go for the exact score to hit the jackpot, but remember—even being close counts!

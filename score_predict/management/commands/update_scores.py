@@ -36,11 +36,24 @@ def calculate_alt_points(prediction, fixture):
     return 0
 
 def update_scores(stdout=None):
-    fixtures = Fixture.objects.filter(status_description="finished")
-    if stdout:
-        stdout.write(f"Found {fixtures.count()} finished fixtures.")
+    # ✅ Get active games with no winner
+    active_games = (
+        GameInstance.objects
+        .filter(winner__isnull=True)
+        .filter(gameentry__isnull=False)
+        .distinct()
+    )
 
-    # ✅ Update individual fixture prediction scores
+    # ✅ Get only finished fixtures linked to these active games' templates
+    fixtures = Fixture.objects.filter(
+        gametemplate__in=active_games.values_list("template", flat=True),
+        status_description="finished"
+    )
+
+    if stdout:
+        stdout.write(f"Found {fixtures.count()} finished fixtures for active games.")
+
+    # ✅ Update prediction scores for relevant fixtures
     for fixture in fixtures:
         if stdout:
             stdout.write(
@@ -59,7 +72,29 @@ def update_scores(stdout=None):
         if stdout:
             stdout.write(f"Updated scores for Fixture {fixture.fixture_id}")
 
-    check_for_winners()
+    # ✅ Update total_score and alt_score for each player in each active game
+    for game in active_games:
+        for entry in GameEntry.objects.filter(game=game):
+            totals = Prediction.objects.filter(
+                game_instance=game,
+                player=entry.player
+            ).aggregate(
+                total=Sum("score"),
+                alt_total=Sum("alternate_score")
+            )
+            entry.total_score = totals["total"] or 0
+            entry.alt_score = totals["alt_total"] or 0
+            entry.save()
+
+            if stdout:
+                stdout.write(
+                    f"Updated totals for {entry.player.username} in {game}: "
+                    f"total_score={entry.total_score}, alt_score={entry.alt_score}"
+                )
+
+    # ✅ Check for winners at the end
+    check_for_winners(stdout)
+
 
 
 def check_for_winners(stdout=None):

@@ -7,5 +7,5 @@ urlpatterns = [
     path("game/<int:pk>/", views.GameDetailView.as_view(), name="game_detail"),
     path("game-summary/<int:group_id>/<slug:template_slug>/", views.game_summary, name="game_summary"),
     path('history/', views.game_history, name='game_history'),
-    path("scoring/", views.points_scoring, name="scoring"),
+    path("scoring/", views.points_scoring, name="sp_scoring"),
 ]

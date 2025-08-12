@@ -66,6 +66,40 @@ main {
     padding: 0.5rem 0.75rem;
   }
 
+  .username_sp {
+  width: 200px;                  /* Desktop default width */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.score-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-weight: 500;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  color: white;
+  padding: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.score-green {
+  background-color: #28a745; /* Bootstrap green */
+}
+
+.score-orange {
+  background-color: #fd7e14; /* Bootstrap orange */
+}
+
+.score-grey {
+  background-color: #80848aff; /* Bootstrap dark */
+}
   .score-pred-cell {
     width: 36px;
     height: 28px;
@@ -212,6 +246,14 @@ main {
   font-size: 9px;  
 }
 
+/* MEDIA STYLING */
+
+@media (max-width: 768px) {       /* Tablet & mobile */
+  .username_sp {
+    width: 120px;                /* Narrower name column */
+  }
+}
+
 @media (max-width: 576px) {
   .score-pred-cell {
     width: 30px; /* Further reduce size on smaller screens */
@@ -230,5 +272,11 @@ main {
 
   .d-flex .fixture {
     margin-bottom: 5px;
+  }
+}
+
+@media (max-width: 480px) {       /* Small phones */
+  .username_sp {
+    width: 90px;                 /* Even narrower for tiny screens */
   }
 }
