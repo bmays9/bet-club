@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>LMS History</h1>
+
+<!-- Group selector -->
+<form method="get" action="{% url 'lms_history' %}">
+    <select name="group" onchange="this.form.submit()">
+        {% for group in groups %}
+            <option value="{{ group.id }}" {% if group == selected_group %}selected{% endif %}>
+                {{ group.name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+<hr>
+
+{% if games %}
+    <ul>
+        {% for game in games %}
+            <li>
+                {{ game.created_at|date:"Y-m-d" }} - {{ game.get_league_display }} - Winner: 
+                {% if game.winner %}
+                    {{ game.winner.username }}
+                {% else %}
+                    No winner
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No completed LMS games for this group.</p>
+{% endif %}
+
+{% endblock %}

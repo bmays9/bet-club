@@ -304,3 +304,30 @@ def pick_is_correct(pick):
         return True
     return False
 
+@login_required
+def lms_history(request):
+    # Groups the user belongs to
+    groups = UserGroup.objects.filter(members=request.user)
+
+    # Get selected group from query params (default to first group)
+    group_id = request.GET.get("group")
+    selected_group = None
+    games = []
+
+    if groups.exists():
+        if group_id:
+            selected_group = groups.filter(id=group_id).first()
+        else:
+            selected_group = groups.first()
+
+        if selected_group:
+            # Only completed LMS games for this group
+            games = LMSGame.objects.filter(group=selected_group, active=False).order_by('-created_at')
+
+    context = {
+        "groups": groups,
+        "selected_group": selected_group,
+        "games": games,
+    }
+
+    return render(request, "lms/lms_history.html", context)

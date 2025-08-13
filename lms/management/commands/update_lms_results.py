@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils.timezone import now
 from datetime import timedelta
-from lms.models import LMSPick, LMSRound, LMSEntry
+from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from score_predict.models import Fixture
 from django.db.models import Max
 
@@ -65,6 +65,23 @@ class Command(BaseCommand):
                 round_obj.save()
                 self.stdout.write(f"Round {round_obj.round_number} marked as completed.")
 
+            # 3️⃣.5 If one or no players remain - the game is over!
+            
+            alive_entries = round_obj.game.entries.filter(alive=True)
+            alive_count = alive_entries.count()
+
+            if alive_count == 1:
+                winner_entry = alive_entries.first()
+                round_obj.game.winner = winner_entry.user
+                round_obj.game.active = False
+                round_obj.game.save()
+                self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} for {round_obj.game}")
+
+            elif alive_count == 0:
+                round_obj.game.active = False
+                round_obj.game.save()
+                self.stdout.write(f"⚠️ Game over with no winner: {round_obj.game}")
+
             # 4️⃣ Create next round if this one is the latest and completed
             latest_round_num = LMSRound.objects.filter(game=round_obj.game).aggregate(Max('round_number'))['round_number__max']
 
@@ -79,6 +96,27 @@ class Command(BaseCommand):
                         self.stdout.write(f"✅ Created Round {created_round.round_number} for {round_obj.game}")
                     else:
                         self.stdout.write(f"⚠️ Not enough fixtures available yet for Round {next_round_num}")
+        
+        self.stdout.write("🔍 Checking for active games missing an incomplete round...")
+
+        active_games = LMSGame.objects.filter(active=True)  # adjust 'active' field if named differently
+
+        for game in active_games:
+            incomplete_exists = LMSRound.objects.filter(game=game, completed=False).exists()
+
+            if not incomplete_exists:
+                self.stdout.write(f"⚠️ {game} has no incomplete round. Attempting to create one...")
+
+                # Get the latest completed round
+                latest_round = LMSRound.objects.filter(game=game).order_by("-round_number").first()
+                if latest_round:
+                    created_round = self.create_next_round(latest_round)
+                    if created_round:
+                        self.stdout.write(f"✅ Created Round {created_round.round_number} for {game}")
+                    else:
+                        self.stdout.write(f"⚠️ No suitable fixtures found for next round of {game}")
+                else:
+                    self.stdout.write(f"❌ No rounds found at all for {game}")
 
     def create_next_round(self, previous_round):
         """Create the next LMS round with remaining players if fixtures are available."""

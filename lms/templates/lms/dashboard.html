@@ -2,7 +2,10 @@
 {% block content %}
 
 {% if user.is_authenticated %}
-<h2>Your Games</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Your Games</h2>
+    <a class="btn btn-primary" href="{% url 'lms_history' %}">Game History</a>
+</div>
 <table class="table">
   <thead>
     <tr>
