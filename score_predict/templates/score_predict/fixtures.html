@@ -74,7 +74,7 @@
     <div class="card mt-3 p-3 shadow-sm border rounded">
       <h5 class="card-title">{{ selected_entry.group.name }}</h5>
       {% if selected_entry.game_instance %}
-        <p class="card-text" >
+        <p class="card-text">
           Players Entered: {{ selected_entry.num_players }}<br>
           Prize Pot: £{{ selected_entry.game_instance.entry_fee|floatformat:2|add:""|floatformat:2|floatformat:"0"|add:""|floatformat:2|stringformat:"s" }} × {{ selected_entry.num_players }} =
           £{{ selected_entry.game_instance.entry_fee|floatformat:2|floatformat:"s" }} × {{ selected_entry.num_players }} =

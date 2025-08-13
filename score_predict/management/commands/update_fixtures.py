@@ -1,75 +1,126 @@
+import os
 import requests
 from datetime import datetime, timedelta, timezone
-from django.db.models import Q
-from django.utils.text import slugify
-from django.utils.timezone import now, make_aware
-from django.contrib.auth.models import User
+
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.utils.timezone import now
 from score_predict.models import Fixture, GameTemplate, GameInstance, GameEntry
 from score_predict.utils import group_fixtures_by_consecutive_days
-import os
 
+# RapidAPI configuration
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
-RAPIDAPI_SOFA_HOST = os.environ.get('RAPIDAPI_SOFA_HOST')
-
-#BASE_URL = "https://v3.football.api-sports.io/"
+RAPIDAPI_SOFA_HOST = os.getenv("RAPIDAPI_SOFA_HOST")
 
 HEADERS = {
     "X-RapidAPI-Key": RAPIDAPI_KEY,
     "X-RapidAPI-Host": RAPIDAPI_SOFA_HOST
 }
 
-# SofaScore uses competition IDs for leagues:
+# SofaScore English league IDs
 ENGLISH_LEAGUES = {
     "Premier League": {"short_name": "EPL", "tournament_id": 17, "season_id": 76986},
     "Championship": {"short_name": "ECH", "tournament_id": 18, "season_id": 77347},
     "League One": {"short_name": "EL1", "tournament_id": 24, "season_id": 77352},
     "League Two": {"short_name": "EL2", "tournament_id": 25, "season_id": 77351},
 }
+ENGLISH_LEAGUE_IDS = {v["tournament_id"] for v in ENGLISH_LEAGUES.values()}
+
+
+def get_block_start_date(first_fixture_date):
+    """
+    Returns the start date of the Fri–Mon or Tue–Thu block for a given date.
+    """
+    weekday = first_fixture_date.weekday()  # Mon=0 ... Sun=6
+
+    if weekday in [1, 2, 3]:  # Tue, Wed, Thu
+        block_start = first_fixture_date - timedelta(days=weekday - 1)
+        game_type = "midweek"
+    else:  # Fri–Mon
+        days_from_friday = (weekday - 4) % 7
+        block_start = first_fixture_date - timedelta(days=days_from_friday)
+        game_type = "weekend"
+
+    return block_start, game_type
+
+
+def assign_fixtures_to_templates(new_fixtures):
+    grouped_blocks = group_fixtures_by_consecutive_days(new_fixtures)
+
+    for block in grouped_blocks:
+        start_date = block[0].date.date()
+        end_date = block[-1].date.date()
+        first_weekday = block[0].date.weekday()
+
+        # Determine game type
+        game_type = "midweek" if first_weekday in (1, 2, 3) else "weekend"
+        league_ids = {f.league_id for f in block}
+
+        # Build template slug
+        if league_ids.issubset(ENGLISH_LEAGUE_IDS):
+            slug = f"en-{game_type}-{start_date}"
+        else:
+            slug = f"{block[0].league_id}-{game_type}-{start_date}"
+
+        with transaction.atomic():
+            template, created = GameTemplate.objects.get_or_create(
+                slug=slug,
+                defaults={
+                    "game_type": game_type,
+                    "week": start_date.isocalendar()[1],
+                    "start_date": start_date,
+                    "end_date": end_date,
+                }
+            )
+            print(f"{'🆕 Created' if created else '✅ Using existing'} template: {slug}")
+
+            # Assign fixtures to template
+            for fixture in block:
+                fixture.gametemplate = template
+                fixture.save(update_fields=["gametemplate"])
+
 
 def get_next_fixtures():
-    
     fixtures = []
 
     for league_name, ids in ENGLISH_LEAGUES.items():
         url = "https://sofascore.p.rapidapi.com/tournaments/get-next-matches"
-            
         querystring = {
             "tournamentId": str(ids["tournament_id"]),
             "seasonId": str(ids["season_id"]),
             "pageIndex": "0"
         }
+
         response = requests.get(url, headers=HEADERS, params=querystring)
-
-        if response.status_code == 200:
-            data = response.json()
-            events = data.get("events", [])
-
-            for fixture in events:
-                # Convert naive UTC datetime to aware UTC datetime
-                naive_utc_dt = datetime.utcfromtimestamp(fixture["startTimestamp"])
-                aware_utc_dt = naive_utc_dt.replace(tzinfo=timezone.utc)
-
-                fixtures.append({
-                    "fixture_id": fixture["id"],
-                    "league_id": ids["tournament_id"],
-                    "league_short_name": ids["short_name"],
-                    "date": aware_utc_dt,  # timezone aware datetime here
-                    "home_team": fixture["homeTeam"]["name"],
-                    "away_team": fixture["awayTeam"]["name"],
-                    "home_colour": fixture.get("homeTeam", {}).get("teamColors", {}).get("primary"),
-                    "home_text": fixture.get("homeTeam", {}).get("teamColors", {}).get("text"),
-                    "away_colour": fixture.get("awayTeam", {}).get("teamColors", {}).get("primary"),
-                    "away_text": fixture.get("awayTeam", {}).get("teamColors", {}).get("text"),
-                    "final_result_only": fixture.get("finalResultOnly", False),
-                    "status_code": fixture.get("status", {}).get("code"),
-                    "status_description": fixture.get("status", {}).get("description"),
-                })
-        else:
+        if response.status_code != 200:
             print(f"Error fetching fixtures for {league_name}: {response.status_code}")
+            continue
+
+        data = response.json()
+        events = data.get("events", [])
+
+        for fixture in events:
+            dt_utc = datetime.utcfromtimestamp(fixture["startTimestamp"]).replace(tzinfo=timezone.utc)
+            fixtures.append({
+                "fixture_id": fixture["id"],
+                "league_id": ids["tournament_id"],
+                "league_short_name": ids["short_name"],
+                "date": dt_utc,
+                "home_team": fixture["homeTeam"]["name"],
+                "away_team": fixture["awayTeam"]["name"],
+                "home_colour": fixture.get("homeTeam", {}).get("teamColors", {}).get("primary"),
+                "home_text": fixture.get("homeTeam", {}).get("teamColors", {}).get("text"),
+                "away_colour": fixture.get("awayTeam", {}).get("teamColors", {}).get("primary"),
+                "away_text": fixture.get("awayTeam", {}).get("teamColors", {}).get("text"),
+                "final_result_only": fixture.get("finalResultOnly", False),
+                "status_code": fixture.get("status", {}).get("code"),
+                "status_description": fixture.get("status", {}).get("description"),
+            })
 
     return fixtures
+
 
 def store_fixtures(fixtures):
     saved = 0
@@ -100,13 +151,13 @@ def store_fixtures(fixtures):
 
 
 class Command(BaseCommand):
-    help = "Fetch new fixtures and assign them to a gametemplate if unassigned"
+    help = "Fetch new fixtures and assign them to GameTemplates"
 
     def handle(self, *args, **options):
         new_fixtures = get_next_fixtures()
-        created_count = 0
 
-                # ✅ Create new Fixture objects
+        # Store only brand-new fixtures
+        created_count = 0
         for f in new_fixtures:
             if not Fixture.objects.filter(fixture_id=f["fixture_id"]).exists():
                 Fixture.objects.create(**f)
@@ -114,112 +165,54 @@ class Command(BaseCommand):
 
         print(f"✔ {created_count} new fixtures added.")
 
-        # Group unassigned fixtures by consecutive days
+        # Assign unassigned fixtures into templates
         unassigned = Fixture.objects.filter(gametemplate__isnull=True).order_by("date")
-        grouped_sets = group_fixtures_by_consecutive_days(unassigned)
-
-        # 🔍 Debug: print each group
-        for i, group in enumerate(grouped_sets, 1):
-            print(f"\n📦 Group {i} ({len(group)} fixtures):")
-            for fixture in group:
-                print(f" - {fixture.date.date()} | {fixture.home_team} vs {fixture.away_team}")
-
-        for fixture_group in grouped_sets:
-            if not fixture_group:
-                continue
-
-            first_date = fixture_group[0].date.date()
-            last_date = fixture_group[-1].date.date()
-            week_number = first_date.isocalendar()[1]
-
-            # Determine game_type by weekday
-            weekdays = [f.date.weekday() for f in fixture_group]  # 0=Mon ... 6=Sun
-            if all(day in [1, 2, 3] for day in weekdays):  # Tue, Wed, Thu
-                game_type = "midweek"
-            else:
-                game_type = "weekend"
-
-            week_number = first_date.isocalendar().week
-            slug = slugify(f"EN-{game_type}-week-{week_number}-{first_date.isoformat()}")
-
-            # ✅ Get or Create a new GameTemplate
-            template, created = GameTemplate.objects.get_or_create(
-                slug=slug,
-                defaults={
-                    'game_type': game_type,
-                    'week': week_number,
-                    'start_date': first_date,
-                    'end_date': last_date,
-                }
-            )
-            if created:
-                print(f"Created new GameTemplate: {slug}")
-            else:
-                print(f"GameTemplate already exists: {slug}")
-
-            # Assign fixtures to this template (add without duplicates)
-            for f in fixture_group:
-                # Set the fixture's gametemplate field to this template
-                f.gametemplate = template
-                f.save()
-
-            # ✅ Add to M2M relation for consistency
-            print(f"{'🆕 Created' if created else '✅ Reused'} template '{slug}' with {len(fixture_group)} fixtures.")
+        assign_fixtures_to_templates(unassigned)
 
 
+# Optional utility functions
 def create_weekly_prediction_games():
     today = now().date()
-    current_week = today.isocalendar().week
+    current_week = today.isocalendar()[1]
 
-    # Define week window
-    this_tuesday = today + timedelta((1 - today.weekday()) % 7)  # Next Tuesday
+    # Define week window (Tue–Mon)
+    this_tuesday = today + timedelta((1 - today.weekday()) % 7)
     next_monday = this_tuesday + timedelta(days=6)
 
     fixtures = Fixture.objects.filter(date__range=(this_tuesday, next_monday))
 
-    # Midweek: Tue - Thu
-    midweek_start = this_tuesday
-    midweek_end = this_tuesday + timedelta(days=2)
-    midweek_fixtures = fixtures.filter(date__week_day__in=[3, 4, 5])  # Tue=3, Wed=4, Thu=5
-
-    # Weekend: Fri - Mon
-    weekend_start = this_tuesday + timedelta(days=3)
-    weekend_end = next_monday
-    weekend_fixtures = fixtures.filter(date__week_day__in=[6, 7, 2, 1])  # Fri=6, Sat=7, Sun=1, Mon=2
-
-    # Create Game objects if there are fixtures
+    # Midweek: Tue–Thu
+    midweek_fixtures = fixtures.filter(date__week_day__in=[3, 4, 5])
     if midweek_fixtures.exists():
-        Game.objects.update_or_create(
+        game, _ = GameInstance.objects.update_or_create(
             week=current_week,
             game_type="Midweek",
-            defaults={
-                "start_date": midweek_start,
-                "end_date": midweek_end,
-            }
-        )[0].fixtures.set(midweek_fixtures)
+            defaults={"start_date": this_tuesday, "end_date": this_tuesday + timedelta(days=2)}
+        )
+        game.fixtures.set(midweek_fixtures)
 
+    # Weekend: Fri–Mon
+    weekend_fixtures = fixtures.filter(date__week_day__in=[6, 7, 1, 2])
     if weekend_fixtures.exists():
-        Game.objects.update_or_create(
+        game, _ = GameInstance.objects.update_or_create(
             week=current_week,
             game_type="Weekend",
-            defaults={
-                "start_date": weekend_start,
-                "end_date": weekend_end,
-            }
-        )[0].fixtures.set(weekend_fixtures)
+            defaults={"start_date": this_tuesday + timedelta(days=3), "end_date": next_monday}
+        )
+        game.fixtures.set(weekend_fixtures)
+
 
 def create_game_instance(game_type="weekend"):
-    fixtures = Fixture.objects.filter(
-        date__gte=timezone.now()
-    ).order_by("date")
+    fixtures = Fixture.objects.filter(date__gte=now()).order_by("date")
 
     if game_type == "midweek":
-        fixtures = fixtures.filter(date__week_day__in=[2, 3, 4])  # Tue, Wed, Thu
+        fixtures = fixtures.filter(date__week_day__in=[2, 3, 4])  # Tue–Thu
     else:
-        fixtures = fixtures.filter(date__week_day__in=[6, 7, 1])  # Fri, Sat, Sun
+        fixtures = fixtures.filter(date__week_day__in=[6, 7, 1])  # Fri–Sun
 
     if fixtures.exists():
-        template = GameTemplate.objects.get(name=game_type)  # Ensure templates exist
-        game = GameInstance.objects.create(template=template, start_date=timezone.now())
-        game.fixtures.set(fixtures[:template.num_fixtures])  # Or some logic to limit fixtures
-        game.save()
+        template = GameTemplate.objects.filter(game_type=game_type).first()
+        if template:
+            game = GameInstance.objects.create(template=template, start_date=now())
+            game.fixtures.set(fixtures[:template.num_fixtures])
+            game.save()

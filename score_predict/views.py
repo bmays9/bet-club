@@ -83,7 +83,8 @@ class FixtureList(generic.ListView):
         context["fixture_list"] = ordered_grouped
         context["selected_tab"] = self.request.GET.get("tab", "weekend")
         context["game_template"] = self.selected_template
-
+        
+        
         user = self.request.user
 
         if user.is_authenticated:
@@ -188,6 +189,7 @@ def game_summary(request, group_id, template_slug):
         has_entered = False
 
     return JsonResponse({
+        "group_name": group.name,
         "player_count": player_count,
         "pot": str(pot),
         "has_entered": has_entered,

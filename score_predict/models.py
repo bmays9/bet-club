@@ -70,7 +70,7 @@ class GameInstance(models.Model):
         unique_together = ("template", "group")
 
     def __str__(self):
-        return f"{ self.id } - {self.template.slug} - {self.group.name} | Winner: { self.winner }"
+        return f"{ self.id } - {self.template.slug} - {self.group.name}"
 
 class Prediction(models.Model):
     RESULT_CHOICES = [

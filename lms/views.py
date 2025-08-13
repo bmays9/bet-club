@@ -207,20 +207,20 @@ def lms_game_detail(request, game_id):
                 row["picks"].append(pick)
             picks_table.append(row)
 
-    import pprint
-    
-    pprint.pprint({
-        "game": game,
-        "league_display_name": league_display_name,
-        "round": round_obj,
-        "entry": entry,
-        "user_pick": user_pick,
-        "entries": entries,
-        "rounds": rounds,
-        "picks_table": picks_table,
-        "picks_by_entry_and_round": picks_by_entry_and_round,
-        "other_games": other_games,
-    })
+    # import pprint
+    #
+    #pprint.pprint({
+    #    "game": game,
+    #    "league_display_name": league_display_name,
+    #    "round": round_obj,
+    #    "entry": entry,
+    #    "user_pick": user_pick,
+    #    "entries": entries,
+    #    "rounds": rounds,
+    #    "picks_table": picks_table,
+    #    "picks_by_entry_and_round": picks_by_entry_and_round,
+    #    "other_games": other_games,
+    #})
     print("Entries:", entries)
     print("Rounds:", list(rounds))
     print("Picks by entry and round:", picks_by_entry_and_round)
