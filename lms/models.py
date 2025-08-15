@@ -37,7 +37,9 @@ class LMSRound(models.Model):
 
     @property
     def is_active(self):
-        """Round is active if the current time is after its start date."""
+        """Round is active if it has started, not completed, and is within its time window."""
+        if self.completed:
+            return False
         return timezone.now() >= self.start_date
 
     def __str__(self):

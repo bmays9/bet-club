@@ -110,6 +110,7 @@ class FixtureList(generic.ListView):
         else:
             context["group_entries"] = []
 
+        print(context)
         return context
 
 

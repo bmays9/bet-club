@@ -2,167 +2,154 @@
 {% load static %}
 {% block content %}
 <!-- content starts here -->
- <ul class="nav nav-pills">
+<ul class="nav nav-pills">
   <li class="nav-item">
-     <a class="nav-link {% if request.resolver_match.url_name == 'game_history' %}active{% endif %}" href="{% url 'game_history' %}">Game History</a>
+    <a class="nav-link {% if request.resolver_match.url_name == 'game_history' %}active{% endif %}" 
+       href="{% url 'game_history' %}">Game History</a>
   </li>
 </ul>
-<!--
-<div class="container mx-auto p-4">
-    <ul class="nav nav-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if selected_tab == 'weekend' %}active{% endif %}" data-bs-toggle="tab" href="?tab=weekend"" aria-selected="true" role="tab">Weekend</a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {% if selected_tab == 'midweek' %}active{% endif %}" data-bs-toggle="tab" href="?tab=midweek" aria-selected="false" role="tab">Midweek</a>
-        </li>
 
-    </ul>
-</div>
-
-<div id="myTabContent" class="tab-content">
-    <div class="tab-pane fade active show" id="weekend" role="tabpanel">
-    </div>
-    <div class="tab-pane fade" id="midweek" role="tabpanel">
-    </div>
-    <div class="tab-pane fade" id="dropdown1">
-        <p></p>
-    </div>
-    <div class="tab-pane fade" id="dropdown2">
-        <p></p>
-    </div>
-</div> -->
-<!-- Hide submission button if user is not logged in-->
+<!-- Group select and submit button -->
 <div class="container mx-auto mt-0 pl-4 pr-4">
-    <div class="row justify-content-md-center mb-2 pt-0">
-        {% if user.is_authenticated %}
+  {% if user.is_authenticated %}
+    {% if group_entries %}
+      <div class="row justify-content-md-center mb-2 pt-0">
         <div class="col">
-            {% if group_entries %}
-            <input type="hidden" id="game-template-slug" class="form-label mt-4 group-drop" value="{{ game_template.slug }}">
-            <label for="sp-group-select"></label>
-                <select id="sp-group-select" name="group_id" class="form-select">
-                {% for entry in group_entries %}
-                    <option value="{{ entry.group.id }}">
-                        {{ entry.group.name }} - {{ entry.num_players }} entries
-                        {% if entry.has_entered %}(Entered){% endif %}
-                        </option>
-                  {% endfor %}
-                </select>
-            {% else %}
-            <p>You have not joined any groups.</p>
-            {% endif %}
+          <input type="hidden" id="game-template-slug" class="form-label mt-4 group-drop" 
+                 value="{{ game_template.slug }}">
+          <label for="sp-group-select"></label>
+          <select id="sp-group-select" name="group_id" class="form-select">
+            {% for entry in group_entries %}
+              <option value="{{ entry.group.id }}">
+                {{ entry.group.name }} - {{ entry.num_players }} entries
+                {% if entry.has_entered %}(Entered){% endif %}
+              </option>
+            {% endfor %}
+          </select>
         </div>
-    </div>
-    <div class="row justify-content-md-center">
-        <div class="col">
-            <p><button id="submit-scores" class="btn btn-primary">Submit</button></p>
+      </div>
+      <!-- <div class="row justify-content-md-center">
+        <div class="col-auto">
+          <button id="submit-scores" class="btn btn-primary">Submit</button>
         </div>
-        <div class="col">
-            <p class="small-font">£<span id="entry-fee">5.00</span> Entry</p>
+        <div class="col-auto">
+          <p class="small-font mb-0">£<span id="entry-fee">5.00</span> Entry</p>
         </div>
-        {% else %}
-        <p>You are not logged in.</p>
-        {% endif %}
-    </div>
+      </div> --> 
+    {% else %}
+      <p>You have not joined any groups.</p>
+    {% endif %}
+  {% else %}
+    <p>You are not logged in.</p>
+  {% endif %}
 </div>
 
-<!-- Game Entry card-->
-
+<!-- Game Entry card -->
 {% if group_entries %}
   {% with selected_entry=group_entries.0 %}
-  <div id="game-summary">
-    <div class="card mt-3 p-3 shadow-sm border rounded">
-      <h5 class="card-title">{{ selected_entry.group.name }}</h5>
-      {% if selected_entry.game_instance %}
-        <p class="card-text">
-          Players Entered: {{ selected_entry.num_players }}<br>
-          Prize Pot: £{{ selected_entry.game_instance.entry_fee|floatformat:2|add:""|floatformat:2|floatformat:"0"|add:""|floatformat:2|stringformat:"s" }} × {{ selected_entry.num_players }} =
-          £{{ selected_entry.game_instance.entry_fee|floatformat:2|floatformat:"s" }} × {{ selected_entry.num_players }} =
-          £{{ selected_entry.game_instance.entry_fee|floatformat:2|stringformat:"s"|add:""|floatformat:2|stringformat:"s" }}
-        </p>
-        <p>
-          {% if selected_entry.has_entered %}
-            ✅ You have entered this game.
-          {% else %}
-            ❌ You have not entered this game yet.
-          {% endif %}
-        </p>
-        <a href="{% url 'score_predict:game_detail' selected_entry.game_instance.id %}" class="btn btn-primary">
-          View Game Page
-        </a>
-      {% else %}
-        <p class="text-muted">No game available for this group yet.</p>
-      {% endif %}
+    <div id="game-summary" class="container mt-3">
+      <div class="card p-3 shadow-sm border rounded">
+        <h5 class="card-title">{{ selected_entry.group.name }}</h5>
+        
+        {% if selected_entry.game_instance %}
+          {% with prize_pot=selected_entry.game_instance.entry_fee|floatformat:2|floatformat:"g" %}
+            <p class="card-text">
+              Players Entered: {{ selected_entry.num_players }}<br>
+              Entry Fee: £{{ selected_entry.game_instance.entry_fee|floatformat:2 }}<br>
+              Prize Pot: £{{ selected_entry.game_instance.entry_fee|floatformat:2 }} × {{ selected_entry.num_players }} = £{{ selected_entry.game_instance.entry_fee|floatformat:2|add:""|floatformat:2 }}
+            </p>
+          {% endwith %}
+
+          <!-- Conditional button -->
+          <div class="row justify-content-md-center mt-2">
+            <div class="col-auto">
+              {% if selected_entry.has_entered %}
+                <a href="{% url 'score_predict:game_detail' selected_entry.game_instance.id %}" class="btn btn-primary">
+                  View Game Page
+                </a>
+              {% else %}
+                <button id="submit-scores" class="btn btn-primary">Submit</button>
+              {% endif %}
+            </div>
+          </div>
+
+          <p class="mt-2">
+            {% if selected_entry.has_entered %}
+              ✅ You have entered this game.
+            {% else %}
+              ❌ You have not entered this game yet.
+            {% endif %}
+          </p>
+        {% else %}
+          <p class="text-muted">No game available for this group yet.</p>
+        {% endif %}
+      </div>
     </div>
-</div>
   {% endwith %}
 {% endif %}
 
-
-<div id="fixture-container" class="mx-auto" data-template-id="{{ game_template.id }}">
-    <div class="accordion small-font" id="accordionExample">
-        {% for league_name, fixtures in fixture_list.items %}
-        <div class="accordion-item border-0">
-            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
-                <div class="accordion-button d-grid" style="grid-template-columns: 1fr 40px 40px 40px;"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#collapse{{ forloop.counter }}"
-                    aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
-                    aria-controls="collapse{{ forloop.counter }}">
-                    <!-- League name (left-aligned) -->
-                    <span class="fw-bold">{{ league_name }}</span>
-                    <!-- H D A buttons (fixed-width columns) -->
-                    <span class="text-center prediction-cell" data-result="H">H</span>
-                    <span class="text-center prediction-cell" data-result="D">D</span>
-                    <span class="text-center prediction-cell" data-result="A">A</span>
-                </div>
-            </h2>
-            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
-                aria-labelledby="heading{{ forloop.counter }}"
-                data-bs-parent="#accordionExample">
-                <div class="accordion-body py-2 px-3 small-font">
-                    {% if fixtures %}
-                    <ul class="list-group list-group-flush">
-                        {% for fixture in fixtures %}
-                        <li class="list-group-item d-flex flex-row py-1 px-2">
-                            <!-- LEFT: Fixture info -->
-                            <div class="flex-grow-1 date-font">
-                                <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
-                                <!-- Home Team and Home Score Prediction -->
-                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <div class="fixture">{{ fixture.home_team }}</div>
-                                    <input type="number" min="0" placeholder="H"
-                                        class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                                        data-fixture-id="{{ fixture.id }}" data-team="home">
-                                </div>
-                                <!-- Away Team and Away Score Prediction -->
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="fixture">{{ fixture.away_team }}</div>
-                                    <input type="number" min="0" placeholder="A"
-                                        class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                                        data-fixture-id="{{ fixture.id }}" data-team="away">
-                                </div>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="mb-0">No fixtures available for this league.</p>
-                    {% endif %}
-                </div>
-            </div>
+<!-- Fixture accordion -->
+<div id="fixture-container" class="container mx-auto mt-4" data-template-id="{{ game_template.id }}">
+  <div class="accordion small-font" id="accordionExample">
+    {% for league_name, fixtures in fixture_list.items %}
+      <div class="accordion-item border-0">
+        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+          <div class="accordion-button d-grid" style="grid-template-columns: 1fr 40px 40px 40px;"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse{{ forloop.counter }}"
+               aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+               aria-controls="collapse{{ forloop.counter }}">
+            <span class="fw-bold">{{ league_name }}</span>
+            <span class="text-center prediction-cell" data-result="H">H</span>
+            <span class="text-center prediction-cell" data-result="D">D</span>
+            <span class="text-center prediction-cell" data-result="A">A</span>
+          </div>
+        </h2>
+        <div id="collapse{{ forloop.counter }}" 
+             class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+             aria-labelledby="heading{{ forloop.counter }}" 
+             data-bs-parent="#accordionExample">
+          <div class="accordion-body py-2 px-3 small-font">
+            {% if fixtures %}
+              <ul class="list-group list-group-flush">
+                {% for fixture in fixtures %}
+                  <li class="list-group-item d-flex flex-row py-1 px-2">
+                    <div class="flex-grow-1 date-font">
+                      <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
+                      <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="fixture">{{ fixture.home_team }}</div>
+                        <input type="number" min="0" placeholder="H"
+                               class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                               data-fixture-id="{{ fixture.id }}" data-team="home">
+                      </div>
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="fixture">{{ fixture.away_team }}</div>
+                        <input type="number" min="0" placeholder="A"
+                               class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
+                               data-fixture-id="{{ fixture.id }}" data-team="away">
+                      </div>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="mb-0">No fixtures available for this league.</p>
+            {% endif %}
+          </div>
         </div>
-        {% endfor %}
-    </div>
+      </div>
+    {% endfor %}
+  </div>
 </div>
+
 <script>
-    function toggleCollapse(id) {
-        var section = document.getElementById(id);
-        section.classList.toggle("hidden");
-    }
+function toggleCollapse(id) {
+  document.getElementById(id).classList.toggle("hidden");
+}
 </script>
 <!-- content ends here -->
 {% endblock content %}
+
 {% block additional %}
 <script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
 {% endblock additional %}

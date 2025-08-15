@@ -163,7 +163,7 @@ def lms_dashboard(request):
 @login_required
 def lms_game_detail(request, game_id):
     game = get_object_or_404(LMSGame, id=game_id)
-    round_obj = game.rounds.filter(completed=False).first()
+    round_obj = game.rounds.filter(completed=False).order_by("round_number").first()
     entry = LMSEntry.objects.filter(user=request.user, game=game).first()
 
     user_pick = None
@@ -173,7 +173,6 @@ def lms_game_detail(request, game_id):
     entries = LMSEntry.objects.filter(game=game).select_related("user")
     rounds = game.rounds.order_by("round_number")
 
-    # Map league code to display name
     LEAGUE_DISPLAY_NAMES = {
         "EPL": "Premier League",
         "ECH": "Championship",
@@ -182,49 +181,20 @@ def lms_game_detail(request, game_id):
     }
     league_display_name = LEAGUE_DISPLAY_NAMES.get(game.league, game.league)
 
-    # Preload all picks for this game
+    # ✅ Include all picks (past + current round)
     all_picks = LMSPick.objects.filter(
-        entry__game=game,
-        round__completed=True
-        ).select_related("entry__user", "round").order_by("round__round_number")
+        entry__game=game
+    ).select_related("entry__user", "round").order_by("round__round_number")
 
-
-    # Organize picks by entry and round
     picks_by_entry_and_round = defaultdict(dict)
     for pick in all_picks:
         picks_by_entry_and_round[pick.entry.id][pick.round.id] = pick
 
-    # Other active games in the same group
     other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
 
-    # Prepare a structure:
-    picks_table = []
-    if entries.exists():
-        for entry in entries:
-            row = {"player": entry.user.username, "picks": []}
-            for rnd in rounds:
-                pick = picks_by_entry_and_round.get(entry, {}).get(rnd)
-                row["picks"].append(pick)
-            picks_table.append(row)
-
-    # import pprint
-    #
-    #pprint.pprint({
-    #    "game": game,
-    #    "league_display_name": league_display_name,
-    #    "round": round_obj,
-    #    "entry": entry,
-    #    "user_pick": user_pick,
-    #    "entries": entries,
-    #    "rounds": rounds,
-    #    "picks_table": picks_table,
-    #    "picks_by_entry_and_round": picks_by_entry_and_round,
-    #    "other_games": other_games,
-    #})
     print("Entries:", entries)
     print("Rounds:", list(rounds))
     print("Picks by entry and round:", picks_by_entry_and_round)
-
 
     return render(request, "lms/game_detail.html", {
         "game": game,
@@ -236,7 +206,9 @@ def lms_game_detail(request, game_id):
         "rounds": rounds,
         "picks_by_entry_and_round": picks_by_entry_and_round,
         "other_games": other_games,
+        "now": timezone.now(),  # ✅ needed for "Picked" / tick icon logic
     })
+
 
 @login_required
 def create_game(request):
