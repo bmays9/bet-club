@@ -190,27 +190,39 @@ document.addEventListener("DOMContentLoaded", function () {
   const groupSelect = document.getElementById("sp-group-select");
 
   function loadGameSummary(groupId, templateSlug) {
-    // Guard against missing container
-    const summaryEl = document.getElementById("game-summary");
-    if (!summaryEl) return;
+  const summaryEl = document.getElementById("game-summary");
+  const submitBtn = document.getElementById("submit-scores");
+  if (!summaryEl || !submitBtn) return;
 
-    fetch(`/scores/game-summary/${groupId}/${templateSlug}/`)
-      .then(res => res.json())
-      .then(data => {
-        summaryEl.innerHTML = `
-          <div class="card mb-3 text-white bg-info shadow-sm border rounded" style="max-width: 25rem;">
-            <div class="card-header">${data.group_name}</div>
-            <div class="card-body">
-              <p class="card-text">Entries: ${data.player_count}</p>
-              <p class="card-text">Prize Pot: £${data.pot}</p>
-              <p class="card-text">Status: ${data.has_entered ? "Entered" : "Not yet entered"}</p>
-              ${data.has_entered ? `<a href="/scores/game/${data.game_id}/" class="btn btn-primary">View Game</a>` : ""}
-            </div>
+  fetch(`/scores/game-summary/${groupId}/${templateSlug}/`)
+    .then(res => res.json())
+    .then(data => {
+      summaryEl.innerHTML = `
+        <div class="card mb-3 text-white bg-info shadow-sm border rounded" style="max-width: 25rem;">
+          <div class="card-header">${data.group_name}</div>
+          <div class="card-body">
+            <p class="card-text">Entries: ${data.player_count}</p>
+            <p class="card-text">Prize Pot: £${data.pot}</p>
+            <p class="card-text">Status: ${data.has_entered ? "Entered" : "Not yet entered"}</p>
+            ${
+              data.has_entered
+                ? `<a href="/scores/game/${data.game_id}/" class="btn btn-primary">View Game</a>`
+                : ""
+            }
           </div>
-        `;
-      })
-      .catch(err => console.error("Error loading game summary:", err));
-  }
+        </div>
+      `;
+
+      // Show or hide submit button
+      if (data.has_entered) {
+        submitBtn.classList.add("d-none");
+      } else {
+        submitBtn.classList.remove("d-none");
+      }
+    })
+    .catch(err => console.error("Error loading game summary:", err));
+}
+
 
   if (groupSelect) {
     const slugEl = document.getElementById("game-template-slug");
