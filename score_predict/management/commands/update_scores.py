@@ -41,7 +41,7 @@ def update_scores(stdout=None):
     # ✅ Get active games with no winner
     active_games = (
         GameInstance.objects
-        .filter(winner__isnull=True)
+        .filter(winners__isnull=True)
         .filter(gameentry__isnull=False)
         .distinct()
     )
@@ -100,7 +100,7 @@ def update_scores(stdout=None):
 
 
 def check_for_winners(stdout=None):
-    for game in GameInstance.objects.filter(winner__isnull=True):
+    for game in GameInstance.objects.filter(winners__isnull=True):
         game_fixtures = Fixture.objects.filter(gametemplate=game.template)
         if not game_fixtures.exists():
             continue  # no fixtures linked, skip
@@ -132,7 +132,7 @@ def check_for_winners(stdout=None):
                 winner_users = [w.player for w in winners]  # list of User instances
                 # winner_user = winner_users[0]  # first one if you still want a single "official" winner
 
-                game.winners = winner_users
+                game.winners.set(winner_users)
                 game.save()
 
                 winner_names = ", ".join(user.username for user in winner_users)
@@ -141,7 +141,7 @@ def check_for_winners(stdout=None):
 
                 # --- 💰 Settle Money in Bank app ---
                 entrants = [e.player for e in GameEntry.objects.filter(game=game)]
-                entry_fee = game.template.entry_fee  # assume stored on template
+                entry_fee = game.entry_fee  # stored on GameInstance
                 prize_pool = Decimal(entry_fee) * len(entrants)
 
                 apply_batch(

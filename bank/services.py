@@ -1,6 +1,5 @@
-# bank/services.py
-import random
 from decimal import Decimal, ROUND_DOWN
+import random
 from django.db import transaction
 from .models import BankBalance, BankTransaction, BankTransactionBatch
 
@@ -9,7 +8,6 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
     """
     Process entrants (debits) + winners (credits) in a single atomic batch.
     """
-
     entrants = entrants or []
     winners = winners or []
 
@@ -26,21 +24,17 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
 
             BankTransaction.objects.create(
                 user=user,
-                group=group,
-                tx_type=BankTransaction.DEBIT,
+                transaction_type=BankTransaction.DEBIT,
                 amount=entry_fee,
-                description=f"Entry fee: {description}",
                 batch=batch
             )
 
         # 2. Distribute winnings
         if winners and prize_pool > 0:
             share = (prize_pool / len(winners)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
-
             total_distributed = share * len(winners)
             remainder = (prize_pool - total_distributed).quantize(Decimal("0.01"))
 
-            # Randomly allocate the extra pennies
             winners_list = list(winners)
             random.shuffle(winners_list)
 
@@ -58,10 +52,8 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
 
                 BankTransaction.objects.create(
                     user=user,
-                    group=group,
-                    tx_type=BankTransaction.CREDIT,
+                    transaction_type=BankTransaction.CREDIT,
                     amount=payout,
-                    description=f"Winnings: {description}",
                     batch=batch
                 )
 

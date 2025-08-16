@@ -27,9 +27,17 @@ class BankTransactionBatch(models.Model):
         return f"{self.group.name} - {self.description} ({self.created_at:%Y-%m-%d %H:%M})"
 
 class BankTransaction(models.Model):
+    CREDIT = 'credit'
+    DEBIT = 'debit'
+
+    TRANSACTION_TYPES = [
+        (CREDIT, 'Credit'),
+        (DEBIT, 'Debit'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    transaction_type = models.CharField(max_length=10, choices=[('credit','Credit'),('debit','Debit')])
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     batch = models.ForeignKey(BankTransactionBatch, on_delete=models.CASCADE, related_name="transactions")
     created_at = models.DateTimeField(default=timezone.now)
 
