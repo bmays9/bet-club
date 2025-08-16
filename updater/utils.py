@@ -16,9 +16,11 @@ def maybe_update():
             date__lte=timezone.now() - timedelta(hours=RESULTS_DELAY_HOURS),
             status_code__lt=100
         )
-        if pending_fixtures.exists():
+        # update all games
+        if pending_fixtures.exists(): 
             call_command('update_results', verbosity=0)
             call_command('update_scores', verbosity=0)
+            call_command('update_lms_results', verbosity=0)
             tracker.last_results_check = timezone.now()
             tracker.save()
 

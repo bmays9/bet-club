@@ -63,7 +63,7 @@ class GameInstance(models.Model):
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, related_name='game_instances')
     entry_fee = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
     players = models.ManyToManyField(User, through='GameEntry', related_name='score_games')
-    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='won_games')
+    winners = models.ManyToManyField(User, blank=True, related_name='won_games')  # 👈 multiple winners
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

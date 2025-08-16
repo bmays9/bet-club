@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models import Max
+from bank.services import apply_batch
+from decimal import Decimal
 
 def calculate_points(prediction, fixture):
     if prediction.predicted_home_score == fixture.home_score and prediction.predicted_away_score == fixture.away_score:
@@ -128,14 +130,29 @@ def check_for_winners(stdout=None):
             # Step 3: assign winner(s)
             if winners.exists():
                 winner_users = [w.player for w in winners]  # list of User instances
-                winner_user = winner_users[0]  # first one if you still want a single "official" winner
+                # winner_user = winner_users[0]  # first one if you still want a single "official" winner
 
-                game.winner = winner_user
+                game.winners = winner_users
                 game.save()
 
                 winner_names = ", ".join(user.username for user in winner_users)
                 if stdout:
                     stdout.write(f"Winner for {game} set to: {winner_names}")
+
+                # --- 💰 Settle Money in Bank app ---
+                entrants = [e.player for e in GameEntry.objects.filter(game=game)]
+                entry_fee = game.template.entry_fee  # assume stored on template
+                prize_pool = Decimal(entry_fee) * len(entrants)
+
+                apply_batch(
+                    group=game.group,             # 👈 your UserGroup
+                    entrants=entrants,            # all who paid in
+                    winners=winner_users,         # one or many winners
+                    entry_fee=Decimal(entry_fee),
+                    prize_pool=prize_pool,
+                    description=f"Settlement for {game}"
+                )
+
 
 
 class Command(BaseCommand):

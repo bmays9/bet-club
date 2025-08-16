@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from .models import BankBalance
+from .models import BankBalance, BankMessage
 from groups.models import UserGroup  # adjust import if needed
 
 
@@ -27,7 +27,12 @@ def money_list(request):
         selected_group = user_groups.first()
 
     balances = []
+    messages = []
     if selected_group:
+        # Ensure every group member has a BankBalance
+        for member in selected_group.members.all():
+            BankBalance.objects.get_or_create(user=member, group=selected_group, defaults={'balance': 0})
+
         balances = (
             BankBalance.objects
             .filter(group=selected_group)
@@ -35,8 +40,15 @@ def money_list(request):
             .order_by("-balance")
         )
 
+        messages = (
+            BankMessage.objects
+            .filter(group=selected_group)
+            .order_by("-created_at")[:20]  # 👈 newest 20
+        )
+
     return render(request, "bank/money_list.html", {
         "user_groups": user_groups,
         "selected_group": selected_group,
         "balances": balances,
+        "messages": messages,  # 👈 send to template
     })
