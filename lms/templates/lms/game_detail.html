@@ -9,6 +9,8 @@
     <h3>{{ league_display_name }}</h3>
     <p><strong>Group:</strong> {{ game.group.name }}</p>
 
+{% if game.active %}
+
     <!-- Switch game dropdown -->
     <div class="mb-3">
         <form method="get" action="{% url 'lms_dashboard' %}">
@@ -116,29 +118,82 @@
         </thead>
         <tbody>
             {% for entry in entries %}
-                <tr>
-                    <td>{{ entry.user.username }}</td>
-                    {% for r in rounds %}
-                        {% if r.id != round.id %}
-                            {% with round_picks=picks_by_entry_and_round|get_item:entry.id %}
-                                {% with pick=round_picks|get_item:r.id %}
-                                    <td>
-                                        {% if pick %}
-                                            {{ pick.team_name }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                {% endwith %}
+            <tr>
+                <td>{{ entry.user.username }}</td>
+                {% for r in rounds %}
+                    {% if r.id != round.id %}
+                        {% with round_picks=picks_by_entry_and_round|get_item:entry.id %}
+                            {% with pick=round_picks|get_item:r.id %}
+                                <td>
+                                    {% if pick %}
+                                        {{ pick.team_name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
                             {% endwith %}
-                        {% endif %}
-                    {% endfor %}
-                </tr>
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-</div>
 
+
+
+{% else %} 
+
+<!-- Game is finished , not active-->
+
+  <div class="card mb-4 p-4">
+    <h2 class="text-xl font-bold mb-2">{{ league_display_name }} — Game Over</h2>
+
+    <p><strong>Entry Fee:</strong> £{{ game.entry_fee }}</p>
+    <p><strong>Prize Pot:</strong> £{{ prize_pot }}</p>
+
+    {% if game.winner %}
+      <p class="mt-2 text-green-700 font-semibold">🏆 Winner: {{ game.winner.username }}</p>
+      {% if winner_last_pick %}
+        <p><strong>Winner’s last pick:</strong> {{ winner_last_pick.team_name }}
+           (Round {{ winner_last_pick.round.round_number }})</p>
+      {% endif %}
+      <p><strong>Winnings:</strong> £{{ prize_pot }}</p>
+    {% else %}
+      <p class="mt-2 text-red-700 font-semibold">❌ No winner — prize pot not awarded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card p-4">
+    <h3 class="text-lg font-semibold mb-2">Player Eliminations</h3>
+    <table class="table-auto w-full border">
+      <thead>
+        <tr>
+          <th class="border px-2 py-1 text-left">Player</th>
+          <th class="border px-2 py-1 text-left">Eliminated in Round</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries_for_results %}
+          <tr>
+            <td class="border px-2 py-1">{{ e.user.username }}</td>
+            <td class="border px-2 py-1">
+              {% if game.winner and e.user_id == game.winner_id %}
+                Winner
+              {% elif e.eliminated_round %}
+                Round {{ e.eliminated_round }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+</div>
 
 
 {% endblock %}

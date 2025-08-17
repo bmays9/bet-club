@@ -10,7 +10,7 @@ from .models import LMSGame, LMSRound, LMSEntry, LMSGame, LMSPick
 from .forms import LMSPickForm, CreateLMSGameForm
 from groups.models import UserGroup
 from score_predict.models import Fixture
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 
 @login_required
@@ -186,15 +186,48 @@ def lms_game_detail(request, game_id):
         entry__game=game
     ).select_related("entry__user", "round").order_by("round__round_number")
 
+    # Build a dict of picks keyed by entry and round
     picks_by_entry_and_round = defaultdict(dict)
     for pick in all_picks:
         picks_by_entry_and_round[pick.entry.id][pick.round.id] = pick
 
-    other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
+    # Ensure every entry has an entry for every round, even if empty
+    for entry in entries:
+        for r in rounds:
+            picks_by_entry_and_round[entry.id].setdefault(r.id, None)
 
-    print("Entries:", entries)
-    print("Rounds:", list(rounds))
-    print("Picks by entry and round:", picks_by_entry_and_round)
+    other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
+    prize_pot = game.entry_fee * game.entries.count()
+
+    # ⬇️ Extra context for closed games
+    winner_entry = None
+    winner_last_pick = None
+    entries_for_results = None
+
+    if not game.active:
+        if game.winner:
+            winner_entry = entries.filter(user=game.winner).first()
+            if winner_entry:
+                winner_last_pick = (
+                    LMSPick.objects
+                    .filter(entry=winner_entry)
+                    .select_related("round")
+                    .order_by("-round__round_number")
+                    .first()
+                )
+
+        # Ordering: losers first, winner (eliminated_round=None) last
+        try:
+            from django.db.models import F
+            entries_for_results = entries.order_by(
+                F("eliminated_round").asc(nulls_last=True),
+                "user__username"
+            )
+        except Exception:
+            entries_for_results = sorted(
+                entries,
+                key=lambda e: (e.eliminated_round is None, e.eliminated_round or 0, e.user.username.lower())
+            )
 
     return render(request, "lms/game_detail.html", {
         "game": game,
@@ -206,6 +239,10 @@ def lms_game_detail(request, game_id):
         "rounds": rounds,
         "picks_by_entry_and_round": picks_by_entry_and_round,
         "other_games": other_games,
+        "prize_pot": prize_pot,
+        "winner_entry": winner_entry,
+        "winner_last_pick": winner_last_pick,
+        "entries_for_results": entries_for_results,
         "now": timezone.now(),  # ✅ needed for "Picked" / tick icon logic
     })
 
@@ -287,32 +324,32 @@ def lms_history(request):
     games = []
 
     if groups.exists():
-        if group_id:
-            selected_group = groups.filter(id=group_id).first()
-        else:
-            selected_group = groups.first()
+        selected_group = groups.filter(id=group_id).first() if group_id else groups.first()
 
         if selected_group:
             # Completed LMS games for this group
             games_qs = (
                 LMSGame.objects.filter(group=selected_group, active=False)
-                .annotate(player_count=Count("entries"))   # ✅ count entries
-                .select_related("winner")                  # ✅ winner is FK
+                .annotate(player_count=Count("entries"))
+                .select_related("winner")
                 .order_by("-created_at")
             )
 
-            games = []
-            for game in games_qs:
-                prize_pot = game.player_count * game.entry_fee
-                games.append({
-                    "game": game,
-                    "player_count": game.player_count,
-                    "prize_pot": prize_pot,
-                })
+            # Use namedtuple to wrap each game with extra fields
+            GameItem = namedtuple("GameItem", ["game", "player_count", "prize_pot"])
+            games = [
+                GameItem(
+                    game=game,
+                    player_count=game.player_count,
+                    prize_pot=game.player_count * game.entry_fee
+                )
+                for game in games_qs
+            ]
 
     context = {
         "groups": groups,
         "selected_group": selected_group,
         "games": games,
     }
+
     return render(request, "lms/lms_history.html", context)

@@ -56,11 +56,15 @@
                     <!-- prize pot (calculated in view) -->
                     <td>£{{ game.prize_pot }}</td>
 
-                    <!-- link to detail page -->
+                    <!-- link to detail page (only if game has id) -->
                     <td>
-                        <a href="{% url 'lms_game_detail' game.game.id %}" class="btn btn-sm btn-primary">
-                            View Game
-                        </a>
+                        {% if game.game.id %}
+                            <a href="{% url 'lms_game_detail' game.game.id %}" class="btn btn-sm btn-primary">
+                                View Game
+                            </a>
+                        {% else %}
+                            N/A
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}
@@ -69,7 +73,6 @@
 {% else %}
     <p>No completed LMS games for this group.</p>
 {% endif %}
-
 
 
 {% endblock %}
