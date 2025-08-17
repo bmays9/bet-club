@@ -3,32 +3,45 @@ from django.utils.timezone import now
 from datetime import timedelta
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from score_predict.models import Fixture
-from django.db.models import Max
+from django.db.models import Max, Min
 
+
+from django.core.management.base import BaseCommand
+from django.db.models import Min, Max
+from lms.models import LMSGame, LMSRound
 
 class Command(BaseCommand):
     help = "Update LMS pick results and create the next round if needed"
 
     def handle(self, *args, **options):
-        self.stdout.write("Updating LMS pick results...")
+        self.stdout.write("🔄 Updating LMS pick results...")
 
-        # Consider only rounds not yet completed
-        incomplete_rounds = LMSRound.objects.filter(completed=False)
-        self.stdout.write(f"Processing incomplete rounds {incomplete_rounds}...")
+        # --- 1️⃣ Process earliest incomplete rounds per game ---
+        earliest_incomplete_rounds = (
+            LMSRound.objects.filter(game__active=True, completed=False)
+            .values("game")
+            .annotate(earliest_round=Min("round_number"))
+        )
+
+        incomplete_rounds = LMSRound.objects.filter(
+            game__active=True,
+            completed=False,
+            round_number__in=[r["earliest_round"] for r in earliest_incomplete_rounds]
+        ).order_by("game_id", "round_number")
+
+        self.stdout.write(f"Processing incomplete rounds: {list(incomplete_rounds)}")
 
         for round_obj in incomplete_rounds:
-            self.stdout.write(f"Processing {round_obj}...")
+            self.stdout.write(f"\n➡️ Processing {round_obj}")
 
-            # 1️⃣ Update all picks that are still pending
+            # --- 1a. Update pending picks ---
             picks_pending = round_obj.picks.filter(result="PENDING")
             for pick in picks_pending:
                 fixture = pick.fixture
-                print(f"\n[DEBUG] Processing Pick ID: {pick.id}")
-                print(f"  Picked Team: {pick.team_name}")
-                print(f"  Fixture: {fixture.home_team} vs {fixture.away_team}")
-                print(f"  Scores: {fixture.home_score}-{fixture.away_score}")
-                print(f"  Status Code: {fixture.status_code}")
-
+                self.stdout.write(f"  Processing Pick {pick.id} ({pick.team_name}) "
+                                  f"{fixture.home_team} vs {fixture.away_team} "
+                                  f"[Score: {fixture.home_score}-{fixture.away_score}, Status: {fixture.status_code}]")
+                
                 if fixture.status_code == 100:  # Fixture finished
                     if fixture.home_score > fixture.away_score:
                         result = "WIN" if fixture.home_team == pick.team_name else "LOSE"
@@ -36,37 +49,37 @@ class Command(BaseCommand):
                         result = "WIN" if fixture.away_team == pick.team_name else "LOSE"
                     else:
                         result = "DRAW"
-                    print(f"  Computed Result: {result}")
                     pick.result = result
                     pick.save()
+                    self.stdout.write(f"    ✅ Pick result computed: {result}")
 
-            # 2️⃣ Eliminate losing/drawing entries and those who didn't pick
-            entries = round_obj.game.entries.all()
-            for entry in entries:
+            # --- 1b. Eliminate entries with losing/drawing picks or no picks ---
+            for entry in round_obj.game.entries.all():
                 picks_for_entry = round_obj.picks.filter(entry=entry)
+
                 if not picks_for_entry.exists():
-                    # No picks made at all → eliminated round 0
+                    # No picks made: eliminated at round 0 only if round 1, otherwise current round
                     if entry.alive:
                         entry.alive = False
-                        entry.eliminated_round = 0
+                        entry.eliminated_round = 0 if round_obj.round_number == 1 else round_obj.round_number
                         entry.save()
+                        self.stdout.write(f"    ❌ Entry {entry.user} eliminated for not picking in round {round_obj.round_number}")
                     continue
 
-                # If any pick is LOSE or DRAW → eliminate this entry
                 if picks_for_entry.filter(result__in=["LOSE", "DRAW"]).exists():
                     if entry.alive:
                         entry.alive = False
                         entry.eliminated_round = round_obj.round_number
                         entry.save()
+                        self.stdout.write(f"    ❌ Entry {entry.user} eliminated for incorrect pick(s) in round {round_obj.round_number}")
 
-            # 3️⃣ If no picks pending, mark round completed
+            # --- 1c. Mark round completed if no pending picks remain ---
             if not round_obj.picks.filter(result="PENDING").exists():
                 round_obj.completed = True
                 round_obj.save()
-                self.stdout.write(f"Round {round_obj.round_number} marked as completed.")
+                self.stdout.write(f"✅ Round {round_obj.round_number} marked as completed.")
 
-            # 3️⃣.5 If one or no players remain - the game is over!
-            
+            # --- 1d. Check for winner / no winner ---
             alive_entries = round_obj.game.entries.filter(alive=True)
             alive_count = alive_entries.count()
 
@@ -75,48 +88,44 @@ class Command(BaseCommand):
                 round_obj.game.winner = winner_entry.user
                 round_obj.game.active = False
                 round_obj.game.save()
-                self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} for {round_obj.game}")
+                self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} ({round_obj.game})")
 
             elif alive_count == 0:
                 round_obj.game.active = False
                 round_obj.game.save()
                 self.stdout.write(f"⚠️ Game over with no winner: {round_obj.game}")
 
-            # 4️⃣ Create next round if this one is the latest and completed
+            # --- 1e. Create next round if current is completed and latest ---
             latest_round_num = LMSRound.objects.filter(game=round_obj.game).aggregate(Max('round_number'))['round_number__max']
-
-            if round_obj.round_number == latest_round_num and round_obj.completed:
+            if round_obj.completed and round_obj.round_number == latest_round_num:
                 next_round_num = round_obj.round_number + 1
-
-                # Ensure no existing next round
                 if not LMSRound.objects.filter(game=round_obj.game, round_number=next_round_num).exists():
-                    self.stdout.write(f"Attempting to create Round {next_round_num} for {round_obj.game}")
                     created_round = self.create_next_round(round_obj)
                     if created_round:
                         self.stdout.write(f"✅ Created Round {created_round.round_number} for {round_obj.game}")
                     else:
-                        self.stdout.write(f"⚠️ Not enough fixtures available yet for Round {next_round_num}")
-        
-        self.stdout.write("🔍 Checking for active games missing an incomplete round...")
+                        self.stdout.write(f"⚠️ Not enough fixtures to create Round {next_round_num} for {round_obj.game}")
 
-        active_games = LMSGame.objects.filter(active=True)  # adjust 'active' field if named differently
-
-        for game in active_games:
-            incomplete_exists = LMSRound.objects.filter(game=game, completed=False).exists()
-
-            if not incomplete_exists:
-                self.stdout.write(f"⚠️ {game} has no incomplete round. Attempting to create one...")
-
-                # Get the latest completed round
-                latest_round = LMSRound.objects.filter(game=game).order_by("-round_number").first()
-                if latest_round:
-                    created_round = self.create_next_round(latest_round)
-                    if created_round:
-                        self.stdout.write(f"✅ Created Round {created_round.round_number} for {game}")
-                    else:
-                        self.stdout.write(f"⚠️ No suitable fixtures found for next round of {game}")
+        # --- 2️⃣ Final check: active games missing a next round ---
+        self.stdout.write("\n🔍 Checking active games for missing next rounds...")
+        for game in LMSGame.objects.filter(active=True):
+            latest_round = LMSRound.objects.filter(game=game).order_by("-round_number").first()
+            if latest_round:
+                if latest_round.completed:
+                    next_round_num = latest_round.round_number + 1
+                    if not LMSRound.objects.filter(game=game, round_number=next_round_num).exists():
+                        created_round = self.create_next_round(latest_round)
+                        if created_round:
+                            self.stdout.write(f"✅ Created Round {created_round.round_number} for {game}")
+                        else:
+                            self.stdout.write(f"⚠️ No suitable fixtures found for next round of {game}")
                 else:
-                    self.stdout.write(f"❌ No rounds found at all for {game}")
+                    self.stdout.write(f"⏳ Latest round {latest_round.round_number} of {game} not yet completed. Skipping.")
+            else:
+                self.stdout.write(f"❌ No rounds found for {game}")
+
+        self.stdout.write("✅ LMS pick results update complete.")
+
 
     def create_next_round(self, previous_round):
         """Create the next LMS round with remaining players if fixtures are available."""

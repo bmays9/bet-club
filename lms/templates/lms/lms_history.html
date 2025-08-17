@@ -17,20 +17,59 @@
 <hr>
 
 {% if games %}
-    <ul>
-        {% for game in games %}
-            <li>
-                {{ game.created_at|date:"Y-m-d" }} - {{ game.get_league_display }} - Winner: 
-                {% if game.winner %}
-                    {{ game.winner.username }}
-                {% else %}
-                    No winner
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
+    <table border="1" cellpadding="5" class="table table-hover">
+        <thead>
+            <tr class="table-primary">
+                <th scope="col">Started</th>
+                <th scope="col">League</th>
+                <th scope="col">Players</th>
+                <th scope="col">Entry Fee</th>
+                <th scope="col">Winner</th>
+                <th scope="col">Prize</th>
+                <th scope="col">View</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in games %}
+                <tr scope="row">
+                    <!-- created_at from LMSGame -->
+                    <td>{{ game.game.created_at|date:"M d, Y" }}</td>
+
+                    <!-- league with display name -->
+                    <td>{{ game.game.get_league_display }}</td>
+
+                    <!-- annotated player_count -->
+                    <td>{{ game.player_count }}</td>
+
+                    <!-- entry fee -->
+                    <td>£{{ game.game.entry_fee }}</td>
+
+                    <!-- single winner -->
+                    <td>
+                        {% if game.game.winner %}
+                            {{ game.game.winner.username }}
+                        {% else %}
+                            No winner
+                        {% endif %}
+                    </td>
+
+                    <!-- prize pot (calculated in view) -->
+                    <td>£{{ game.prize_pot }}</td>
+
+                    <!-- link to detail page -->
+                    <td>
+                        <a href="{% url 'lms_game_detail' game.game.id %}" class="btn btn-sm btn-primary">
+                            View Game
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% else %}
     <p>No completed LMS games for this group.</p>
 {% endif %}
+
+
 
 {% endblock %}

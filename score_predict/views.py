@@ -250,8 +250,8 @@ def game_history(request):
         # Get completed games for that group (winner is not None)
         games = (
             GameInstance.objects.filter(group=selected_group)
-            .exclude(winner__isnull=True)
-            .select_related("winner", "template")
+            .exclude(winners__isnull=True)
+            .prefetch_related("winners") 
              .annotate(player_count=Count('players'))  # Count the players M2M relation
             .order_by("-id")
         )

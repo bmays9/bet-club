@@ -2,7 +2,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
@@ -293,13 +293,26 @@ def lms_history(request):
             selected_group = groups.first()
 
         if selected_group:
-            # Only completed LMS games for this group
-            games = LMSGame.objects.filter(group=selected_group, active=False).order_by('-created_at')
+            # Completed LMS games for this group
+            games_qs = (
+                LMSGame.objects.filter(group=selected_group, active=False)
+                .annotate(player_count=Count("entries"))   # ✅ count entries
+                .select_related("winner")                  # ✅ winner is FK
+                .order_by("-created_at")
+            )
+
+            games = []
+            for game in games_qs:
+                prize_pot = game.player_count * game.entry_fee
+                games.append({
+                    "game": game,
+                    "player_count": game.player_count,
+                    "prize_pot": prize_pot,
+                })
 
     context = {
         "groups": groups,
         "selected_group": selected_group,
         "games": games,
     }
-
     return render(request, "lms/lms_history.html", context)

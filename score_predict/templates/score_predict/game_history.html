@@ -37,7 +37,14 @@
                   <td>{{ game.game.template.start_date|date:"M d, Y" }}</td>
                   <td>{{ game.player_count }}</td>
                   <td>£{{ game.game.entry_fee }}</td>
-                  <td>{{ game.game.winner.username }}</td>
+                  <td>
+                    {% with winners=game.game.winners.all %}
+                        {% for winner in winners|slice:":3" %}
+                        {{ winner.username }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                        {% if winners|length > 3 %}...{% endif %}
+                    {% endwith %}
+                  </td>
                   <td>£{{ game.prize_pot }}</td>
                   <td>
                   <a href="{% url 'game_detail' game.game.id %}" class="btn btn-primary">View</a>
