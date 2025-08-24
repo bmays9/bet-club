@@ -164,7 +164,11 @@ def lms_dashboard(request):
 def lms_game_detail(request, game_id):
     game = get_object_or_404(LMSGame, id=game_id)
     round_obj = game.rounds.filter(completed=False).order_by("round_number").first()
+    all_entry = LMSEntry.objects.filter(user=request.user, game=game)
     entry = LMSEntry.objects.filter(user=request.user, game=game).first()
+    #print("ALL ENTRY", all_entry) 
+    #print("FIRST ENTRY", all_entry.first()) 
+    #print("ENTRY", entry) 
 
     user_pick = None
     if entry and round_obj:
@@ -192,9 +196,9 @@ def lms_game_detail(request, game_id):
         picks_by_entry_and_round[pick.entry.id][pick.round.id] = pick
 
     # Ensure every entry has an entry for every round, even if empty
-    for entry in entries:
+    for selection in entries:
         for r in rounds:
-            picks_by_entry_and_round[entry.id].setdefault(r.id, None)
+            picks_by_entry_and_round[selection.id].setdefault(r.id, None)
 
     other_games = LMSGame.objects.filter(group=game.group, active=True).exclude(id=game.id)
     prize_pot = game.entry_fee * game.entries.count()
@@ -229,6 +233,19 @@ def lms_game_detail(request, game_id):
                 key=lambda e: (e.eliminated_round is None, e.eliminated_round or 0, e.user.username.lower())
             )
 
+    #print("game", game)
+    #print("round object", round_obj)
+    #print("This entry", entry)
+    #print("user has picked", user_pick)
+    #print("entries", entries)
+    #print("rounds", rounds)
+    #print("pbeandr", picks_by_entry_and_round)
+    ##print("other games", other_games)
+    #print("pot", prize_pot)
+    #print("winning entry", winner_entry)
+    #print("winner last pick", winner_last_pick)
+    #print("entries for results", entries_for_results)
+    
     return render(request, "lms/game_detail.html", {
         "game": game,
         "league_display_name": league_display_name,

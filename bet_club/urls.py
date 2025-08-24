@@ -31,4 +31,5 @@ urlpatterns = [
     path('groups/', include('groups.urls')),
     path("lms/", include("lms.urls"), name="lms"),
     path("scores/", include("score_predict.urls"), name="scores"),
+    path("summernote/", include("django_summernote.urls")),
 ]
