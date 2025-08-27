@@ -37,10 +37,24 @@
             </tbody>
         </table>
 
-            {% if messages %}
+        {% if player_messages %}
+            <h3 class="mt-4">📜 Latest news...</h3>
+            <ul class="list-group">
+                {% for news in player_messages %}
+                    <li class="list-group-item">
+                        <small class="text-muted">{{ news.created_at|date:"Y-m-d H:i" }}</small><br>
+                        {{ news.message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="mt-3">No recent transactions for this group.</p>
+        {% endif %}
+
+        {% if bank_messages %}
             <h3 class="mt-4">📜 Recent Transactions</h3>
             <ul class="list-group">
-                {% for msg in messages %}
+                {% for msg in bank_messages %}
                     <li class="list-group-item">
                         <small class="text-muted">{{ msg.created_at|date:"Y-m-d H:i" }}</small><br>
                         {{ msg.message }}
@@ -48,8 +62,10 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="mt-3">No recent transactions for this group.</p>
+            <p class="mt-3">No recent updates for this group.</p>
         {% endif %}
+
+
 
     {% else %}
         <p class="mt-3">No balances found for this group.</p>

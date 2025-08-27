@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'golf',
     'groups',
     'lms',
+    'player_messages',
     'score_predict',
     'updater',
 ]

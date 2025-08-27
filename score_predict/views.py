@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Prefetch, Count
 from django.shortcuts import get_object_or_404, render
 from .models import GameTemplate, GameInstance, Prediction, Fixture, GameEntry
+from player_messages.models import PlayerMessage
 from collections import defaultdict, OrderedDict
 from groups.models import UserGroup
 from django.utils.dateparse import parse_date
@@ -164,6 +165,16 @@ def submit_predictions(request):
 
             # Ensure player is in the game instance
             game_instance.players.add(user)
+
+            # Update messages
+            PlayerMessage.objects.update_or_create(
+                    group=group,
+                    receiver=user,
+                    type="Entry",
+                    game="Score Predict",
+                    message=f"{user.username} has entered Score Predict",
+                    link="LINK HERE"
+                )
 
             return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
 

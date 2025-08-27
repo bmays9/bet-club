@@ -24,7 +24,7 @@ class LMSGame(models.Model):
 
     def __str__(self):
         game_id = self.id
-        return f"{ game_id } | {self.active} ({self.get_league_display()} - {self.group.name} - {self.winner})"
+        return f"({ game_id } | {self.group.name} - {self.get_league_display()} | Active: {self.active})"
 
 
 class LMSRound(models.Model):
@@ -43,7 +43,7 @@ class LMSRound(models.Model):
         return timezone.now() >= self.start_date
 
     def __str__(self):
-        return f"{self.game} - Round {self.round_number} | Active = { self.is_active } | { self.start_date } - { self.end_date } Completed = { self.completed } "
+        return f"{self.game} - Round {self.round_number} | Completed = { self.completed } "
 
 
 class LMSEntry(models.Model):

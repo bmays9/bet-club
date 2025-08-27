@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
         # --- 1️⃣ Process earliest incomplete rounds per game ---
         earliest_incomplete_rounds = (
-            LMSRound.objects.filter(game__active=True, completed=False)
+            LMSRound.objects.filter(game__active=True, completed=False, start_date__lte=timezone.now())   # ✅ only past or current rounds
             .values("game")
             .annotate(earliest_round=Min("round_number"))
         )
@@ -26,6 +26,7 @@ class Command(BaseCommand):
         incomplete_rounds = LMSRound.objects.filter(
             game__active=True,
             completed=False,
+            start_date__lte=timezone.now(),
             round_number__in=[r["earliest_round"] for r in earliest_incomplete_rounds]
         ).order_by("game_id", "round_number")
 
