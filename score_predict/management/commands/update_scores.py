@@ -139,6 +139,16 @@ def check_for_winners(stdout=None):
                 if stdout:
                     stdout.write(f"Winner for {game} set to: {winner_names}")
 
+                # Update messages with the winners
+                PlayerMessage.objects.update_or_create(
+                    group=game.group,
+                    type="Group",
+                    game="Score Predict",
+                    message=f"{winner_names} have won Score Predict with a score of {total_score}",
+                    link="LINK HERE"
+                )
+
+
                 # --- 💰 Settle Money in Bank app ---
                 entrants = [e.player for e in GameEntry.objects.filter(game=game)]
                 entry_fee = game.entry_fee  # stored on GameInstance

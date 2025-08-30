@@ -23,9 +23,25 @@ class LMSEntryAdmin(SummernoteModelAdmin):
 
 @admin.register(LMSPick)
 class LMSPickAdmin(SummernoteModelAdmin):
-    list_display = ('entry', 'round', 'fixture', 'team_name', 'result')
-    search_fields = ['entry']
+    list_display = ('get_user', 'get_group', 'get_league', 'get_round', 'team_name', 'result', 'fixture')
+    search_fields = ['get_group', 'get_league']
     list_filter = ['result', 'round']
+
+    def get_user(self, obj):
+        return obj.entry.user.username
+    get_user.short_description = 'User'
+
+    def get_group(self, obj):
+        return obj.round.game.group
+    get_group.short_description = 'Group'
+
+    def get_league(self, obj):
+        return obj.round.game.league
+    get_league.short_description = 'League'
+
+    def get_round(self, obj):
+        return obj.round.round_number
+    get_round.short_description = 'Round'
 
 # Register your models here.
 

@@ -21,6 +21,8 @@ def maybe_update():
         # update all games
         if pending_fixtures.exists(): 
             call_command('update_results', verbosity=0)
+            call_command('update_scores', verbosity=0)
+            call_command('update_lms_results', verbosity=0)
             tracker.last_results_check = timezone.now()
             tracker.save()
 
@@ -34,8 +36,8 @@ def maybe_update():
         winners__isnull=True                             # no winners assigned
     ).distinct()
 
-    if games.exists():   # ✅ only runs score updates if at least one match
-        call_command('update_scores', verbosity=0)
-        call_command('update_lms_results', verbosity=0)
+    #if games.exists():   # ✅ only runs score updates if at least one match
+    #    call_command('update_scores', verbosity=0)
+    #    call_command('update_lms_results', verbosity=0)
 
             

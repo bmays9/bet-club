@@ -49,6 +49,6 @@ class Command(BaseCommand):
                     fixture.away_score = away_score
                     fixture.save()
 
-        self.stdout.write(self.style.SUCCESS("Fixture results updated! Now updating scores..."))
-        update_scores(stdout=self.stdout)  # call score update after fixtures updated
-        self.stdout.write(self.style.SUCCESS("Scores updated!"))
+        self.stdout.write(self.style.SUCCESS("Fixture results updated!"))
+        # update_scores(stdout=self.stdout)  # call score update after fixtures updated
+        # self.stdout.write(self.style.SUCCESS("Scores updated!"))
