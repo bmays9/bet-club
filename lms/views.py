@@ -11,6 +11,7 @@ from .forms import LMSPickForm, CreateLMSGameForm
 from groups.models import UserGroup
 from score_predict.models import Fixture
 from collections import defaultdict, namedtuple
+from player_messages.utils import create_message
 
 
 @login_required
@@ -268,9 +269,17 @@ def lms_game_detail(request, game_id):
 def create_game(request):
     if request.method == "POST":
         form = CreateLMSGameForm(request.POST, user=request.user)
+        
         if form.is_valid():
             game = form.save(commit=False)
             game.save()
+
+            # Create messaging for new game - code LM-NEW
+            create_message(
+                code="LM-NEW",
+                context={"User": request.user, "league": game.league.name},
+                group=game.group
+            )
 
             today = now().date()
             created_round = None

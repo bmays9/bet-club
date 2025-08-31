@@ -66,6 +66,8 @@ class Command(BaseCommand):
                         entry.eliminated_round = 0 if round_obj.round_number == 1 else round_obj.round_number
                         entry.save()
                         self.stdout.write(f"    ❌ Entry {entry.user} eliminated for not picking in round {round_obj.round_number}")
+
+                        # Update messages
                     continue
 
                 if picks_for_entry.filter(result__in=["LOSE", "DRAW"]).exists():

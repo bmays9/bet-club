@@ -5,6 +5,7 @@
 
 <div class="container mt-4">
 {% if user.is_authenticated %}
+    
     <h2>💰 Money List</h2>
     <form method="get">
         <label for="group-select">Select Group:</label>
@@ -36,23 +37,38 @@
                 {% endfor %}
             </tbody>
         </table>
+    {% else %}
+        <p class="mt-3">No balances found for this group.</p>
+    {% endif %}
 
         {% if player_messages %}
             <h3 class="mt-4">📜 Latest news...</h3>
-            <ul class="list-group">
-                {% for news in player_messages %}
-                    <li class="list-group-item">
-                        <small class="text-muted">{{ news.created_at|date:"Y-m-d H:i" }}</small><br>
-                        {{ news.message }}
-                    </li>
-                {% endfor %}
-            </ul>
+                <table class="table table-hover table-sm small-font">
+                    <thead>
+                        <tr>
+                            <th scope="col"></th>
+                            <th scope="col"></th>
+                            <th scope="col"></th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for update in player_messages %}
+                        <tr class="table-active">
+                            <th scope="row">{{update.group}}</th>
+                            <td><small class="text-muted">{{ update.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ update.message}} </td>
+                            <td>{{update.link}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
         {% else %}
-            <p class="mt-3">No recent transactions for this group.</p>
+            <p class="mt-3">No recent updates for this group.</p>
         {% endif %}
 
         {% if bank_messages %}
-            <h3 class="mt-4">📜 Recent Transactions</h3>
+            <h3 class="mt-4">💷 Recent Transactions</h3>
             <ul class="list-group">
                 {% for msg in bank_messages %}
                     <li class="list-group-item">
@@ -64,12 +80,6 @@
         {% else %}
             <p class="mt-3">No recent updates for this group.</p>
         {% endif %}
-
-
-
-    {% else %}
-        <p class="mt-3">No balances found for this group.</p>
-    {% endif %}
 
 {% else %}
     <h2>Welcome to BetClub</h2>

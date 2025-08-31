@@ -140,13 +140,14 @@ def check_for_winners(stdout=None):
                     stdout.write(f"Winner for {game} set to: {winner_names}")
 
                 # Update messages with the winners
-                PlayerMessage.objects.update_or_create(
-                    group=game.group,
-                    type="Group",
-                    game="Score Predict",
-                    message=f"{winner_names} have won Score Predict with a score of {total_score}",
-                    link="LINK HERE"
-                )
+                for w in winners: 
+                    # Create messaging for each SP Winner - code SP-WIN
+                    create_message(
+                        code="SP-WIN",
+                        context={"User": w.user, "score": total_score},
+                        group=game.group
+                        
+                    )
 
 
                 # --- 💰 Settle Money in Bank app ---
