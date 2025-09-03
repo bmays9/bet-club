@@ -56,5 +56,23 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
                     amount=payout,
                     batch=batch
                 )
+        
+        # 3. Create a message for the group
+        entrants_str = ", ".join([u.username for u in entrants]) if entrants else "None"
+        winners_str = ", ".join([f"{u} (+£{payouts[u]:.2f})" for u in payouts]) if payouts else "None"
+
+        message_text = (
+            f"💰 {description} processed\n"
+            f"Entry fee: £{entry_fee:.2f}\n"
+            f"Entrants: {entrants_str}\n"
+            f"Prize pool: £{prize_pool:.2f}\n"
+            f"Winners: {winners_str}"
+        )
+
+        BankMessage.objects.create(
+            group=group,
+            message=message_text,
+            # link=f"/bank/batch/{batch.id}/"  # optional: link to batch detail page
+        )
 
         return batch

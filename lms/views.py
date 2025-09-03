@@ -58,11 +58,22 @@ def lms_pick(request, game_id, round_id):
                     messages.success(request, f"You picked {team_name} for this round.")
 
                     # Create player messaging for making the pick code LM-PCK
-                    create_message(
-                        code="LM-PCK",
-                        context={"User": request.user, "league": game.league, "round": round.round_number},
-                        group=game.group
-                    )
+                    if round.round_number == 1:
+                        #New Entry Message
+                        create_message(
+                            code="LM-ENT",
+                            context={"User": request.user, "league": game.league},
+                            receiver=request.user,
+                            group=game.group
+                        )
+                    else:
+                        # New Pick Message
+                        create_message(
+                            code="LM-PCK",
+                            context={"User": request.user, "league": game.league, "round": round.round_number},
+                            receiver=request.user,
+                            group=game.group
+                        )
 
 
                     return redirect("lms_game_detail", game_id=game.id)
@@ -286,7 +297,7 @@ def create_game(request):
             # Create messaging for new game - code LM-NEW
             create_message(
                 code="LM-NEW",
-                context={"User": request.user, "league": game.league.name},
+                context={"User": request.user, "league": game.league},
                 group=game.group
             )
 

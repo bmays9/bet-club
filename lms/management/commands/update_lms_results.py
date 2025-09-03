@@ -1,15 +1,12 @@
+from bank.services import apply_batch
+from decimal import Decimal
 from django.core.management.base import BaseCommand
+from django.db.models import Max, Min
 from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from score_predict.models import Fixture
-from django.db.models import Max, Min
-
-
-from django.core.management.base import BaseCommand
-from django.db.models import Min, Max
-from lms.models import LMSGame, LMSRound
 
 class Command(BaseCommand):
     help = "Update LMS pick results and create the next round if needed"
@@ -101,6 +98,10 @@ class Command(BaseCommand):
             # --- 1d. Check for winner / no winner ---
             alive_entries = round_obj.game.entries.filter(alive=True)
             alive_count = alive_entries.count()
+            loser_entries = round_obj.game.entries.filter(alive=False)
+            entrants = loser_entries.count() + 1
+            entry_fee = round_obj.game.entry_fee  # stored in LMSGame
+            prize_pool = Decimal(entry_fee) * entrants
 
             if alive_count == 1:
                 winner_entry = alive_entries.first()
@@ -108,12 +109,25 @@ class Command(BaseCommand):
                 round_obj.game.active = False
                 round_obj.game.save()
                 self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} ({round_obj.game})")
+                
                 # Update messages with the LMS Winner!
                 create_message(
                     code="LM-WIN",
                     context={"User": entry.user, "league": entry.game.league, "prize"; "£25"},
                     group=entry.game.group
                 )
+
+                # --- 💰 Settle Money in Bank app ---
+                apply_batch(
+                    group=entry.game.group,       # 👈 your UserGroup
+                    entrants=entrants,            # all who paid in
+                    winners=winner_entry.user,         # one winner only
+                    entry_fee=Decimal(entry_fee),
+                    prize_pool=prize_pool,
+                    description=f"Settlement for {game}"
+                )
+
+                
 
             elif alive_count == 0:
                 round_obj.game.active = False
