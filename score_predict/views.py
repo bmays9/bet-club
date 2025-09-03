@@ -15,6 +15,7 @@ from decimal import Decimal
 from django.views import generic
 import json
 from datetime import date, datetime
+from player_messages.utils import create_message
 from updater.utils import maybe_update
 
 LEAGUE_ORDER = {
@@ -167,14 +168,22 @@ def submit_predictions(request):
             game_instance.players.add(user)
 
             # Update messages
-            PlayerMessage.objects.update_or_create(
-                    group=group,
-                    receiver=user,
-                    type="Entry",
-                    game="Score Predict",
-                    message=f"{user.username} has entered Score Predict",
-                    link="LINK HERE"
-                )
+            # Create messaging for SP ENtry - code SP-ENT
+            create_message(
+                code="SP-ENT",
+                context={"User": user},
+                group=group,
+                receiver=user
+            )
+
+            #PlayerMessage.objects.update_or_create(
+                    #group=group,
+                    #receiver=user,
+                    #type="Entry",
+                    #game="Score Predict",
+                    #message=f"{user.username} has entered Score Predict",
+                    #link="LINK HERE"
+                #)
 
             return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
 

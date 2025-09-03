@@ -56,6 +56,15 @@ def lms_pick(request, game_id, round_id):
                         team_name=team_name
                     )
                     messages.success(request, f"You picked {team_name} for this round.")
+
+                    # Create player messaging for making the pick code LM-PCK
+                    create_message(
+                        code="LM-PCK",
+                        context={"User": request.user, "league": game.league, "round": round.round_number},
+                        group=game.group
+                    )
+
+
                     return redirect("lms_game_detail", game_id=game.id)
                 else:
                     messages.error(request, "No fixture found for that team.")

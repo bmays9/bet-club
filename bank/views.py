@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Exists, OuterRef
 from .models import BankBalance, BankMessage
 from player_messages.models import PlayerMessage
 from groups.models import UserGroup  # adjust import if needed
@@ -47,11 +48,24 @@ def money_list(request):
             .order_by("-created_at")[:20]  # 👈 newest 20
         )
 
-        player_messages = (
-            PlayerMessage.objects
-            .filter(group=selected_group)
-            .order_by("-created_at")[:20]  # 👈 newest 20
+        # Personal and group messages merged
+        personal_messages = PlayerMessage.objects.filter(
+            group=selected_group,
+            receiver=request.user
         )
+
+        overlap = PlayerMessage.objects.filter(
+            group=selected_group,
+            receiver=request.user,
+            code=OuterRef("code")
+        )
+
+        group_messages = PlayerMessage.objects.filter(
+            group=selected_group,
+            receiver__isnull=True
+        ).exclude(Exists(overlap))
+
+        player_messages = personal_messages.union(group_messages).order_by("-created_at")[:20]
 
 
     return render(request, "bank/money_list.html", {

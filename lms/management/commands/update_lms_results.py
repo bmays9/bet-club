@@ -68,6 +68,13 @@ class Command(BaseCommand):
                         self.stdout.write(f"    ❌ Entry {entry.user} eliminated for not picking in round {round_obj.round_number}")
 
                         # Update messages
+                        # Update messages with the losers
+                        create_message(
+                            code="LM-UKO",
+                            context={"User": entry.user, "league": entry.game.league},
+                            group=entry.game.group
+                        )
+
                     continue
 
                 if picks_for_entry.filter(result__in=["LOSE", "DRAW"]).exists():
@@ -76,6 +83,14 @@ class Command(BaseCommand):
                         entry.eliminated_round = round_obj.round_number
                         entry.save()
                         self.stdout.write(f"    ❌ Entry {entry.user} eliminated for incorrect pick(s) in round {round_obj.round_number}")
+
+                        # Update messages with the losers
+                        create_message(
+                            code="LM-UKO",
+                            context={"User": entry.user, "league": entry.game.league},
+                            group=entry.game.group
+                        )
+
 
             # --- 1c. Mark round completed if no pending picks remain ---
             if not round_obj.picks.filter(result="PENDING").exists():
@@ -93,11 +108,23 @@ class Command(BaseCommand):
                 round_obj.game.active = False
                 round_obj.game.save()
                 self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} ({round_obj.game})")
+                # Update messages with the LMS Winner!
+                create_message(
+                    code="LM-WIN",
+                    context={"User": entry.user, "league": entry.game.league, "prize"; "£25"},
+                    group=entry.game.group
+                )
 
             elif alive_count == 0:
                 round_obj.game.active = False
                 round_obj.game.save()
                 self.stdout.write(f"⚠️ Game over with no winner: {round_obj.game}")
+                # Update messages with no LMS Winner - rollover!
+                create_message(
+                    code="LM-OOO",
+                    context={"User": entry.user, "league": entry.game.league, "prize"; "£25"},
+                    group=entry.game.group
+                )
 
             # --- 1e. Create next round if current is completed and latest ---
             latest_round_num = LMSRound.objects.filter(game=round_obj.game).aggregate(Max('round_number'))['round_number__max']
