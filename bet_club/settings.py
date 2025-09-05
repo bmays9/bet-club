@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'lms',
     'player_messages',
     'score_predict',
+    'season',
     'updater',
 ]
 
