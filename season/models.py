@@ -88,6 +88,9 @@ class GameLeague(models.Model):
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="game_leagues")
     league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="game_leagues")
     active = models.BooleanField(default=True)
+    last_standings_batch = models.ForeignKey(
+        "StandingsBatch", null=True, blank=True, on_delete=models.SET_NULL, related_name="game_leagues"
+    )
 
     class Meta:
         unique_together = [("game", "league")]

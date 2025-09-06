@@ -66,6 +66,12 @@ def save_standings(league: League, data: dict):
                 goals_for=row["scoresFor"],
                 goals_against=row["scoresAgainst"],
             )
+        
+        # ✅ Attach batch to every GameLeague using this League
+        game_leagues = GameLeague.objects.filter(league=league, active=True)
+        for gl in game_leagues:
+            gl.last_standings_batch = batch
+            gl.save(update_fields=["last_standings_batch"])
 
     return batch
 
