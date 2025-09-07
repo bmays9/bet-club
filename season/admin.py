@@ -103,6 +103,7 @@ class PlayerScoreSnapshotAdmin(admin.ModelAdmin):
     )
     list_filter = ("game_league", "batch")
     search_fields = ("player_game__user__username",)
+    ordering = ("-overall_total_points",)
 
 
 # -----------------------------

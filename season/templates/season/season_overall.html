@@ -1,0 +1,25 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% block content %}
+<!-- content starts here -->
+
+{% if batch %}
+
+<h2>Overall Leaderboard ({{ batch.taken_at|date:"Y-m-d H:i" }})</h2>
+<table>
+  <tr><th>Rank</th><th>Player</th><th>Points</th></tr>
+  {% for row in snaps %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ row.player_game__user__username }}</td>
+      <td>{{ row.total }}</td>
+    </tr>
+  {% endfor %}
+</table>
+
+{% else %}
+  <p>No standings available yet.</p>
+{% endif %}
+
+<!-- content ends here --> 
+ {% endblock content %} 

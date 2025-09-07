@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
+from player_messages.utils import create_message
 from score_predict.models import Fixture
 
 class Command(BaseCommand):
@@ -69,7 +70,8 @@ class Command(BaseCommand):
                         create_message(
                             code="LM-UKO",
                             context={"User": entry.user, "league": entry.game.league},
-                            group=entry.game.group
+                            group=entry.game.group,
+                            receiver=entry.user
                         )
 
                     continue
@@ -85,7 +87,8 @@ class Command(BaseCommand):
                         create_message(
                             code="LM-UKO",
                             context={"User": entry.user, "league": entry.game.league},
-                            group=entry.game.group
+                            group=entry.game.group,
+                            receiver=entry.user
                         )
 
 
@@ -113,18 +116,22 @@ class Command(BaseCommand):
                 # Update messages with the LMS Winner!
                 create_message(
                     code="LM-WIN",
-                    context={"User": entry.user, "league": entry.game.league, "prize"; "£25"},
-                    group=entry.game.group
+                    context={"User": winner_entry.user, "league": round_obj.game.league, "prize": prize_pool},
+                    group=entry.game.group,
+                    receiver=winner_entry.user
                 )
 
                 # --- 💰 Settle Money in Bank app ---
+                entrants = [e.user for e in round_obj.game.entries.all()]  # all users who joined this game
+                winners = [winner_entry.user]                              # the single winner
+
                 apply_batch(
-                    group=entry.game.group,       # 👈 your UserGroup
-                    entrants=entrants,            # all who paid in
-                    winners=winner_entry.user,         # one winner only
+                    group=round_obj.game.group, 
+                    entrants=entrants,
+                    winners=winners,
                     entry_fee=Decimal(entry_fee),
                     prize_pool=prize_pool,
-                    description=f"Settlement for {game}"
+                    description=f"Settlement for {round_obj.game}"
                 )
 
                 
@@ -133,11 +140,12 @@ class Command(BaseCommand):
                 round_obj.game.active = False
                 round_obj.game.save()
                 self.stdout.write(f"⚠️ Game over with no winner: {round_obj.game}")
+    
                 # Update messages with no LMS Winner - rollover!
                 create_message(
                     code="LM-OOO",
-                    context={"User": entry.user, "league": entry.game.league, "prize"; "£25"},
-                    group=entry.game.group
+                    context={"league": round_obj.game.league, "prize": prize_pool},
+                    group=round_obj.game.group
                 )
 
             # --- 1e. Create next round if current is completed and latest ---

@@ -55,7 +55,7 @@
               <a class="nav-link {% if request.path == lms_dashboard %}active{%endif%}" href="{% url 'lms_dashboard' %}">LMS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Football Season</a>
+              <a class="nav-link {% if request.path == season_overall %}active{%endif%}" href="{% url 'season_overall' %}">Football Season</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">Golf</a>

@@ -1,12 +1,14 @@
 from decimal import Decimal, ROUND_DOWN
 import random
 from django.db import transaction
-from .models import BankBalance, BankTransaction, BankTransactionBatch
+from .models import BankBalance, BankTransaction, BankTransactionBatch, BankMessage
 
 
 def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), prize_pool=Decimal("0"), description="Game"):
     """
     Process entrants (debits) + winners (credits) in a single atomic batch.
+    Creates a BankTransactionBatch, individual transactions, updates balances,
+    and posts a summary BankMessage to the group.
     """
     entrants = entrants or []
     winners = winners or []
@@ -30,6 +32,7 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
             )
 
         # 2. Distribute winnings
+        payouts = {}  # store payouts per winner (User -> Decimal)
         if winners and prize_pool > 0:
             share = (prize_pool / len(winners)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
             total_distributed = share * len(winners)
@@ -56,10 +59,12 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
                     amount=payout,
                     batch=batch
                 )
-        
+
+                payouts[user] = payout  # ✅ use User as dict key
+
         # 3. Create a message for the group
         entrants_str = ", ".join([u.username for u in entrants]) if entrants else "None"
-        winners_str = ", ".join([f"{u} (+£{payouts[u]:.2f})" for u in payouts]) if payouts else "None"
+        winners_str = ", ".join([f"{u.username} (+£{payouts[u]:.2f})" for u in payouts]) if payouts else "None"
 
         message_text = (
             f"💰 {description} processed\n"
