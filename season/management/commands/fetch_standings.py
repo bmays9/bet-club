@@ -3,8 +3,9 @@ import requests
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.timezone import now
-from score_predict.management.commands.update_fixtures import ENGLISH_LEAGUES
+
 from season.models import League, Team, StandingsBatch, StandingsRow
+from score_predict.management.commands.update_fixtures import ENGLISH_LEAGUES
 
 # RapidAPI configuration
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
@@ -29,13 +30,15 @@ def fetch_table(tournament_id: int, season_id: int) -> dict:
 
 
 def save_standings(league: League, data: dict):
-    # assume the first "total" standings block
+    # pick the "total" standings
     standings = next((s for s in data.get("standings", []) if s["type"] == "total"), None)
     if not standings:
         return None
 
     with transaction.atomic():
+        # Create one batch **per league**
         batch = StandingsBatch.objects.create(
+            league=league,
             taken_at=now(),
             season_round=None,
             source="sofascore",
@@ -43,16 +46,13 @@ def save_standings(league: League, data: dict):
 
         for row in standings["rows"]:
             team_id = row["team"]["id"]
-            team_name = row["team"]["name"]
-            short_name = row["team"].get("shortName") or team_name
-
             team, _ = Team.objects.get_or_create(
                 sofascore_id=team_id,
+                league=league,
                 defaults={
-                    "league": league,
-                    "name": team_name,
-                    "short_name": short_name,
-                }
+                    "name": row["team"]["name"],
+                     "short_name": row["team"].get("shortName") or row["team"]["name"][:3],
+                },
             )
 
             StandingsRow.objects.create(
@@ -66,13 +66,6 @@ def save_standings(league: League, data: dict):
                 goals_for=row["scoresFor"],
                 goals_against=row["scoresAgainst"],
             )
-        
-        # ✅ Attach batch to every GameLeague using this League
-        game_leagues = GameLeague.objects.filter(league=league, active=True)
-        for gl in game_leagues:
-            gl.last_standings_batch = batch
-            gl.save(update_fields=["last_standings_batch"])
-
     return batch
 
 
@@ -81,17 +74,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for league_name, ids in ENGLISH_LEAGUES.items():
-            league, created = League.objects.get_or_create(
-                code=ids["short_name"],
-                defaults={
-                    "name": league_name,
-                    "country": "England",
-                    "tournament_id": ids["tournament_id"],
-                    "season_id": ids["season_id"],
-                }
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Created league {league_name}"))
+            try:
+                league = League.objects.get(code=ids["short_name"])
+            except League.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f"League {league_name} not found in DB"))
+                continue
 
             self.stdout.write(f"Fetching {league_name} standings...")
             data = fetch_table(ids["tournament_id"], ids["season_id"])

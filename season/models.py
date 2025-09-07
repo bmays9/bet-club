@@ -207,7 +207,7 @@ class PlayerPick(models.Model):
 
 class StandingsBatch(models.Model):
     """A batch timestamp for a standings import (e.g., weekly)."""
-
+    league = models.ForeignKey(League, on_delete=models.PROTECT, null=True, blank=True)
     taken_at = models.DateTimeField(default=timezone.now)
     season_round = models.PositiveSmallIntegerField(blank=True, null=True)
     source = models.CharField(max_length=40, default="sofascore")

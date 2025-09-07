@@ -75,8 +75,8 @@ class PlayerPickAdmin(admin.ModelAdmin):
 
 @admin.register(StandingsBatch)
 class StandingsBatchAdmin(admin.ModelAdmin):
-    list_display = ("taken_at", "season_round", "source")
-    list_filter = ("source",)
+    list_display = ("taken_at", "league", "season_round", "source")
+    list_filter = ("league",)
     date_hierarchy = "taken_at"
 
 
