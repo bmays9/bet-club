@@ -2,21 +2,24 @@
 {% block content %}
 {% load static %}
 {% load dict_extras %}
-<div class="row mb-3">
-  <div class="col">
+
+<!-- Header with Dropdown -->
+<div class="row align-items-center mb-3">
+  <div class="col-6">
     <h2 class="mt-4">Teams To Lose</h2>
   </div>
-  <div class="col text-end">
+  <div class="col-6 text-end">
     <ul class="nav nav-pills justify-content-end">
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Other Tables</a>
-        <div class="dropdown-menu dropdown-menu-end">
-          <a class="dropdown-item" href="#">Summary</a>
+        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+          Other Tables
+        </a>
+        <div class="dropdown-menu">
           <a class="dropdown-item" href="#">My Teams</a>
           <a class="dropdown-item" href="#">Money Breakdown</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
-          <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
+          <a class="dropdown-item" href="#">Teams to Lose</a>
           <a class="dropdown-item" href="#">League Totals</a>
           <a class="dropdown-item" href="#">Form Table</a>
           <a class="dropdown-item" href="#">Handicaps</a>
@@ -29,67 +32,70 @@
     </ul>
   </div>
 </div>
-<h5 class="mt-5">Best Picks</h5>
-{% if teams %}
-<table class="table table-striped table-hover mt-3">
-  <thead class="table-dark">
-    <tr>
-      <th>Team</th>
-      <th>Player</th>
-      <th>League</th>
-      <th>Type</th>
-      <th>Pld</th>
-      <th>Pts</th>
-      <th>£</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for pick in teams %}
-    <tr>
-      <td>{{ pick.team.name }}</td>
-      <td>{{ pick.player_game.user.username }}</td>
-      <td>{{ pick.league }}</td>
-      <td>{{ pick.pick_type}}</td>
-      <td>{{ pick.games_played }}</td>
-      <td>{{ pick.total_points|floatformat:2}}</td>
-      <td>£40</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
 
-<h5 class="mt-5">Worst Picks</h5>
-<table class="table table-striped table-hover mt-3">
-  <thead class="table-dark">
-    <tr>
-      <th>Team</th>
-      <th>Player</th>
-      <th>League</th>
-      <th>Type</th>
-      <th>Pld</th>
-      <th>Pts</th>
-      <th>£</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for pick in worst_teams %}
-    <tr>
-      <td>{{ pick.team.name }}</td>
-      <td>{{ pick.player_game.user.username }}</td>
-      <td>{{ pick.league }}</td>
-      <td>{{ pick.pick_type}}</td>
-      <td>{{ pick.games_played }}</td>
-      <td>{{ pick.total_points|floatformat:0}}</td>
-      <td>£40</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h5 class="mt-4">Best Picks</h5>
+<!-- Responsive Table -->
+<div class="table-responsive">
+  <table class="table table-sm table-striped table-hover table-bordered align-middle text-center">
+    <thead class="table-dark">
+      <tr>
+        <th>Team</th>
+        <th>Player</th>
+        <th>League</th>
+        <th>Type</th>
+        <th>Pld</th>
+        <th>Pts</th>
+        <th>£</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pick in teams %}
+      <tr>
+        <td>{{ pick.team.name }}</td>
+        <td>{{ pick.player_game.user.username }}</td>
+        <td>{{ pick.league }}</td>
+        <td>{{ pick.pick_type }}</td>
+        <td>{{ pick.games_played }}</td>
+        <td>{{ pick.total_points|floatformat:0 }}</td>
+        <td>£40</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-<p class="mt-3">As of: {{ batch.taken_at|date:"Y-m-d H:i" }}</p>
-
-{% else %}
-<p>No picks available yet.</p>
+{% if worst_teams %}
+<h5 class="mt-4">Worst Picks</h5>
+<div class="table-responsive">
+  <table class="table table-sm table-striped table-hover table-bordered align-middle text-center">
+    <thead class="table-dark">
+      <tr>
+        <th>Team</th>
+        <th>Player</th>
+        <th>League</th>
+        <th>Type</th>
+        <th>Pld</th>
+        <th>Pts</th>
+        <th>£</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pick in worst_teams %}
+      <tr>
+        <td>{{ pick.team.name }}</td>
+        <td>{{ pick.player_game.user.username }}</td>
+        <td>{{ pick.league }}</td>
+        <td>{{ pick.pick_type }}</td>
+        <td>{{ pick.games_played }}</td>
+        <td>{{ pick.total_points|floatformat:0 }}</td>
+        <td>£40</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
+
+<p class="text-muted small mt-2">As of: {{ batch.taken_at|date:"Y-m-d H:i" }}</p>
 
 {% endblock content %}
