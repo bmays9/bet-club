@@ -49,13 +49,13 @@
               href="{% url 'index' %}">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if request.path == scores_url %}active{%endif%}" href="{% url 'scores' %}">ScorePredict</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'scores' %}active{%endif%}" href="{% url 'scores' %}">ScorePredict</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if request.path == lms_dashboard %}active{%endif%}" href="{% url 'lms_dashboard' %}">LMS</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'lms_dashboard' %}active{%endif%}" href="{% url 'lms_dashboard' %}">LMS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if request.path == season_overall %}active{%endif%}" href="{% url 'season_overall' %}">Football Season</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'season_overall' %}active{%endif%}" href="{% url 'season_overall' %}">Football Season</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">Golf</a>

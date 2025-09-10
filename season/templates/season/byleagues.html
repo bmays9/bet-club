@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+{% load static %}
+{% load dict_extras %}
+
+<!-- Header with Dropdown -->
+<div class="row align-items-center mb-3">
+  <div class="col-6">
+    <h2 class="mt-4">League Totals</h2>
+  </div>
+  <div class="col-6 text-end">
+    <ul class="nav nav-pills justify-content-end">
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Other Tables</a>
+        <div class="dropdown-menu dropdown-menu-end">
+          <a class="dropdown-item" href="#">Summary</a>
+          <a class="dropdown-item" href="#">My Teams</a>
+          <a class="dropdown-item" href="#">Money Breakdown</a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
+          <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
+          <a class="dropdown-item" href="{% url 'season_by_league' %}">League Totals</a>
+          <a class="dropdown-item" href="#">Form Table</a>
+          <a class="dropdown-item" href="#">Handicaps</a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">This month</a>
+          <a class="dropdown-item" href="#">This week</a>
+          <a class="dropdown-item" href="#">Last 4 games</a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+{% if league_data %}
+{% for league, players in league_data.items %}
+  <h5>{{ league }}</h5>
+<!-- Responsive Table -->
+<div class="table-responsive">
+  <table class="table small-font table-sm table-striped table-hover table-bordered align-middle text-center">
+    <thead class="table-dark">
+      <tr>
+        <th>Player</th>
+        <th>Games</th>
+        <th>Points</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for player, stats in players.items %}
+      <tr>
+        <td>{{ player }}</td>
+        <td>{{ stats.games_played }}</td>
+        <td>{{ stats.total_points }}</td>
+      </tr>
+      {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endfor %}
+
+
+<p class="mt-3">As of: {{ batch.taken_at|date:"Y-m-d H:i" }}</p>
+
+{% else %}
+<p>No picks available yet.</p>
+{% endif %}
+
+{% endblock content %}

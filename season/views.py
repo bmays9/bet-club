@@ -265,17 +265,95 @@ def season_teams_to_lose(request):
         "worst_teams": worst_teams,
     })
 
-
-def season_best_by_league(request):
-    latest_snapshot = PlayerScoreSnapshot.objects.order_by("-batch__taken_at").first()
-    if not latest_snapshot:
-        return render(request, "season/season_best_by_league.html", {"snaps": [], "batch": None})
-
-    latest_batch = latest_snapshot.batch
-    snaps = (
-        PlayerScoreSnapshot.objects.filter(batch=latest_batch)
-        .values("game_league__league__name", "player_game__user__username")
-        .annotate(total=Sum("league_total_points"))
-        .order_by("game_league__league__name", "-total")
+def season_by_league(request):
+    # Get latest batch per league
+    latest_batches = (
+        StandingsBatch.objects.values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
     )
-    return render(request, "season/season_best_by_league.html", {"snaps": snaps, "batch": latest_batch})
+
+    batch_ids = []
+    for row in latest_batches:
+        b = StandingsBatch.objects.filter(
+            league_id=row["league_id"], taken_at=row["latest_taken_at"]
+        ).first()
+        if b:
+            batch_ids.append(b.id)
+
+    if not batch_ids:
+        return render(request, "season/byleagues.html", {"batch": None, "league_data": {}})
+
+    # Fetch snapshots for these latest batches
+    snaps = (
+        PlayerScoreSnapshot.objects.filter(batch_id__in=batch_ids)
+        .select_related("player_game__user", "game_league__league")
+    )
+
+    # Build league -> player -> stats
+    league_data = {}
+    for snap in snaps:
+        league_name = snap.game_league.league.name
+        username = snap.player_game.user.username
+
+        league_entry = league_data.setdefault(league_name, {})
+        player_entry = league_entry.setdefault(username, {"games_played": 0, "total_points": 0})
+
+        #player_entry["games_played"] += snap.league_games_played
+        player_entry["total_points"] += snap.league_total_points
+
+    # Sort players in each league by total_points descending
+    for league_name, players in league_data.items():
+        sorted_players = dict(
+            sorted(players.items(), key=lambda x: x[1]["total_points"], reverse=True)
+        )
+        league_data[league_name] = sorted_players
+
+    # Get a reference batch (latest overall by taken_at)
+    latest_batch = StandingsBatch.objects.filter(id__in=batch_ids).order_by("-taken_at").first()
+
+    return render(
+        request,
+        "season/byleagues.html",
+        {"batch": latest_batch, "league_data": league_data},
+    )
+
+
+def season_by_not_league(request):
+        # Get latest batch per league
+    latest_batches = (
+        StandingsBatch.objects.values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
+    )
+
+    batch_ids = []
+    for row in latest_batches:
+        b = StandingsBatch.objects.filter(
+            league_id=row["league_id"], taken_at=row["latest_taken_at"]
+        ).first()
+        if b:
+            batch_ids.append(b.id)
+
+    if not batch_ids:
+        return render(request, "season/season_overall.html", {"batch": None, "snaps": []})
+
+    # Fetch snapshots for these latest batches
+    snaps = PlayerScoreSnapshot.objects.filter(batch_id__in=batch_ids)
+
+    # Aggregate overall points per player across leagues
+    overall = (
+        snaps.values("player_game_id", "player_game__user__username")
+        .annotate(total=Sum("league_total_points"))
+        .order_by("-total")
+    )
+
+    # Build a dict mapping player -> league -> league_rank
+    league_points = {}
+    for snap in snaps:
+        username = snap.player_game.user.username
+        league_name = snap.game_league.league.name
+        league_points = snap.game_league.league.name
+        league_ranks.setdefault(username, {})[league_name] = snap.league_rank
+
+    print("s", snaps)
+    print("lr", league_ranks)
+    return render(request, "season/byleagues.html", {"snaps": snaps, "batch": latest_batch})
