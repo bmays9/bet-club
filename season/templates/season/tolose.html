@@ -15,11 +15,12 @@
           Other Tables
         </a>
         <div class="dropdown-menu">
+          <a class="dropdown-item" href="#">Summary</a>
           <a class="dropdown-item" href="#">My Teams</a>
           <a class="dropdown-item" href="#">Money Breakdown</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
-          <a class="dropdown-item" href="#">Teams to Lose</a>
+          <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
           <a class="dropdown-item" href="#">League Totals</a>
           <a class="dropdown-item" href="#">Form Table</a>
           <a class="dropdown-item" href="#">Handicaps</a>
@@ -57,7 +58,16 @@
         <td>{{ pick.pick_type }}</td>
         <td>{{ pick.games_played }}</td>
         <td>{{ pick.total_points|floatformat:0 }}</td>
-        <td>£40</td>
+        <td {% if pick.prize > 0 %} 
+          class="table-success"
+        {% endif %}
+        >
+        {% if pick.prize > 0 %}
+        £{{ pick.prize|floatformat:0 }}
+        {% else %}
+        –
+        {% endif %}
+      </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -88,7 +98,16 @@
         <td>{{ pick.pick_type }}</td>
         <td>{{ pick.games_played }}</td>
         <td>{{ pick.total_points|floatformat:0 }}</td>
-        <td>£40</td>
+        <td {% if pick.prize > 0 %} 
+          class="table-danger"
+        {% endif %}
+        >
+        {% if pick.prize > 0 %}
+         - £{{ pick.prize|floatformat:0 }}
+        {% else %}
+        –
+        {% endif %}
+      </td>
       </tr>
       {% endfor %}
     </tbody>

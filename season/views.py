@@ -1,7 +1,8 @@
+from decimal import Decimal
 from django.shortcuts import render
 from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
 from django.db.models.functions import Cast
-from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch
+from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory
 
 def season_overall(request):
     # Get latest batch per league
@@ -137,6 +138,33 @@ def season_teams_to_win(request):
     # Sort worst 20 by total points
     worst_teams = sorted(teams, key=lambda x: x["total_points"])[:20]
 
+    # Attach prize amounts ---------------------------------
+    # Get the PrizePool for this game/category
+    prize_pool = PrizePool.objects.filter(
+        game__in=[p["player_game"].game for p in teams_sorted[:1]],  # take any game
+        category=PrizeCategory.TEAMS_TO_WIN,
+        active=True,
+    ).prefetch_related("payouts").first()
+
+    payout_map = {}
+    if prize_pool:
+        for payout in prize_pool.payouts.all():
+            if payout.rank:  # fixed rank payouts
+                payout_map[payout.rank] = payout.amount
+            elif payout.entry_fee_per_player:  # entry fee-based
+                num_players = prize_pool.game.player_games.count()
+                payout_map[1] = payout.calculate_prize(num_players)
+
+    # Annotate teams with prize (top list)
+    for idx, team in enumerate(teams_sorted, start=1):
+        team["rank"] = idx
+        team["prize"] = payout_map.get(idx, Decimal("0.00"))
+
+    # Annotate worst teams with prize (bottom list)
+    for idx, team in enumerate(worst_teams, start=1):
+        team["rank"] = idx
+        team["prize"] = payout_map.get(idx, Decimal("0.00"))
+
     return render(request, "season/towin.html", {
         "batch": max(league_latest_batch.values(), key=lambda b: b.taken_at),
         "teams": teams_sorted,
@@ -203,6 +231,33 @@ def season_teams_to_lose(request):
 
     # Worst 20 to lose = most points
     worst_teams = sorted(teams, key=lambda x: x["total_points"], reverse=True)[:15]
+
+    # Attach prize amounts ---------------------------------
+    # Get the PrizePool for this game/category
+    prize_pool = PrizePool.objects.filter(
+        game__in=[p["player_game"].game for p in teams_sorted[:1]],  # take any game
+        category=PrizeCategory.TEAMS_TO_LOSE,
+        active=True,
+    ).prefetch_related("payouts").first()
+
+    payout_map = {}
+    if prize_pool:
+        for payout in prize_pool.payouts.all():
+            if payout.rank:  # fixed rank payouts
+                payout_map[payout.rank] = payout.amount
+            elif payout.entry_fee_per_player:  # entry fee-based
+                num_players = prize_pool.game.player_games.count()
+                payout_map[1] = payout.calculate_prize(num_players)
+
+    # Annotate teams with prize (top list)
+    for idx, team in enumerate(teams_sorted, start=1):
+        team["rank"] = idx
+        team["prize"] = payout_map.get(idx, Decimal("0.00"))
+
+    # Annotate worst teams with prize (bottom list)
+    for idx, team in enumerate(worst_teams, start=1):
+        team["rank"] = idx
+        team["prize"] = payout_map.get(idx, Decimal("0.00"))
 
     return render(request, "season/tolose.html", {
         "batch": max(league_latest_batch.values(), key=lambda b: b.taken_at),

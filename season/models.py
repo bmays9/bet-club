@@ -315,19 +315,46 @@ class PrizePool(models.Model):
         unique_together = [("game", "category", "league")]
         ordering = ["game", "category"]
 
+    def calculate_payouts(self, total_pool: Decimal):
+        """
+        Given a total prize pool (from entry fees, etc.), calculate
+        payouts for each rank. Winner gets the leftover.
+        """
+        payouts = {p.rank: p.amount for p in self.payouts.all()}
+        fixed_total = sum(p.amount for p in self.payouts.all())
+        payouts[1] = total_pool - fixed_total  # winner takes remainder
+        return payouts
+
     def __str__(self) -> str:
         target = self.league.code if self.league_id else "All Leagues"
-        return f"{self.game.name}"
+        return f"{self.game.name} | {self.category} | {self.name}"
 
 
 class PrizePayout(models.Model):
     prize_pool = models.ForeignKey(PrizePool, on_delete=models.CASCADE, related_name="payouts")
-    rank = models.PositiveIntegerField()
-    amount = models.DecimalField(max_digits=9, decimal_places=2)
-
+    rank = models.PositiveIntegerField(null=True, blank=True, help_text="Optional if entry_fee_per_player is used.")
+    amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, help_text="Fixed payout if entry_fee_per_player is not used")
+    entry_fee_per_player = models.DecimalField(
+        max_digits=9, decimal_places=2,
+        null=True, blank=True,
+        help_text="If set, prize = entry_fee_per_player × number of players"
+    )
     class Meta:
         unique_together = [("prize_pool", "rank")]
         ordering = ["rank"]
 
+    def clean(self):
+        """Ensure at least one payout mode is defined."""
+        if not self.amount and not self.entry_fee_per_player:
+            raise ValidationError("Either amount or entry_fee_per_player must be set.")
+
     def __str__(self) -> str:
+        if self.entry_fee_per_player:
+            return f"{self.prize_pool.name} – Rank {self.rank or 1}: {self.entry_fee_per_player} × players"
         return f"{self.prize_pool.name} – Rank {self.rank}: £{self.amount}"
+
+    def calculate_prize(self, num_players: int) -> Decimal:
+        """Return the payout amount based on player count."""
+        if self.entry_fee_per_player:
+            return self.entry_fee_per_player * Decimal(num_players)
+        return self.amount or Decimal("0.00")
