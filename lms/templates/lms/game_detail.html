@@ -118,7 +118,7 @@
         </thead>
         <tbody>
             {% for entry in entries %}
-            <tr>
+            <tr {% if not entry.alive %} class="table-danger" {% endif %}>
                 <td>{{ entry.user.username }}</td>
                 {% for r in rounds %}
                     {% if r.id != round.id %}
@@ -193,6 +193,42 @@
   </div>
 {% endif %}
 
+<!-- Picks by Round Table (Historical only) -->
+    <h4 class="mt-4">Picks by Round</h4>
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr>
+                <th>Player</th>
+                {% for r in rounds %}
+                    {% if r.id != round.id %}
+                        <th>Round {{ r.round_number }}</th>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr {% if not entry.alive %} class="table-danger" {% endif %}>
+                <td>{{ entry.user.username }}</td>
+                {% for r in rounds %}
+                    {% if r.id != round.id %}
+                        {% with round_picks=picks_by_entry_and_round|get_item:entry.id %}
+                            {% with pick=round_picks|get_item:r.id %}
+                                <td>
+                                    {% if pick %}
+                                        {{ pick.team_name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            {% endwith %}
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 
