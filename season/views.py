@@ -104,7 +104,7 @@ def season_teams_to_win(request):
         StandingsBatch.objects.values("league_id")
         .annotate(latest_taken_at=Max("taken_at"))
     )
-
+    
     # Map league_id -> batch
     league_latest_batch = {}
     for lb in latest_batches:
@@ -118,14 +118,27 @@ def season_teams_to_win(request):
         return render(request, "season/towin.html", {
             "teams": [], "worst_teams": [], "batch": None
         })
-
+    
     # Get all PlayerPick objects for the latest batch of each league
     picks = PlayerPick.objects.filter(
-        game_league__league_id__in=league_latest_batch.keys()
-    ).select_related('player_game__user', 'team', 'game_league', 'game_league__league')
+        game_league__league_id__in=league_latest_batch.keys(),
+        pick_type__in=[PickType.HANDICAP, PickType.WIN]  # only handicap and win picks
+    ).select_related(
+        'player_game__user', 'team', 'game_league', 'game_league__league'
+    )
+
+    print(picks)
 
     teams = []
-
+    
+    # Modifier for leagues with fewer teams
+    league_modifier = {
+        "Premier League": 1.2105,
+        "Championship": 1,
+        "League One": 1,
+        "League Two": 1
+        }
+    
     for pick in picks:
         batch = league_latest_batch.get(pick.game_league.league_id)
         if not batch:
@@ -141,6 +154,10 @@ def season_teams_to_win(request):
             if hcp:
                 season_games = pick.game_league.league.season_games
                 total_points += round(hcp.points * games_played / season_games, 2)
+        
+        else:
+       
+            total_points = total_points * league_modifier.get(pick.game_league.league.name)
 
         # Map league and pick type codes
         league_code_map = {
@@ -224,6 +241,14 @@ def season_teams_to_lose(request):
         return render(request, "season/tolose.html", {
             "teams": [], "worst_teams": [], "batch": None
         })
+    
+    # Modifier for leagues with fewer teams
+    league_modifier = {
+        "Premier League": 1.2105,
+        "Championship": 1,
+        "League One": 1,
+        "League Two": 1
+        }
 
     # Get all PlayerPick objects of type 'lose' for the latest batch of each league
     picks = PlayerPick.objects.filter(
@@ -247,7 +272,7 @@ def season_teams_to_lose(request):
 
         row = pick.team.standings_rows.filter(batch=batch).first()
         games_played = row.played if row else 0
-        total_points = row.pure_points if row else 0
+        total_points = row.pure_points * league_modifier.get(pick.game_league.league.name) if row else 0
 
         teams.append({
             "team": pick.team,

@@ -95,14 +95,14 @@
       <td>{{ pick.league }}</td>
       <td>{{ pick.pick_type}}</td>
       <td>{{ pick.games_played }}</td>
-      <td>{{ pick.total_points|floatformat:0}}</td>
+      <td>{{ pick.total_points|floatformat:2 }}</td>
       <td 
         {% if pick.prize > 0 %} 
           class="table-danger"
         {% endif %}
         >
         {% if pick.prize > 0 %}
-        - £{{ pick.prize|floatformat:0 }}
+        - £{{ pick.prize|floatformat:2 }}
         {% else %}
         
         {% endif %}
