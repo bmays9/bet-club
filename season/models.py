@@ -339,6 +339,8 @@ class PrizePayout(models.Model):
         null=True, blank=True,
         help_text="If set, prize = entry_fee_per_player × number of players"
     )
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="player_prize", null=True, blank=True)
+    
     class Meta:
         unique_together = [("prize_pool", "rank")]
         ordering = ["rank"]
