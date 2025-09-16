@@ -1,72 +1,13 @@
 {% extends "base.html" %}
-{% block content %}
+
 {% load static %}
 {% load dict_extras %}
 
-<!-- Header with Dropdown -->
-<div class="row align-items-center mb-3">
-    <!-- Header -->
-    <div class="col-md-3 mb-2">
-        <h2 class="mt-4">Season Scores</h2>
-    </div>
+{% block content %}
 
-    <!-- Selection Form -->
-    <form id="selection-form" method="get" class="col-md-6 row g-2 align-items-end">
-        <!-- Group select -->
-        <div class="col-md-6">
-            <label for="group-select" class="form-label">Select Group:</label>
-            <select name="group" id="group-select" class="form-select" onchange="this.form.submit()">
-                {% for group in user_groups %}
-                <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>
-                    {{ group.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- Game select -->
-        <div class="col-md-6">
-            <label for="game-select" class="form-label">Select Game:</label>
-            <select name="game" id="game-select" class="form-select" onchange="this.form.submit()">
-                <option value="">-- Select a game --</option>
-                {% for game in group_games %}
-                <option value="{{ game.id }}" {% if selected_game and game.id == selected_game.id %}selected{% endif %}>
-                    {{ game.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-    </form>
-
-    <!-- Other Tables Dropdown -->
-    <div class="col-md-3 text-md-end mt-3 mt-md-0">
-        <ul class="nav nav-pills justify-content-end">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
-                    Other Tables
-                </a>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="#">Summary</a>
-                    <a class="dropdown-item" href="#">My Teams</a>
-                    <a class="dropdown-item" href="#">Money Breakdown</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
-                    <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
-                    <a class="dropdown-item" href="{% url 'season_by_league' %}">League Totals</a>
-                    <a class="dropdown-item" href="#">Form Table</a>
-                    <a class="dropdown-item" href="#">Handicaps</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="#">This month</a>
-                    <a class="dropdown-item" href="#">This week</a>
-                    <a class="dropdown-item" href="#">Last 4 games</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-</div>
+{% include "season/_season_header.html" %}
 
 <!-- Game Summary -->
-
 {% if overall %}
 <div class="table-responsive">
     <table class="table table-sm small-font table-striped table-bordered mt-3 text-center">

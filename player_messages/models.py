@@ -6,6 +6,7 @@ from groups.models import UserGroup
 class PlayerMessage(models.Model):
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, null=True, blank=True)
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    actor = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="messages_created", null=True, blank=True)
     code = models.CharField(max_length=20)
     audience = models.CharField(   # ✅ key field
         max_length=10,
@@ -18,8 +19,8 @@ class PlayerMessage(models.Model):
 
     def __str__(self):
         if self.audience == "User":
-            return f"{self.code} → {self.receiver} (personal)"
-        return f"{self.code} → {self.group} (group)"
+            return f"{self.id} | {self.code} → {self.receiver} (personal)"
+        return f"{self.id} | {self.code} → {self.group} (group)"
 
 
 class MessageTemplate(models.Model):

@@ -12,6 +12,6 @@ class MessageTemplateAdmin(SummernoteModelAdmin):
 
 @admin.register(PlayerMessage)
 class PlayerMessageAdmin(SummernoteModelAdmin):
-    list_display = ('group', 'code', 'audience', 'receiver', 'message', 'created_at')
-    search_fields = ['group', 'audience']
+    list_display = ('group', 'code', 'audience', 'receiver', 'actor', 'message', 'created_at')
+    search_fields = ['group', 'audience', 'actor']
     list_filter = ('code', 'audience')
