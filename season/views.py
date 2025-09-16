@@ -4,35 +4,17 @@ from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, 
 from django.db.models.functions import Cast
 from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory, PlayerGame, Game
 from groups.models import UserGroup
+from .utils.season_helpers import get_group_and_game_selection
+
+
 
 def season_overall(request):
-    user_groups = UserGroup.objects.filter(members=request.user)
-    selected_group_id = request.GET.get("group")
-    selected_game_id = request.GET.get("game")
-
-    # Auto-select group if only one
-    if not selected_group_id and user_groups.count() == 1:
-        selected_group = user_groups.first()
-    else:
-        selected_group = user_groups.filter(id=selected_group_id).first()
-
-    print (selected_group)
-    # Games for dropdown
-    group_games = Game.objects.filter(group=selected_group) if selected_group else Game.objects.none()
-
-    # Auto-select game if only one
-    if not selected_game_id and group_games.count() == 1:
-        selected_game = group_games.first()
-    else:
-        selected_game = group_games.filter(id=selected_game_id).first()
-
-    print (group_games)
-    print (selected_game)
-
-    # PlayerGames for scoring
-    player_games = PlayerGame.objects.filter(game__group=selected_group)
-    if selected_game:
-        player_games = player_games.filter(game=selected_game)
+    sel = get_group_and_game_selection(request.user, request)
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    selected_game = sel["selected_game"]
+    player_games = sel["player_games"]
 
     if not selected_game:
         return render(request, "season/season_overall.html", {
@@ -99,6 +81,13 @@ def season_overall(request):
 
 
 def season_teams_to_win(request):
+    sel = get_group_and_game_selection(request.user, request)
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    selected_game = sel["selected_game"]
+    player_games = sel["player_games"]
+
     # Get the latest batch for each league
     latest_batches = (
         StandingsBatch.objects.values("league_id")
@@ -218,10 +207,21 @@ def season_teams_to_win(request):
         "batch": max(league_latest_batch.values(), key=lambda b: b.taken_at),
         "teams": teams_sorted,
         "worst_teams": worst_teams,
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
     })
 
 
 def season_teams_to_lose(request):
+    sel = get_group_and_game_selection(request.user, request)
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    selected_game = sel["selected_game"]
+    player_games = sel["player_games"]
+    
     # Get the latest batch for each league
     latest_batches = (
         StandingsBatch.objects.values("league_id")
@@ -320,9 +320,21 @@ def season_teams_to_lose(request):
         "batch": max(league_latest_batch.values(), key=lambda b: b.taken_at),
         "teams": teams_sorted,
         "worst_teams": worst_teams,
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
     })
 
 def season_by_league(request):
+
+    sel = get_group_and_game_selection(request.user, request)
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    selected_game = sel["selected_game"]
+    player_games = sel["player_games"]    
+
     # Get latest batch per league
     latest_batches = (
         StandingsBatch.objects.values("league_id")
@@ -371,46 +383,11 @@ def season_by_league(request):
     return render(
         request,
         "season/byleagues.html",
-        {"batch": latest_batch, "league_data": league_data},
-    )
-
-
-def season_by_not_league(request):
-        # Get latest batch per league
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
-
-    batch_ids = []
-    for row in latest_batches:
-        b = StandingsBatch.objects.filter(
-            league_id=row["league_id"], taken_at=row["latest_taken_at"]
-        ).first()
-        if b:
-            batch_ids.append(b.id)
-
-    if not batch_ids:
-        return render(request, "season/season_overall.html", {"batch": None, "snaps": []})
-
-    # Fetch snapshots for these latest batches
-    snaps = PlayerScoreSnapshot.objects.filter(batch_id__in=batch_ids)
-
-    # Aggregate overall points per player across leagues
-    overall = (
-        snaps.values("player_game_id", "player_game__user__username")
-        .annotate(total=Sum("league_total_points"))
-        .order_by("-total")
-    )
-
-    # Build a dict mapping player -> league -> league_rank
-    league_points = {}
-    for snap in snaps:
-        username = snap.player_game.user.username
-        league_name = snap.game_league.league.name
-        league_points = snap.game_league.league.name
-        league_ranks.setdefault(username, {})[league_name] = snap.league_rank
-
-    print("s", snaps)
-    print("lr", league_ranks)
-    return render(request, "season/byleagues.html", {"snaps": snaps, "batch": latest_batch})
+        {
+            "batch": latest_batch,
+            "league_data": league_data,
+            "user_groups": user_groups,
+            "selected_group": selected_group,
+            "group_games": group_games,
+            "selected_game": selected_game,
+            })
