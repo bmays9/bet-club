@@ -146,6 +146,8 @@ def check_for_winners(stdout=None):
                     create_message(
                         code="SP-WIN",
                         context={"User": w.user, "score": total_score},
+                        receiver=w.user,
+                        actor=w.user,
                         group=game.group
                         
                     )

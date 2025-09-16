@@ -62,16 +62,18 @@ def lms_pick(request, game_id, round_id):
                         #New Entry Message
                         create_message(
                             code="LM-ENT",
-                            context={"User": request.user, "league": game.league},
+                            context={"User": request.user, "league": game.get_league_display()},
                             receiver=request.user,
+                            actor=request.user,
                             group=game.group
                         )
                     else:
                         # New Pick Message
                         create_message(
                             code="LM-PCK",
-                            context={"User": request.user, "league": game.league, "round": round.round_number},
+                            context={"User": request.user, "league": game.get_league_display(), "round": round.round_number},
                             receiver=request.user,
+                            actor=request.user,
                             group=game.group
                         )
 
@@ -297,7 +299,7 @@ def create_game(request):
             # Create messaging for new game - code LM-NEW
             create_message(
                 code="LM-NEW",
-                context={"User": request.user, "league": game.league},
+                context={"User": request.user, "league": game.get_league_display()},
                 group=game.group
             )
 

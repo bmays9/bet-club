@@ -38,6 +38,7 @@ def create_message(code, context, group=None, receiver=None, actor=None, link=No
             messages.append(PlayerMessage(
                 group=group,
                 receiver=r,
+                actor=actor,
                 code=code,
                 message=message,
                 link=link or template.game_link,
@@ -52,6 +53,7 @@ def create_message(code, context, group=None, receiver=None, actor=None, link=No
         messages.append(PlayerMessage(
             group=group,
             receiver=None,
+            actor=actor,
             code=code,
             message=group_message,
             link=link or template.game_link,

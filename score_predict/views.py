@@ -173,17 +173,9 @@ def submit_predictions(request):
                 code="SP-ENT",
                 context={"User": user},
                 group=group,
-                receiver=user
+                receiver=user,
+                actor=user
             )
-
-            #PlayerMessage.objects.update_or_create(
-                    #group=group,
-                    #receiver=user,
-                    #type="Entry",
-                    #game="Score Predict",
-                    #message=f"{user.username} has entered Score Predict",
-                    #link="LINK HERE"
-                #)
 
             return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
 
