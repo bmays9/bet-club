@@ -50,36 +50,41 @@ def assign_fixtures_to_templates(new_fixtures):
     grouped_blocks = group_fixtures_by_consecutive_days(new_fixtures)
 
     for block in grouped_blocks:
-        start_date = block[0].date.date()
-        end_date = block[-1].date.date()
-        first_weekday = block[0].date.weekday()
+        # Normalize to Fri (weekend) or Tue (midweek)
+        block_start, game_type = get_block_start_date(block[0].date)
+        block_end = block[-1].date.date()
 
-        # Determine game type
-        game_type = "midweek" if first_weekday in (1, 2, 3) else "weekend"
         league_ids = {f.league_id for f in block}
 
-        # Build template slug
+        # Consistent slug for each block (prevents duplicates)
         if league_ids.issubset(ENGLISH_LEAGUE_IDS):
-            slug = f"en-{game_type}-{start_date}"
+            slug = f"en-{game_type}-{block_start}"
         else:
-            slug = f"{block[0].league_id}-{game_type}-{start_date}"
+            slug = f"{block[0].league_id}-{game_type}-{block_start}"
 
         with transaction.atomic():
             template, created = GameTemplate.objects.get_or_create(
                 slug=slug,
                 defaults={
                     "game_type": game_type,
-                    "week": start_date.isocalendar()[1],
-                    "start_date": start_date,
-                    "end_date": end_date,
+                    "week": block_start.isocalendar()[1],
+                    "start_date": block_start,
+                    "end_date": block_end,
                 }
             )
+
+            # If template already exists but needs a later end_date, update it
+            if not created and template.end_date < block_end:
+                template.end_date = block_end
+                template.save(update_fields=["end_date"])
+
             print(f"{'🆕 Created' if created else '✅ Using existing'} template: {slug}")
 
-            # Assign fixtures to template
+            # Assign fixtures to this template
             for fixture in block:
                 fixture.gametemplate = template
                 fixture.save(update_fields=["gametemplate"])
+
 
 
 def get_next_fixtures():

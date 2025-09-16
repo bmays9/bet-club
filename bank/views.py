@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Exists, OuterRef
 from .models import BankBalance, BankMessage
 from player_messages.models import PlayerMessage
-from groups.models import UserGroup  # adjust import if needed
+from groups.models import UserGroup
 
 
 def money_list(request):

@@ -2,67 +2,99 @@ from decimal import Decimal
 from django.shortcuts import render
 from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
 from django.db.models.functions import Cast
-from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory
+from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory, PlayerGame, Game
+from groups.models import UserGroup
 
 def season_overall(request):
+    user_groups = UserGroup.objects.filter(members=request.user)
+    selected_group_id = request.GET.get("group")
+    selected_game_id = request.GET.get("game")
+
+    # Auto-select group if only one
+    if not selected_group_id and user_groups.count() == 1:
+        selected_group = user_groups.first()
+    else:
+        selected_group = user_groups.filter(id=selected_group_id).first()
+
+    print (selected_group)
+    # Games for dropdown
+    group_games = Game.objects.filter(group=selected_group) if selected_group else Game.objects.none()
+
+    # Auto-select game if only one
+    if not selected_game_id and group_games.count() == 1:
+        selected_game = group_games.first()
+    else:
+        selected_game = group_games.filter(id=selected_game_id).first()
+
+    print (group_games)
+    print (selected_game)
+
+    # PlayerGames for scoring
+    player_games = PlayerGame.objects.filter(game__group=selected_group)
+    if selected_game:
+        player_games = player_games.filter(game=selected_game)
+
+    if not selected_game:
+        return render(request, "season/season_overall.html", {
+            "overall": [],
+            "league_ranks": {},
+            "latest_time": None,
+            "user_groups": user_groups,
+            "selected_group": selected_group,
+            "group_games": group_games,
+            "selected_game": None,
+        })
+
     # Get latest batch per league
     latest_batches = (
         StandingsBatch.objects.values("league_id")
         .annotate(latest_taken_at=Max("taken_at"))
     )
 
-    batch_ids = []
-    for row in latest_batches:
-        b = StandingsBatch.objects.filter(
+    batch_ids = [
+        b.id for row in latest_batches
+        if (b := StandingsBatch.objects.filter(
             league_id=row["league_id"], taken_at=row["latest_taken_at"]
-        ).first()
-        if b:
-            batch_ids.append(b.id)
+        ).first())
+    ]
 
-    if not batch_ids:
-        return render(request, "season/season_overall.html", {"batch": None, "snaps": []})
+    snaps = PlayerScoreSnapshot.objects.filter(
+        batch_id__in=batch_ids,
+        player_game__in=player_games,
+    ).select_related("player_game__user", "game_league__league")
 
-    # Fetch snapshots for these latest batches
-    snaps = PlayerScoreSnapshot.objects.filter(batch_id__in=batch_ids)
-
-    # Aggregate overall points per player across leagues
     overall = (
         snaps.values("player_game_id", "player_game__user__username")
         .annotate(total=Sum("league_total_points"))
         .order_by("-total")
     )
 
-    # Build a dict mapping player -> league -> league_rank
     league_ranks = {}
     for snap in snaps:
         username = snap.player_game.user.username
         league_name = snap.game_league.league.name
         league_ranks.setdefault(username, {})[league_name] = snap.league_rank
 
-    cann_rows = []
-    for idx, row in enumerate(overall, start=1):
-        pid = row["player_game_id"]
-        cann_rows.append({
-            "row_number": idx,
-            "username": row["player_game__user__username"],
-            "total": row["total"],
-            "league_ranks": league_ranks.get(pid, {}),
-            "money": 0,  # placeholder
-        })
-
-    # For display we can pass the latest timestamp overall
     latest_time = (
         StandingsBatch.objects.filter(id__in=batch_ids)
         .aggregate(latest=Max("taken_at"))["latest"]
     )
-
-    print("Over", overall)
-    print("Cann", cann_rows)
+    print ("overall", overall)
+    print ("league_ranks", league_ranks)
+    print ("latest_time", latest_time)
+    print ("user_groups", user_groups)
+    print ("selected_group", selected_group)
+    print ("group_games", group_games)
+    print ("selected_game", selected_game)
 
     return render(request, "season/season_overall.html", {
         "overall": overall,
         "league_ranks": league_ranks,
         "latest_time": latest_time,
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
     })
 
 

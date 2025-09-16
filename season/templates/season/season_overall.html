@@ -5,99 +5,133 @@
 
 <!-- Header with Dropdown -->
 <div class="row align-items-center mb-3">
-  <div class="col-6">
-    <h2 class="mt-4">Season Scores</h2>
-  </div>
-  <div class="col-6 text-end">
-    <ul class="nav nav-pills justify-content-end">
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
-          Other Tables
-        </a>
-        <div class="dropdown-menu">
-          <a class="dropdown-item" href="#">Summary</a>
-          <a class="dropdown-item" href="#">My Teams</a>
-          <a class="dropdown-item" href="#">Money Breakdown</a>
-          <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
-          <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
-          <a class="dropdown-item" href="{% url 'season_by_league' %}">League Totals</a>
-          <a class="dropdown-item" href="#">Form Table</a>
-          <a class="dropdown-item" href="#">Handicaps</a>
-          <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="#">This month</a>
-          <a class="dropdown-item" href="#">This week</a>
-          <a class="dropdown-item" href="#">Last 4 games</a>
+    <!-- Header -->
+    <div class="col-md-3 mb-2">
+        <h2 class="mt-4">Season Scores</h2>
+    </div>
+
+    <!-- Selection Form -->
+    <form id="selection-form" method="get" class="col-md-6 row g-2 align-items-end">
+        <!-- Group select -->
+        <div class="col-md-6">
+            <label for="group-select" class="form-label">Select Group:</label>
+            <select name="group" id="group-select" class="form-select" onchange="this.form.submit()">
+                {% for group in user_groups %}
+                <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>
+                    {{ group.name }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
-      </li>
-    </ul>
-  </div>
+
+        <!-- Game select -->
+        <div class="col-md-6">
+            <label for="game-select" class="form-label">Select Game:</label>
+            <select name="game" id="game-select" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Select a game --</option>
+                {% for game in group_games %}
+                <option value="{{ game.id }}" {% if selected_game and game.id == selected_game.id %}selected{% endif %}>
+                    {{ game.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <!-- Other Tables Dropdown -->
+    <div class="col-md-3 text-md-end mt-3 mt-md-0">
+        <ul class="nav nav-pills justify-content-end">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    Other Tables
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">Summary</a>
+                    <a class="dropdown-item" href="#">My Teams</a>
+                    <a class="dropdown-item" href="#">Money Breakdown</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{% url 'season_teams_to_win' %}">Teams to Win</a>
+                    <a class="dropdown-item" href="{% url 'season_teams_to_lose' %}">Teams to Lose</a>
+                    <a class="dropdown-item" href="{% url 'season_by_league' %}">League Totals</a>
+                    <a class="dropdown-item" href="#">Form Table</a>
+                    <a class="dropdown-item" href="#">Handicaps</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#">This month</a>
+                    <a class="dropdown-item" href="#">This week</a>
+                    <a class="dropdown-item" href="#">Last 4 games</a>
+                </div>
+            </li>
+        </ul>
+    </div>
 </div>
+
+<!-- Game Summary -->
+
 {% if overall %}
 <div class="table-responsive">
-  <table class="table table-sm small-font table-striped table-bordered mt-3 text-center">
-    <thead class="table-dark">
-      <tr>
-        <th>PL</th>
-        <th>CH</th>
-        <th>L1</th>
-        <th>L2</th>
-        <th>Player</th>
-        <th>Total Points</th>
-        <th>Money</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for player in overall %}
-        {% with username=player.player_game__user__username %}
-        <tr>
-          {# League ranks with icons #}
-          <td>
-            {% with rank=league_ranks|get_item:username|get_item:"Premier League" %}
-              {% if rank %}
-                <i class="bi bi-trophy-fill text-warning"></i> {{ rank }}
-              {% else %}
-                -
-              {% endif %}
-            {% endwith %}
-          </td>
-          <td>
-            {% with rank=league_ranks|get_item:username|get_item:"Championship" %}
-              {% if rank %}
-                <i class="bi bi-award-fill text-secondary"></i> {{ rank }}
-              {% else %}
-                -
-              {% endif %}
-            {% endwith %}
-          </td>
-          <td>
-            {% with rank=league_ranks|get_item:username|get_item:"League One" %}
-              {% if rank %}
-                <i class="bi bi-star-fill text-info"></i> {{ rank }}
-              {% else %}
-                -
-              {% endif %}
-            {% endwith %}
-          </td>
-          <td>
-            {% with rank=league_ranks|get_item:username|get_item:"League Two" %}
-              {% if rank %}
-                <i class="bi bi-star text-muted"></i> {{ rank }}
-              {% else %}
-                -
-              {% endif %}
-            {% endwith %}
-          </td>
+    <table class="table table-sm small-font table-striped table-bordered mt-3 text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>PL</th>
+                <th>CH</th>
+                <th>L1</th>
+                <th>L2</th>
+                <th>Player</th>
+                <th>Total Points</th>
+                <th>Money</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in overall %}
+            {% with username=player.player_game__user__username %}
+            <tr>
+                {# League ranks with icons #}
+                <td>
+                    {% with rank=league_ranks|get_item:username|get_item:"Premier League" %}
+                    {% if rank %}
+                    <i class="bi bi-trophy-fill text-warning"></i> {{ rank }}
+                    {% else %}
+                    -
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td>
+                    {% with rank=league_ranks|get_item:username|get_item:"Championship" %}
+                    {% if rank %}
+                    <i class="bi bi-award-fill text-secondary"></i> {{ rank }}
+                    {% else %}
+                    -
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td>
+                    {% with rank=league_ranks|get_item:username|get_item:"League One" %}
+                    {% if rank %}
+                    <i class="bi bi-star-fill text-info"></i> {{ rank }}
+                    {% else %}
+                    -
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td>
+                    {% with rank=league_ranks|get_item:username|get_item:"League Two" %}
+                    {% if rank %}
+                    <i class="bi bi-star text-muted"></i> {{ rank }}
+                    {% else %}
+                    -
+                    {% endif %}
+                    {% endwith %}
+                </td>
 
-          {# Player name, total points, money #}
-          <td>{{ username }}</td>
-          <td>{{ player.total }}</td>
-          <td>0</td>
-        </tr>
-        {% endwith %}
-      {% endfor %}
-    </tbody>
-  </table>
+                {# Player name, total points, money #}
+                <td>{{ username }}</td>
+                <td>{{ player.total }}</td>
+                <td>0</td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 <p class="text-muted mt-2">As of: {{ latest_time|date:"Y-m-d H:i" }}</p>
