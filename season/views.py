@@ -4,7 +4,11 @@ from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, 
 from django.db.models.functions import Cast
 from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory, PlayerGame, Game
 from groups.models import UserGroup
-from .utils.season_helpers import get_group_and_game_selection
+from .utils.season_helpers import (
+    get_group_and_game_selection,
+    get_latest_batch_ids,
+    get_latest_batches_map,
+)
 
 
 
@@ -28,17 +32,7 @@ def season_overall(request):
         })
 
     # Get latest batch per league
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
-
-    batch_ids = [
-        b.id for row in latest_batches
-        if (b := StandingsBatch.objects.filter(
-            league_id=row["league_id"], taken_at=row["latest_taken_at"]
-        ).first())
-    ]
+    batch_ids = get_latest_batch_ids()
 
     snaps = PlayerScoreSnapshot.objects.filter(
         batch_id__in=batch_ids,
@@ -88,30 +82,15 @@ def season_teams_to_win(request):
     selected_game = sel["selected_game"]
     player_games = sel["player_games"]
 
-    # Get the latest batch for each league
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
-    
-    # Map league_id -> batch
-    league_latest_batch = {}
-    for lb in latest_batches:
-        batch = StandingsBatch.objects.filter(
-            league_id=lb["league_id"], taken_at=lb["latest_taken_at"]
-        ).first()
-        if batch:
-            league_latest_batch[lb["league_id"]] = batch
-
+    league_latest_batch = get_latest_batches_map()
     if not league_latest_batch:
         return render(request, "season/towin.html", {
             "teams": [], "worst_teams": [], "batch": None
         })
     
-    # Get all PlayerPick objects for the latest batch of each league
     picks = PlayerPick.objects.filter(
         game_league__league_id__in=league_latest_batch.keys(),
-        pick_type__in=[PickType.HANDICAP, PickType.WIN]  # only handicap and win picks
+        pick_type__in=[PickType.HANDICAP, PickType.WIN]
     ).select_related(
         'player_game__user', 'team', 'game_league', 'game_league__league'
     )
@@ -221,27 +200,25 @@ def season_teams_to_lose(request):
     group_games = sel["group_games"]
     selected_game = sel["selected_game"]
     player_games = sel["player_games"]
-    
-    # Get the latest batch for each league
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
 
-    # Map league_id -> batch
-    league_latest_batch = {}
-    for lb in latest_batches:
-        batch = StandingsBatch.objects.filter(
-            league_id=lb["league_id"], taken_at=lb["latest_taken_at"]
-        ).first()
-        if batch:
-            league_latest_batch[lb["league_id"]] = batch
-
+    league_latest_batch = get_latest_batches_map()
     if not league_latest_batch:
         return render(request, "season/tolose.html", {
             "teams": [], "worst_teams": [], "batch": None
         })
-    
+
+    picks = PlayerPick.objects.filter(
+        pick_type="lose",
+        game_league__league_id__in=league_latest_batch.keys()
+    ).select_related('player_game__user', 'team', 'game_league', 'game_league__league')
+
+
+    # Get all PlayerPick objects of type 'lose' for the latest batch of each league
+    picks = PlayerPick.objects.filter(
+        pick_type="lose",
+        game_league__league_id__in=league_latest_batch.keys()
+    ).select_related('player_game__user', 'team', 'game_league', 'game_league__league')
+
     # Modifier for leagues with fewer teams
     league_modifier = {
         "Premier League": 1.2105,
@@ -249,12 +226,6 @@ def season_teams_to_lose(request):
         "League One": 1,
         "League Two": 1
         }
-
-    # Get all PlayerPick objects of type 'lose' for the latest batch of each league
-    picks = PlayerPick.objects.filter(
-        pick_type="lose",
-        game_league__league_id__in=league_latest_batch.keys()
-    ).select_related('player_game__user', 'team', 'game_league', 'game_league__league')
 
     teams = []
 
@@ -327,32 +298,17 @@ def season_teams_to_lose(request):
     })
 
 def season_by_league(request):
-
     sel = get_group_and_game_selection(request.user, request)
     user_groups = sel["user_groups"]
     selected_group = sel["selected_group"]
     group_games = sel["group_games"]
     selected_game = sel["selected_game"]
-    player_games = sel["player_games"]    
+    player_games = sel["player_games"]
 
-    # Get latest batch per league
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
-
-    batch_ids = []
-    for row in latest_batches:
-        b = StandingsBatch.objects.filter(
-            league_id=row["league_id"], taken_at=row["latest_taken_at"]
-        ).first()
-        if b:
-            batch_ids.append(b.id)
-
+    batch_ids = get_latest_batch_ids()
     if not batch_ids:
         return render(request, "season/byleagues.html", {"batch": None, "league_data": {}})
 
-    # Fetch snapshots for these latest batches
     snaps = (
         PlayerScoreSnapshot.objects.filter(batch_id__in=batch_ids)
         .select_related("player_game__user", "game_league__league")
@@ -391,3 +347,94 @@ def season_by_league(request):
             "group_games": group_games,
             "selected_game": selected_game,
             })
+
+
+def season_my_teams(request):
+    sel = get_group_and_game_selection(request.user, request)
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    selected_game = sel["selected_game"]
+    player_games = sel["player_games"]
+
+    batch_ids = get_latest_batch_ids()
+    if not batch_ids:
+        return render(request, "season/myteams.html", {"batch": None, "league_data": {}})
+    
+    user = request.user
+
+    # Get all picks by this user
+    picks = PlayerPick.objects.filter(
+        player_game__user=user
+    ).select_related(
+        "player_game", "team", "game_league__league"
+    )
+
+    print("Picks", picks)
+
+    if not picks.exists():
+        return render(request, "season/myteams.html", {"picks_data": []})
+
+    # Latest batch for each league
+    league_batches = get_latest_batches_map()  # {league_id: batch}
+
+    # Build table rows
+    picks_data = []
+
+    for pick in picks:
+        league = pick.game_league.league
+        batch = league_batches.get(league.id)
+        row = pick.team.standings_rows.filter(batch=batch).first() if batch else None
+
+        # Standing info
+        position = row.position if row else None
+        played = row.played if row else 0
+        won = row.wins if row else 0
+        drawn = row.draws if row else 0
+        lost = row.losses if row else 0
+        pure_points = row.pure_points if row else 0
+
+        # Handicap logic
+        hcp = pick.team.handicaps.filter(game_league=pick.game_league).first()
+        season_games = league.season_games
+        handicap_points = hcp.points if hcp else 0
+        our_points = pure_points
+        if pick.pick_type == "handicap" and hcp:
+            our_points += round(handicap_points * played / season_games, 2)
+
+        # Payouts earned by this team for this user
+        #payouts = pick.team.payouts.filter(
+        #    player_game=pick.player_game
+        #).aggregate(total=Sum("amount"))["total"] or 0
+
+        # League rank from snapshots (if available)
+        snap = pick.player_game.score_snapshots.filter(
+            game_league__league=league, batch=batch
+        ).first() if batch else None
+        league_rank = snap.league_rank if snap else None
+
+        picks_data.append({
+            "team": pick.team,
+            "pick_type": pick.pick_type,
+            "league": league.name,
+            "position": position,
+            "played": played,
+            "won": won,
+            "drawn": drawn,
+            "lost": lost,
+            "pure_points": pure_points,
+            "our_points": our_points,
+            "handicap": handicap_points,
+            # "payouts": payouts,
+            "league_rank": league_rank,
+        })
+        
+        # print("picksData", picks_data)
+
+    return render(request, "season/myteams.html", {
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
+        "picks_data": picks_data,
+    })

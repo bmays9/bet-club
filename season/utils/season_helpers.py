@@ -1,4 +1,5 @@
-from season.models import Game, PlayerGame
+from season.models import Game, PlayerGame, StandingsBatch
+from django.db.models import Max
 from groups.models import UserGroup
 
 def get_group_and_game_selection(user, request):
@@ -33,3 +34,59 @@ def get_group_and_game_selection(user, request):
         "selected_game": selected_game,
         "player_games": player_games,
     }
+
+
+def get_latest_batch_ids():
+    """
+    Returns a list of the latest StandingsBatch IDs, one per league.
+    """
+    latest_batches = (
+        StandingsBatch.objects.values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
+    )
+
+    batch_ids = []
+    for row in latest_batches:
+        b = StandingsBatch.objects.filter(
+            league_id=row["league_id"], taken_at=row["latest_taken_at"]
+        ).first()
+        if b:
+            batch_ids.append(b.id)
+    return batch_ids
+
+def get_latest_batches_map():
+    """
+    Returns a dict of {league_id: latest_batch_object}
+    """
+    from ..models import StandingsBatch
+    from django.db.models import Max
+
+    latest_batches = (
+        StandingsBatch.objects.values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
+    )
+
+    league_latest_batch = {}
+    for lb in latest_batches:
+        batch = StandingsBatch.objects.filter(
+            league_id=lb["league_id"], taken_at=lb["latest_taken_at"]
+        ).first()
+        if batch:
+            league_latest_batch[lb["league_id"]] = batch
+    return league_latest_batch
+
+
+# DONT NEED THIS
+def dont_get_latest_batches_map():
+    latest_batches = (
+        StandingsBatch.objects.values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
+    )
+    result = {}
+    for row in latest_batches:
+        b = StandingsBatch.objects.filter(
+            league_id=row["league_id"], taken_at=row["latest_taken_at"]
+        ).first()
+        if b:
+            result[row["league_id"]] = b
+    return result
