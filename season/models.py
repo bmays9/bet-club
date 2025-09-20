@@ -339,7 +339,16 @@ class PrizePayout(models.Model):
         null=True, blank=True,
         help_text="If set, prize = entry_fee_per_player × number of players"
     )
-    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="player_prize", null=True, blank=True)
+    recipient = models.ForeignKey(
+        "season.PlayerGame",   # Tied to PlayerGame
+        on_delete=models.CASCADE,
+        related_name="payouts",
+        null=True, blank=True
+    )
+    awarded_for_month = models.DateField(
+        null=True, blank=True,
+        help_text="Last day of the month this payout applies to (for monthly prizes)"
+    )
     
     class Meta:
         unique_together = [("prize_pool", "rank")]

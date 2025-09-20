@@ -1,15 +1,20 @@
-from decimal import Decimal
-from django.shortcuts import render
-from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
-from django.db.models.functions import Cast
-from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizeCategory, PlayerGame, Game
-from groups.models import UserGroup
+from .models import PlayerScoreSnapshot, StandingsRow, PlayerPick, PickType, Handicap, StandingsBatch, PrizePool, PrizePayout, PrizeCategory, PlayerGame, Game
 from .utils.season_helpers import (
     get_group_and_game_selection,
     get_latest_batch_ids,
     get_latest_batches_map,
 )
-
+from calendar import monthrange
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+from decimal import Decimal
+from django.shortcuts import render
+from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
+from django.db.models.functions import Cast
+from django.utils import timezone
+from django.utils.timezone import now
+from groups.models import UserGroup
+import calendar
 
 
 def season_overall(request):
@@ -437,4 +442,75 @@ def season_my_teams(request):
         "group_games": group_games,
         "selected_game": selected_game,
         "picks_data": picks_data,
+    })
+
+
+def season_monthly(request):
+    sel = get_group_and_game_selection(request.user, request)
+    selected_game = sel["selected_game"]
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    player_games = sel["player_games"]
+
+    # Determine the current month
+    today = now().date()
+    first_day, last_day = today.replace(day=1), today.replace(day=monthrange(today.year, today.month)[1])
+
+    # Get latest batch ids for the selected game
+    batch_ids = get_latest_batch_ids()  # Returns list of batch IDs across leagues
+
+    if not batch_ids:
+        return render(request, "season/monthly.html", {
+            "current_month_scores": [],
+            "previous_winners": [],
+            "user_groups": user_groups,
+            "selected_group": selected_group,
+            "group_games": group_games,
+            "selected_game": selected_game,
+        })
+
+    # Current month scores: sum of points per PlayerGame across latest batches
+    current_month_scores = (
+        PlayerScoreSnapshot.objects
+        .filter(batch_id__in=batch_ids, batch__taken_at__date__range=(first_day, last_day))
+        .select_related('player_game__user', 'game_league__league')
+        .values('player_game_id', 'player_game__user__username')
+        .annotate(total_points=Sum('league_total_points'))
+        .order_by('-total_points')
+    )
+
+    # Previous monthly winners: last awarded month for this game
+    previous_winners = (
+        PrizePayout.objects
+        .filter(
+            prize_pool__game=selected_game,
+            prize_pool__category=PrizeCategory.MONTH_WINNER,
+            recipient__isnull=False,
+            awarded_for_month__lt=first_day
+        )
+        .select_related('recipient', 'prize_pool')
+        .order_by('-awarded_for_month')
+    )
+    # Debug prints
+    print("Current Month Scores:")
+    for cms in current_month_scores:
+        print(cms)
+
+    print("\nPrevious Winners:")
+    for pw in previous_winners:
+        print(f"Month: {pw.awarded_for_month}, Recipient: {pw.recipient}, Prize: {pw.calculate_prize(pw.prize_pool.game.players.count)}")
+
+    print("\nSelected Group:", selected_group)
+    print("Selected Game:", selected_game)
+    print("User Groups:", [g.name for g in user_groups])
+    print("Group Games:", [g.name for g in group_games])
+
+    return render(request, "season/monthly.html", {
+        "current_month_scores": current_month_scores,
+        "previous_winners": previous_winners,
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
     })

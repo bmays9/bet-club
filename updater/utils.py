@@ -9,7 +9,7 @@ from django.db.models import Q
 def maybe_update():
     tracker, _ = UpdateTracker.objects.get_or_create(pk=1)
 
-    UPDATE_INTERVAL_MINUTES = 60
+    UPDATE_INTERVAL_MINUTES = 6000
     UPDATE_INTERVAL_DAYS = 10
     RESULTS_DELAY_HOURS = 2
 
