@@ -17,6 +17,7 @@
         <tbody>
             {% for cms in current_month_scores %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ cms.player_game__user__username }}</td>
                 <td>{{ cms.total_points|floatformat:2 }}</td>
             </tr>
@@ -44,7 +45,7 @@
             <tr>
                 <td>{{ payout.awarded_for_month|date:"F Y" }}</td>
                 <td>{{ payout.recipient.user.username }}</td>
-                <td>{{ payout.calculate_prize(payout.prize_pool.game.players.count)|floatformat:2 }}</td>
+                <td>&pound;{{ payout.amount|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>

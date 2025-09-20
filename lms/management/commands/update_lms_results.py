@@ -69,7 +69,7 @@ class Command(BaseCommand):
                         # Update messages with the losers
                         create_message(
                             code="LM-UKO",
-                            context={"User": entry.user, "league": entry.game.league},
+                            context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user
                         )
@@ -86,7 +86,7 @@ class Command(BaseCommand):
                         # Update messages with the losers
                         create_message(
                             code="LM-UKO",
-                            context={"User": entry.user, "league": entry.game.league},
+                            context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user
                         )
@@ -116,7 +116,7 @@ class Command(BaseCommand):
                 # Update messages with the LMS Winner!
                 create_message(
                     code="LM-WIN",
-                    context={"User": winner_entry.user, "league": round_obj.game.league, "prize": prize_pool},
+                    context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
                     group=entry.game.group,
                     receiver=winner_entry.user
                 )

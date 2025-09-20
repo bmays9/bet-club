@@ -17,6 +17,8 @@ import json
 from datetime import date, datetime
 from player_messages.utils import create_message
 from updater.utils import maybe_update
+from django.utils.timezone import now
+
 
 LEAGUE_ORDER = {
     "EPL": "Premier League",

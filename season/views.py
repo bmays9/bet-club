@@ -486,12 +486,21 @@ def season_monthly(request):
         .filter(
             prize_pool__game=selected_game,
             prize_pool__category=PrizeCategory.MONTH_WINNER,
-            recipient__isnull=False,
-            awarded_for_month__lt=first_day
-        )
-        .select_related('recipient', 'prize_pool')
+            recipient__isnull=False
+            )
+        .select_related('recipient__user', 'prize_pool__game')
         .order_by('-awarded_for_month')
-    )
+        )
+
+    # Add computed prize values
+    previous_winners_with_amounts = []
+    for pw in previous_winners:
+        prize_amount = pw.calculate_prize(pw.prize_pool.game.players.count)
+        previous_winners_with_amounts.append({
+            "awarded_for_month": pw.awarded_for_month,
+            "recipient": pw.recipient,
+            "amount": prize_amount,
+    })
     # Debug prints
     print("Current Month Scores:")
     for cms in current_month_scores:
@@ -508,7 +517,7 @@ def season_monthly(request):
 
     return render(request, "season/monthly.html", {
         "current_month_scores": current_month_scores,
-        "previous_winners": previous_winners,
+        "previous_winners": previous_winners_with_amounts,
         "user_groups": user_groups,
         "selected_group": selected_group,
         "group_games": group_games,
