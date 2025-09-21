@@ -58,11 +58,11 @@ def update_scores(stdout=None):
 
     # ✅ Update prediction scores for relevant fixtures
     for fixture in fixtures:
-        if stdout:
-            stdout.write(
-                f"Processing Fixture {fixture.fixture_id}: "
-                f"{fixture.home_team} {fixture.home_score} - {fixture.away_score} {fixture.away_team}"
-            )
+        # if stdout:
+        #    stdout.write(
+        #        f"Processing Fixture {fixture.fixture_id}: "
+        #        f"{fixture.home_team} {fixture.home_score} - {fixture.away_score} {fixture.away_team}"
+        #    )
 
         predictions = Prediction.objects.filter(fixture=fixture)
         for prediction in predictions:
@@ -72,8 +72,8 @@ def update_scores(stdout=None):
             prediction.alternate_score = alt_points
             prediction.save()
 
-        if stdout:
-            stdout.write(f"Updated scores for Fixture {fixture.fixture_id}")
+        # if stdout:
+        #    stdout.write(f"Updated scores for Fixture {fixture.fixture_id}")
 
     # ✅ Update total_score and alt_score for each player in each active game
     for game in active_games:
@@ -101,13 +101,15 @@ def update_scores(stdout=None):
 
 
 def check_for_winners(stdout=None):
+    print("Checking for Winners..")
     for game in GameInstance.objects.filter(winners__isnull=True):
+        print("Checking for a winner in game:", game)
         game_fixtures = Fixture.objects.filter(gametemplate=game.template)
         if not game_fixtures.exists():
             continue  # no fixtures linked, skip
 
         # Only decide winner if ALL fixtures are finished
-        if all(f.status_code == 100 for f in game_fixtures):
+        if all(f.status_code in [100, 90, 60] for f in game_fixtures):
             # Step 1: highest total_score
             highest_total = GameEntry.objects.filter(game=game).aggregate(
                 top_total=Max('total_score')

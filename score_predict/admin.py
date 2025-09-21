@@ -22,15 +22,19 @@ class GameEntryAdmin(SummernoteModelAdmin):
 
 @admin.register(Prediction)
 class PredictionAdmin(SummernoteModelAdmin):
-    list_display = ('game_instance', 'player', 'fixture', 'score', 'alternate_score')
+    list_display = ('id', 'game_instance', 'player', 'fixture', 'score', 'alternate_score')
     search_fields = ['player', 'game_instance']
     list_filter = ('game_instance', 'player')
 
 @admin.register(GameInstance)
 class GameInstanceAdmin(SummernoteModelAdmin):
-    list_display = ('group', 'template', 'entry_fee')
+    list_display = ('group', 'template', 'winner_list','entry_fee')
     search_fields = ['group', 'template']
     list_filter = ('group', 'template')
+
+    def winner_list(self, obj):
+        return ", ".join(user.username for user in obj.winners.all())
+    winner_list.short_description = "Winners"
 
 # Register your models here.
 # admin.site.register(GameInstance)
