@@ -37,15 +37,15 @@
             <tr class="table-primary">
                 <th>Month</th>
                 <th>Winner</th>
-                <th>Prize</th>
+                <th> (£)</th>
             </tr>
         </thead>
         <tbody>
-            {% for payout in previous_winners %}
+            {% for pw in previous_winners %}
             <tr>
-                <td>{{ payout.awarded_for_month|date:"F Y" }}</td>
-                <td>{{ payout.recipient.user.username }}</td>
-                <td>&pound;{{ payout.amount|floatformat:2 }}</td>
+                <td>{{ pw.awarded_for_month|date:"F Y" }}</td>
+                <td>{{ pw.recipient.user.username }}</td>
+                <td>{{ pw.amount|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>

@@ -54,7 +54,7 @@ def money_list(request):
             receiver=request.user
         )
 
-        print("Personal", personal_messages)
+        # print("Personal", personal_messages)
 
         overlap = PlayerMessage.objects.filter(
             group=selected_group,
@@ -68,18 +68,18 @@ def money_list(request):
             receiver__isnull=True
         ).exclude(Exists(overlap))
         
-        print("group_messages", group_messages)
+        # print("group_messages", group_messages)
 
         unfiltered_group_messages = PlayerMessage.objects.filter(
             group=selected_group,
             receiver__isnull=True
         )
         
-        print("unfiltered_group_messages", unfiltered_group_messages)
+        # print("unfiltered_group_messages", unfiltered_group_messages)
 
         player_messages = personal_messages.union(group_messages).order_by("-created_at")[:20]
 
-        print("Player Messages", player_messages)
+        # print("Player Messages", player_messages)
 
     return render(request, "bank/money_list.html", {
         "user_groups": user_groups,

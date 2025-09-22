@@ -99,7 +99,6 @@ def update_scores(stdout=None):
     check_for_winners(stdout)
 
 
-
 def check_for_winners(stdout=None):
     print("Checking for Winners..")
     for game in GameInstance.objects.filter(winners__isnull=True):
@@ -142,23 +141,25 @@ def check_for_winners(stdout=None):
                 if stdout:
                     stdout.write(f"Winner for {game} set to: {winner_names}")
 
+
+                # --- 💰 Prepare data for message and settlement ---
+                entrants = [e.player for e in GameEntry.objects.filter(game=game)]
+                entry_fee = game.entry_fee  # stored on GameInstance
+                prize_pool = Decimal(entry_fee) * len(entrants)
+
                 # Update messages with the winners
                 for w in winners: 
                     # Create messaging for each SP Winner - code SP-WIN
                     create_message(
                         code="SP-WIN",
-                        context={"User": w.user, "score": total_score},
-                        receiver=w.user,
-                        actor=w.user,
+                        context={"User": w.player, "score": w.total_score, "prize": prize_pool},
+                        receiver=w.player,
+                        actor=w.player,
                         group=game.group
-                        
                     )
 
 
                 # --- 💰 Settle Money in Bank app ---
-                entrants = [e.player for e in GameEntry.objects.filter(game=game)]
-                entry_fee = game.entry_fee  # stored on GameInstance
-                prize_pool = Decimal(entry_fee) * len(entrants)
 
                 apply_batch(
                     group=game.group,             # 👈 your UserGroup
@@ -166,7 +167,7 @@ def check_for_winners(stdout=None):
                     winners=winner_users,         # one or many winners
                     entry_fee=Decimal(entry_fee),
                     prize_pool=prize_pool,
-                    description=f"Settlement for {game}"
+                    description=f"Settlement for {game.group.name} Score Predict (id #{game.id})"
                 )
 
 

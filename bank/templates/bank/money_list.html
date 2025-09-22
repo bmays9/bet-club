@@ -43,7 +43,7 @@
 
         {% if player_messages %}
             <h3 class="mt-4">📜 Latest news...</h3>
-                <table class="table table-hover table-sm small-font">
+                <table class="table table-hover table-sm small-font table-striped">
                     <thead>
                         <tr>
                             <th scope="col"></th>
@@ -54,9 +54,9 @@
                     </thead>
                     <tbody>
                         {% for update in player_messages %}
-                        <tr class="table-active">
+                        <tr class="table table-hover table-sm small-font table-striped">
                             <th scope="row">{{update.group}}</th>
-                            <td><small class="text-muted">{{ update.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="text-muted">{{ update.created_at|date:"Y-m-d H:i" }}</td>
                             <td>{{ update.message}} </td>
                             <!-- <td>{{update.link}}</td> -->
                         </tr>
@@ -71,10 +71,10 @@
             <h3 class="mt-4">💷 Recent Transactions</h3>
             <ul class="list-group">
                 {% for msg in bank_messages %}
-                    <li class="list-group-item">
-                        <small class="text-muted">{{ msg.created_at|date:"Y-m-d H:i" }}</small><br>
-                        {{ msg.message }}
-                    </li>
+                <li class="list-group-item">
+                    <small class="text-muted">{{ msg.created_at|date:"Y-m-d H:i" }}</small><br>
+                    {{ msg.message|linebreaksbr }}
+                </li>
                 {% endfor %}
             </ul>
         {% else %}

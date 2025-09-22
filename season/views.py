@@ -418,9 +418,13 @@ def season_my_teams(request):
         ).first() if batch else None
         league_rank = snap.league_rank if snap else None
 
+        # Short Pick Type
+        short_pick_type = pick.pick_type[0]
+
         picks_data.append({
+            "pick_number": pick.pick_number,
             "team": pick.team,
-            "pick_type": pick.pick_type,
+            "pick_type": short_pick_type,
             "league": league.name,
             "position": position,
             "played": played,
@@ -495,20 +499,22 @@ def season_monthly(request):
     # Add computed prize values
     previous_winners_with_amounts = []
     for pw in previous_winners:
-        prize_amount = pw.calculate_prize(pw.prize_pool.game.players.count)
+        num_players = pw.prize_pool.game.players.count()
+        prize_amount = pw.calculate_prize(num_players)
         previous_winners_with_amounts.append({
             "awarded_for_month": pw.awarded_for_month,
             "recipient": pw.recipient,
             "amount": prize_amount,
     })
+
     # Debug prints
-    print("Current Month Scores:")
-    for cms in current_month_scores:
-        print(cms)
+    # print("Current Month Scores:")
+    # for cms in current_month_scores:
+    #     print(cms)
 
     print("\nPrevious Winners:")
     for pw in previous_winners:
-        print(f"Month: {pw.awarded_for_month}, Recipient: {pw.recipient}, Prize: {pw.calculate_prize(pw.prize_pool.game.players.count)}")
+        print(f"Month: {pw.awarded_for_month}, Recipient: {pw.recipient}, Prize: {pw.calculate_prize(pw.prize_pool.game.players.count())}")
 
     print("\nSelected Group:", selected_group)
     print("Selected Game:", selected_game)

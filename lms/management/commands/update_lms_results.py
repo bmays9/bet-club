@@ -42,7 +42,7 @@ class Command(BaseCommand):
                                   f"{fixture.home_team} vs {fixture.away_team} "
                                   f"[Score: {fixture.home_score}-{fixture.away_score}, Status: {fixture.status_code}]")
                 
-                if fixture.status_code == 100:  # Fixture finished
+                if fixture.status_code in (100, 60, 90):  # Fixture finished
                     if fixture.home_score > fixture.away_score:
                         result = "WIN" if fixture.home_team == pick.team_name else "LOSE"
                     elif fixture.away_score > fixture.home_score:
@@ -133,8 +133,6 @@ class Command(BaseCommand):
                     prize_pool=prize_pool,
                     description=f"Settlement for {round_obj.game}"
                 )
-
-                
 
             elif alive_count == 0:
                 round_obj.game.active = False
