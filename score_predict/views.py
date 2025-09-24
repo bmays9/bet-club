@@ -167,17 +167,18 @@ def submit_predictions(request):
                 )
 
             # Ensure player is in the game instance
-            game_instance.players.add(user)
+            if not game_instance.players.filter(id=user.id).exists():
+                game_instance.players.add(user)
 
-            # Update messages
-            # Create messaging for SP ENtry - code SP-ENT
-            create_message(
-                code="SP-ENT",
-                context={"User": user},
-                group=group,
-                receiver=user,
-                actor=user
-            )
+                # Update messages
+                # Create messaging for SP ENtry - code SP-ENT
+                create_message(
+                    code="SP-ENT",
+                    context={"User": user},
+                    group=group,
+                    receiver=user,
+                    actor=user
+                )
 
             return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
 

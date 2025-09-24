@@ -64,7 +64,9 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      console.log("Submitting Scores!");
+     // Disable button to prevent duplicate clicks
+     submitBtn.disabled = true;
+     submitBtn.textContent = "Submitting...";
 
       const predictions = [];
       const scoreInputs = document.querySelectorAll(".score-input");
