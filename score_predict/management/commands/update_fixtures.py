@@ -46,8 +46,19 @@ def get_block_start_date(first_fixture_date):
     return block_start, game_type
 
 
-def assign_fixtures_to_templates(new_fixtures):
-    grouped_blocks = group_fixtures_by_consecutive_days(new_fixtures)
+def assign_fixtures_to_templates():
+    """
+    Assign ALL future fixtures into their correct GameTemplates.
+    Past fixtures are ignored.
+    """
+    
+    # Only future fixtures
+    fixtures = Fixture.objects.filter(date__gte=now()).order_by("date")
+    if not fixtures.exists():
+        print("⚠️ No future fixtures found.")
+        return
+    
+    grouped_blocks = group_fixtures_by_consecutive_days(fixtures)
 
     for block in grouped_blocks:
         # Normalize to Fri (weekend) or Tue (midweek)
@@ -58,9 +69,9 @@ def assign_fixtures_to_templates(new_fixtures):
 
         # Consistent slug for each block (prevents duplicates)
         if league_ids.issubset(ENGLISH_LEAGUE_IDS):
-            slug = f"en-{game_type}-{block_start}"
+            slug = f"en-{game_type}-{block_start.date()}"
         else:
-            slug = f"{block[0].league_id}-{game_type}-{block_start}"
+            slug = f"{block[0].league_id}-{game_type}-{block_start.date()}"
 
         with transaction.atomic():
             template, created = GameTemplate.objects.get_or_create(
@@ -78,12 +89,15 @@ def assign_fixtures_to_templates(new_fixtures):
                 template.end_date = block_end
                 template.save(update_fields=["end_date"])
 
-            print(f"{'🆕 Created' if created else '✅ Using existing'} template: {slug}")
+            # Reassign *all* fixtures in this block to this template
+            block_fixtures = Fixture.objects.filter(
+                date__date__range=[block_start.date(), block_end],
+                league_id__in=league_ids,
+            )
+            block_fixtures.update(gametemplate=template)
 
-            # Assign fixtures to this template
-            for fixture in block:
-                fixture.gametemplate = template
-                fixture.save(update_fields=["gametemplate"])
+            print(f"{'🆕 Created' if created else '✅ Using existing'} template {slug} "
+                  f"– {block_fixtures.count()} fixtures assigned.")
 
 
 
@@ -161,18 +175,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         new_fixtures = get_next_fixtures()
 
-        # Store only brand-new fixtures
-        created_count = 0
-        for f in new_fixtures:
-            if not Fixture.objects.filter(fixture_id=f["fixture_id"]).exists():
-                Fixture.objects.create(**f)
-                created_count += 1
+       # Save or update all fixtures
+        store_fixtures(new_fixtures)
 
-        print(f"✔ {created_count} new fixtures added.")
-
-        # Assign unassigned fixtures into templates
-        unassigned = Fixture.objects.filter(gametemplate__isnull=True).order_by("date")
-        assign_fixtures_to_templates(unassigned)
+        assign_fixtures_to_templates()
 
 
 # Optional utility functions
