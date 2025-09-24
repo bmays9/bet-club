@@ -340,10 +340,16 @@ class PrizePayout(models.Model):
         help_text="If set, prize = entry_fee_per_player × number of players"
     )
     recipient = models.ForeignKey(
-        "season.PlayerGame",   # Tied to PlayerGame
+        "season.PlayerGame",   # For payouts to a player / PlayerGame
         on_delete=models.CASCADE,
         related_name="payouts",
         null=True, blank=True
+    )
+    winning_pick = models.ForeignKey(
+    "season.PlayerPick",  # For payouts to individual team picks
+    on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name="team_payouts"
     )
     awarded_for_month = models.DateField(
         null=True, blank=True,
