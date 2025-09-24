@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load dict_extras %}
+
+{% block content %}
+
+{% include "season/_season_header.html" %}
+
+<!-- Game Summary -->
+<h3 class="mb-4">Prize Summary</h3>
+
+{% if summary_data %}
+    {% comment %} Group by category {% endcomment %}
+    {% for category in summary_data %}
+<h5 class="mt-4">{{ category }}</h5>
+<div class="table-responsive">
+    <table class="table table-sm table-striped table-hover table-bordered align-middle text-center small-font">
+        <thead class="table-dark">
+            <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Pick</th>
+                <th>Points</th>
+                <th>Prize</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payout in category.list %}
+            <tr>
+                <td>{{ payout.rank|default:"-" }}</td>
+                <td>{{ payout.player|default:"-" }}</td>
+                <td>{{ payout.winning_pick|default:"-" }}</td>
+                <td>{{ payout.points|default:"-" }}</td>
+                <td>{{ payout.prize|floatformat:0|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    {% endfor %}
+{% else %}
+<p>No prize data is currently available for this game.</p>
+{% endif %}
+
+{% endblock %}

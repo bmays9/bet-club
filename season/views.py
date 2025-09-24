@@ -529,3 +529,49 @@ def season_monthly(request):
         "group_games": group_games,
         "selected_game": selected_game,
     })
+
+def prize_summary(request):
+    sel = get_group_and_game_selection(request.user, request)
+    selected_game = sel["selected_game"]
+    user_groups = sel["user_groups"]
+    selected_group = sel["selected_group"]
+    group_games = sel["group_games"]
+    player_games = sel["player_games"]
+
+    if not selected_game:
+        return render(request, "season/prize_summary.html", {
+            "summary_data": [],
+            "user_groups": user_groups,
+            "selected_group": selected_group,
+            "group_games": group_games,
+            "selected_game": selected_game,
+        })
+
+    # Fetch all active prize pools for this game
+    prize_pools = PrizePool.objects.filter(game=selected_game, active=True)\
+                                   .prefetch_related('payouts', 'payouts__recipient', 'payouts__winning_pick')
+
+    summary_data = []
+    for pool in prize_pools:
+        for payout in pool.payouts.all():  # Include all ranks
+            summary_data.append({
+                "category": pool.get_category_display(),
+                "rank": payout.rank,
+                "player": payout.recipient.user.username if payout.recipient else None,
+                "winning_pick": payout.winning_pick.team.name if payout.winning_pick else None,
+                "points": payout.winning_pick.total_points if payout.winning_pick else None,
+                "prize": payout.calculate_prize(selected_game.players.count()),
+            })
+
+    # Optional: sort by category and rank
+    summary_data.sort(key=lambda x: (x["category"], x["rank"] or 0))
+
+    print(summary_data)
+
+    return render(request, "season/season_money.html", {
+        "summary_data": summary_data,
+        "user_groups": user_groups,
+        "selected_group": selected_group,
+        "group_games": group_games,
+        "selected_game": selected_game,
+    })
