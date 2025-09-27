@@ -119,6 +119,6 @@ class PrizePoolAdmin(admin.ModelAdmin):
 
 @admin.register(PrizePayout)
 class PrizePoolPayout(admin.ModelAdmin):
-    list_display = ("prize_pool", "rank", "amount", "entry_fee_per_player")
+    list_display = ("prize_pool", "rank", "recipient", "winning_pick", "amount", "entry_fee_per_player")
     list_filter = ("prize_pool", "rank")
     search_fields = ("rank","amount")

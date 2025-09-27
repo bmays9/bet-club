@@ -1,8 +1,10 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Sum, Max
+from season.utils.payouts import allocate_payouts_for_game
 import decimal
 
 from season.models import (
+    Game,
     PlayerPick,
     PlayerScoreSnapshot,
     StandingsRow,
@@ -141,3 +143,12 @@ class Command(BaseCommand):
             ).update(overall_rank=rank)
 
         self.stdout.write(self.style.SUCCESS("Scoring complete for all leagues."))
+
+        # After scoring snapshots
+        games_to_update = PlayerPick.objects.filter(
+            game_league__league__in=batch_map.keys()
+        ).values_list('game_league__game', flat=True).distinct()
+
+        for game_id in games_to_update:
+            game = Game.objects.get(id=game_id)
+            allocate_payouts_for_game(game, batch_map)

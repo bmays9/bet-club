@@ -5,17 +5,40 @@ from .utils.season_helpers import (
     get_latest_batches_map,
 )
 from calendar import monthrange
+from collections import OrderedDict
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 from django.shortcuts import render
-from django.db.models import Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
+from django.db.models import Prefetch, Sum, Avg, F, Max, DecimalField, ExpressionWrapper, Value, IntegerField, Case, When
 from django.db.models.functions import Cast
 from django.utils import timezone
 from django.utils.timezone import now
 from groups.models import UserGroup
 import calendar
 
+CATEGORY_ORDER = [
+    "Overall",
+    "Leagues",
+    "Teams to Win",
+    "Teams to Lose",
+    "Monthly",
+]
+
+# map internal choice values (and some display variants) to our normalized group names
+CATEGORY_MAP = {
+    "overall": "Overall",
+    "league_total": "Leagues",
+    "league": "Leagues",
+    "leagues": "Leagues",
+    "teams_to_win": "Teams to Win",
+    "teams to win": "Teams to Win",
+    "teams_to_lose": "Teams to Lose",
+    "teams to lose": "Teams to Lose",
+    "monthly_winner": "Monthly",
+    "monthly": "Monthly",
+    "month": "Monthly",
+}
 
 def season_overall(request):
     sel = get_group_and_game_selection(request.user, request)
@@ -536,42 +559,87 @@ def prize_summary(request):
     user_groups = sel["user_groups"]
     selected_group = sel["selected_group"]
     group_games = sel["group_games"]
-    player_games = sel["player_games"]
+    player_games = sel["player_games"]  # queryset or list of PlayerGame for selected_game
+
+    # build empty ordered container using requested order
+    grouped = OrderedDict((k, []) for k in CATEGORY_ORDER)
 
     if not selected_game:
-        return render(request, "season/prize_summary.html", {
-            "summary_data": [],
+        return render(request, "season/season_money.html", {
+            "grouped_payouts": grouped,
             "user_groups": user_groups,
             "selected_group": selected_group,
             "group_games": group_games,
             "selected_game": selected_game,
         })
 
-    # Fetch all active prize pools for this game
-    prize_pools = PrizePool.objects.filter(game=selected_game, active=True)\
-                                   .prefetch_related('payouts', 'payouts__recipient', 'payouts__winning_pick')
+    # decide how to count players: prefer the player_games selection if provided
+    try:
+        num_players = player_games.count() if player_games is not None else selected_game.players.count()
+    except Exception:
+        # fallback if attribute doesn't exist; calling .count() defensively
+        try:
+            num_players = selected_game.players.count()
+        except Exception:
+            num_players = 0
 
-    summary_data = []
-    for pool in prize_pools:
-        for payout in pool.payouts.all():  # Include all ranks
-            summary_data.append({
-                "category": pool.get_category_display(),
-                "rank": payout.rank,
-                "player": payout.recipient.user.username if payout.recipient else None,
-                "winning_pick": payout.winning_pick.team.name if payout.winning_pick else None,
-                "points": payout.winning_pick.total_points if payout.winning_pick else None,
-                "prize": payout.calculate_prize(selected_game.players.count()),
-            })
+    # fetch payouts for this game; prefetch related to avoid N+1 queries
+    payouts_qs = PrizePayout.objects.filter(prize_pool__game=selected_game) \
+        .select_related(
+            "prize_pool",
+            "prize_pool__league",
+            "recipient__user",
+            "winning_pick__team",
+        ).order_by("prize_pool__category", "rank")
 
-    # Optional: sort by category and rank
-    summary_data.sort(key=lambda x: (x["category"], x["rank"] or 0))
+    # Build grouped data with calculated prize values
+    for payout in payouts_qs:
+        raw_cat = (payout.prize_pool.category or "").lower().strip()
+        normalized = CATEGORY_MAP.get(raw_cat, None)
 
-    print(summary_data)
+        # fallback: if prize_pool has a league set, treat it as "Leagues"
+        if normalized is None and payout.prize_pool.league_id:
+            normalized = "Leagues"
 
+        # fallback to using the prize_pool's display string if nothing matched
+        if normalized is None:
+            # prefer the human label if available; else raw_cat
+            normalized = getattr(payout.prize_pool, "name", raw_cat) or raw_cat or "Other"
+
+        # prepare the item (calculate prize_value here)
+        try:
+            prize_value = payout.calculate_prize(num_players)
+        except Exception:
+            # defensive: ensure we never crash rendering the page
+            prize_value = None
+
+        item = {
+            "prize_pool": payout.prize_pool,
+            "payout": payout,
+            "rank": payout.rank,
+            "recipient": payout.recipient,         # PlayerGame or None
+            "winning_pick": payout.winning_pick,   # PlayerPick or None
+            "league": payout.prize_pool.league,    # League or None (useful for Leagues group)
+            "points": getattr(payout.winning_pick, "total_points", None),  # if you store it on the pick
+            "prize_value": prize_value,
+        }
+
+        # ensure category present in grouped (if extra categories exist, append them)
+        if normalized not in grouped:
+            grouped[normalized] = []
+        grouped[normalized].append(item)
+
+    # sort each group's list by rank (None ranks go last)
+    for cat, items in grouped.items():
+        items.sort(key=lambda it: (it["rank"] is None, it["rank"] or 0))
+    
+    print(grouped)
+    # Render
     return render(request, "season/season_money.html", {
-        "summary_data": summary_data,
+        "grouped_payouts": grouped,
         "user_groups": user_groups,
         "selected_group": selected_group,
         "group_games": group_games,
         "selected_game": selected_game,
+        "num_players": num_players,
     })

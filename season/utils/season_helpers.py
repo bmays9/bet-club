@@ -75,18 +75,3 @@ def get_latest_batches_map():
             league_latest_batch[lb["league_id"]] = batch
     return league_latest_batch
 
-
-# DONT NEED THIS
-def dont_get_latest_batches_map():
-    latest_batches = (
-        StandingsBatch.objects.values("league_id")
-        .annotate(latest_taken_at=Max("taken_at"))
-    )
-    result = {}
-    for row in latest_batches:
-        b = StandingsBatch.objects.filter(
-            league_id=row["league_id"], taken_at=row["latest_taken_at"]
-        ).first()
-        if b:
-            result[row["league_id"]] = b
-    return result
