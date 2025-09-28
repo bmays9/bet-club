@@ -6,6 +6,7 @@ from season.models import (
     PrizePayout,
     PlayerScoreSnapshot,
     PlayerPick,
+    PlayerGame,
     PickType,
     StandingsRow,
     Handicap
@@ -23,32 +24,64 @@ def allocate_payouts_for_game(game, batch_map):
     payouts = PrizePayout.objects.filter(prize_pool__game=game).order_by('rank')
     print(f"Found {payouts.count()} payouts")
 
+    latest_batch_ids = get_latest_batch_ids()
+
     # --- Overall (across all leagues) ---
     overall_payouts = payouts.filter(prize_pool__category="overall")
     print(f"Overall payouts {overall_payouts.count()}")
+    
     for payout in overall_payouts:
-        winner = PlayerScoreSnapshot.objects.filter(
+        winners = (
+            PlayerScoreSnapshot.objects.filter(
             player_game__game=game,
+            batch_id__in=latest_batch_ids,   # only the latest snapshots
             overall_rank=payout.rank
-        ).first() 
-        
-        if winner:
-            payout.recipient = winner.player_game
+        )
+        .select_related("player_game")
+        .values("player_game_id")   # only unique players
+        .distinct()
+        )
+
+        if not winners.exists():
+            print(f"No snapshot found for overall rank {payout.rank}")
+            continue
+
+        for w in winners:
+            pg = PlayerGame.objects.get(id=w["player_game_id"])
+            payout.recipient = pg
             payout.save(update_fields=["recipient"])
-            print(f"Overall {payout} assigned to {winner.player_game}")
+            print(f"Overall {payout} assigned to {pg}")
 
     # --- League Totals ---
     league_payouts = payouts.filter(prize_pool__category="league_total")
     print(f"League payouts: {league_payouts.count()}")
+    print(f"latest batch ids: ", latest_batch_ids)
     for payout in league_payouts:
-        winners = PlayerScoreSnapshot.objects.filter(
+        print("Payout", payout)
+
+        # Get latest snapshots for all leagues
+        latest_snapshots = PlayerScoreSnapshot.objects.filter(
             player_game__game=game,
-            league_rank=payout.rank
-        )
-        for winner in winners:
-            payout.recipient = winner.player_game
-            payout.save(update_fields=["recipient"])
-            print(f"  League  {payout} assigned to {winner.player_game}")
+            batch_id__in=latest_batch_ids,
+            league_rank=1,
+            game_league__league=payout.prize_pool.league
+        ).select_related("player_game", "game_league__league")
+
+        print(f"latest snapshots", latest_snapshots)
+        if not latest_snapshots.exists():
+            print(f"No league winners found for payout {payout}")
+            continue
+
+        for snap in latest_snapshots:
+            # Calculate prize
+            num_players = snap.player_game.game.players.count()
+            prize_amount = payout.calculate_prize(num_players)
+
+            # Assign the payout
+            payout.recipient = snap.player_game
+            payout.amount = prize_amount
+            payout.save(update_fields=["recipient", "amount"])
+            print(f"League -> {payout} assigned to {snap.player_game} (prize: {prize_amount})")
 
     # --- Teams to Win (includes handicap) ---
     win_payouts = payouts.filter(prize_pool__category="teams_to_win")
