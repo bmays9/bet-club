@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
+{% load dict_extras %}
 {% include "season/_season_header.html" %}
 
 <h3 class="mt-3">Money</h3>
@@ -8,48 +9,46 @@
 <div class="table-responsive">
     {% for category, items in grouped_payouts.items %}
     {% if items %}
-    <h5 class="mt-4">{{ category }}</h5>
+    <h5 class="mt-4">{{ category|capfirst }}</h5>
 
     <table class="table table-sm table-striped table-hover table-bordered align-middle text-center small-font">
         <thead class="table-dark">
             <tr>
-                <th style="width:60px;">Rank</th>
-                <th>Pool</th>
-                <th>League</th>
-                <th>Player</th>
-                <th>Team / Pick</th>
-                <th>Points</th>
-                <th style="width:120px;">Prize</th>
+                {% for col in category_columns|get_item:category %}
+                <th>{{ col|capfirst }}</th>
+                {% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for it in items %}
-            <tr>
-                <td>{{ it.rank|default:"." }}</td>
-                <td>{{ it.prize_pool.name }}</td>
-                <td>{% if it.league %}{{ it.league.code }}{% else %}&ndash;{% endif %}</td>
+            <tr {% if it.recipient and user == it.recipient.user %}class="table-info" {% endif %}>
+                {% for col in category_columns|get_item:category %}
                 <td>
-                    {% if it.recipient %}
-                    {{ it.recipient.user.username }}
+                    {% if col == "rank" %}
+                    {{ it.rank|default:"" }}
+                    {% elif col == "prize_pool" %}
+                    {{ it.prize_pool.name|default:"" }}
+                    {% elif col == "league" %}
+                    {% if it.winning_pick and it.winning_pick.team and it.winning_pick.team.league %}
+                    {{ it.winning_pick.team.league.code }}
                     {% else %}
                     &ndash;
                     {% endif %}
-                </td>
-                <td>
-                    {% if it.winning_pick %}
-                    {{ it.winning_pick.team.name }}
-                    {% else %}
-                    &ndash;
+                    {% elif col == "player" %}
+                    {% if it.recipient %}{{ it.recipient.user.username }}{% else %}&ndash;{% endif %}
+                    {% elif col == "winning_pick" %}
+                    {% if it.winning_pick and it.winning_pick.team %}{{ it.winning_pick.team.name }}{% else %}&ndash;{% endif %}
+                    {% elif col == "points" %}
+                    {{ it.points|default:"" }}
+                    {% elif col == "prize_value" %}
+                    {% if it.prize_value is not None %}&pound;{{ it.prize_value|floatformat:0 }}{% else %}&ndash;{% endif %}
+                    {% elif col == "type" %}
+                    {% if it.winning_pick %}{{ it.winning_pick.pick_type|capfirst }}{% else %}&ndash;{% endif %}
+                    {% elif col == "month" %}
+                    {{ it.month|default:"" }}
                     {% endif %}
                 </td>
-                <td>{{ it.points|default:"." }}</td>
-                <td>
-                    {% if it.prize_value is not None %}
-                    &pound;{{ it.prize_value|floatformat:0 }}
-                    {% else %}
-                    &ndash;
-                    {% endif %}
-                </td>
+                {% endfor %}
             </tr>
             {% endfor %}
         </tbody>
@@ -57,5 +56,6 @@
     {% endif %}
     {% endfor %}
 </div>
+
 
 {% endblock %}

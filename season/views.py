@@ -4,7 +4,7 @@ from .utils.season_helpers import (
     get_latest_batch_ids,
     get_latest_batches_map,
 )
-from calendar import monthrange
+from calendar import monthrange, month_name
 from collections import OrderedDict
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
@@ -608,7 +608,7 @@ def prize_summary(request):
 
         # prepare the item (calculate prize_value here)
         try:
-            prize_value = payout.calculate_prize(num_players)
+            prize_value = payout.calculate_prize(num_players-1)
         except Exception:
             # defensive: ensure we never crash rendering the page
             prize_value = None
@@ -632,14 +632,32 @@ def prize_summary(request):
     # sort each group's list by rank (None ranks go last)
     for cat, items in grouped.items():
         items.sort(key=lambda it: (it["rank"] is None, it["rank"] or 0))
+
+    # Assign Months
+    for item in grouped.get('Monthly', []):
+        closing_date = getattr(item['payout'], 'awarded_for_month', None)
+        print("closing date", closing_date)
+        if closing_date:
+            item['month'] = month_name[closing_date.month]  # e.g., "September"
+        else:
+            item['month'] = None
+
+    category_columns = {
+        "Overall": ["rank", "player", "points", "prize_value"],
+        "Leagues": ["prize_pool", "player", "points", "prize_value"],
+        "Teams to Win": ["rank", "player", "winning_pick", "league", "type",  "points", "prize_value"],
+        "Teams to Lose": ["rank", "player", "winning_pick", "league", "points", "prize_value"],
+        "Monthly": ["month", "player", "points", "prize_value"],
+    }
     
-    print(grouped)
+    print("Normalized_Grouped", grouped)
     # Render
     return render(request, "season/season_money.html", {
-        "grouped_payouts": grouped,
+        'grouped_payouts': grouped,
         "user_groups": user_groups,
         "selected_group": selected_group,
         "group_games": group_games,
         "selected_game": selected_game,
         "num_players": num_players,
+        "category_columns": category_columns,
     })
