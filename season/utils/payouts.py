@@ -38,7 +38,7 @@ def allocate_payouts_for_game(game, batch_map):
             overall_rank=payout.rank
         )
         .select_related("player_game")
-        .values("player_game_id")   # only unique players
+        .values("player_game_id", "overall_total_points")   # only unique players
         .distinct()
         )
 
@@ -47,9 +47,11 @@ def allocate_payouts_for_game(game, batch_map):
             continue
 
         for w in winners:
+            print("w in winner", w)
             pg = PlayerGame.objects.get(id=w["player_game_id"])
             payout.recipient = pg
-            payout.save(update_fields=["recipient"])
+            payout.points = w.get("overall_total_points")
+            payout.save(update_fields=["recipient", "points"])
             print(f"Overall {payout} assigned to {pg}")
 
     # --- League Totals ---
@@ -73,6 +75,7 @@ def allocate_payouts_for_game(game, batch_map):
             continue
 
         for snap in latest_snapshots:
+            print("snap in latest snaps for leagues", snap)
             # Calculate prize
             num_players = snap.player_game.game.players.count()
             prize_amount = payout.calculate_prize(num_players)
@@ -80,7 +83,8 @@ def allocate_payouts_for_game(game, batch_map):
             # Assign the payout
             payout.recipient = snap.player_game
             payout.amount = prize_amount
-            payout.save(update_fields=["recipient", "amount"])
+            payout.points = snap.league_total_points
+            payout.save(update_fields=["recipient", "amount", "points"])
             print(f"League -> {payout} assigned to {snap.player_game} (prize: {prize_amount})")
 
     # --- Teams to Win (includes handicap) ---
@@ -125,7 +129,8 @@ def allocate_payouts_for_game(game, batch_map):
         if payout.rank - 1 < len(teams_sorted):
             top_team = teams_sorted[payout.rank - 1]["pick"]
             payout.winning_pick = top_team
-            payout.save(update_fields=["winning_pick"])
+            payout.points = teams_sorted[payout.rank - 1]["total_points"]
+            payout.save(update_fields=["winning_pick", "points"])
             print(f"Teams-to-Win -> {payout} assigned to {top_team}")
     
     # --- Teams to Lose ---
@@ -163,5 +168,6 @@ def allocate_payouts_for_game(game, batch_map):
         if payout.rank - 1 < len(worst_teams_sorted):
             worst_team = worst_teams_sorted[payout.rank - 1]["pick"]
             payout.winning_pick = worst_team
-            payout.save(update_fields=["winning_pick"])
+            payout.points = worst_teams_sorted[payout.rank - 1]["total_points"]
+            payout.save(update_fields=["winning_pick", "points"])
             print(f"Teams-to-Lose -> {payout} assigned to {worst_team}")

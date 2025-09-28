@@ -355,6 +355,7 @@ class PrizePayout(models.Model):
         null=True, blank=True,
         help_text="Last day of the month this payout applies to (for monthly prizes)"
     )
+    points = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal("0.00"))
     
     class Meta:
         unique_together = [("prize_pool", "rank")]

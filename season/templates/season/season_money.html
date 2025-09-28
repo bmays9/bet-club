@@ -39,7 +39,7 @@
                     {% elif col == "winning_pick" %}
                     {% if it.winning_pick and it.winning_pick.team %}{{ it.winning_pick.team.name }}{% else %}&ndash;{% endif %}
                     {% elif col == "points" %}
-                    {{ it.points|default:"" }}
+                    {{ it.points|floatformat:0|default:"" }}
                     {% elif col == "prize_value" %}
                     {% if it.prize_value is not None %}&pound;{{ it.prize_value|floatformat:0 }}{% else %}&ndash;{% endif %}
                     {% elif col == "type" %}

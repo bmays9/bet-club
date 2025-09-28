@@ -620,7 +620,7 @@ def prize_summary(request):
             "recipient": payout.recipient,         # PlayerGame or None
             "winning_pick": payout.winning_pick,   # PlayerPick or None
             "league": payout.prize_pool.league,    # League or None (useful for Leagues group)
-            "points": getattr(payout.winning_pick, "total_points", None),  # if you store it on the pick
+            "points": payout.points,
             "prize_value": prize_value,
         }
 
