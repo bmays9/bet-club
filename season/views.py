@@ -83,7 +83,43 @@ def season_overall(request):
         StandingsBatch.objects.filter(id__in=batch_ids)
         .aggregate(latest=Max("taken_at"))["latest"]
     )
-    print ("overall", overall)
+
+    # All players in a season, with their net totals
+    players = PlayerGame.objects.with_net_total(game=selected_game)
+    player_map = {pg.user.username: pg for pg in players}
+
+    # Get all payouts for the game once
+    all_payouts = PrizePayout.objects.filter(prize_pool__game=selected_game)
+
+    for pgp in PlayerGame.objects.filter(game=selected_game):
+        print(f"\n{pgp.user.username}")
+        for p in all_payouts:
+            won = "Y" if p.recipient_id == pgp.id else "N"
+            print(
+                f"  Payout: {p}, "
+                f"amount={p.amount}, entry_fee={p.entry_fee_per_player}, won={won}"
+            )
+
+    # Then show the annotated totals
+    for pg in players:
+        print(pg.user.username, pg.total_payouts, pg.total_fees, pg.money_total)
+
+
+    overall_list = []
+    for snap in overall:  # overall from PlayerScoreSnapshot aggregation
+        username = snap["player_game__user__username"]
+        total_points = snap["total"]
+        pg = player_map.get(username)
+
+        overall_list.append({
+            "username": username,
+            "total_points": total_points,
+            "total_payouts": getattr(pg, "total_payouts", 0),
+            "total_fees": getattr(pg, "total_fees", 0),
+            "net_total": getattr(pg, "money_total", 0),
+        })
+
+    print ("overall", overall_list)
     print ("league_ranks", league_ranks)
     print ("latest_time", latest_time)
     print ("user_groups", user_groups)
@@ -92,13 +128,14 @@ def season_overall(request):
     print ("selected_game", selected_game)
 
     return render(request, "season/season_overall.html", {
-        "overall": overall,
+        "overall": overall_list,
         "league_ranks": league_ranks,
         "latest_time": latest_time,
         "user_groups": user_groups,
         "selected_group": selected_group,
         "group_games": group_games,
         "selected_game": selected_game,
+        "players": players,   # annotated player totals
     })
 
 

@@ -28,7 +28,7 @@
             <tr>
                 {# League ranks with icons #}
                 <td>
-                    {% with rank=league_ranks|get_item:username|get_item:"Premier League" %}
+                    {% with rank=league_ranks|get_item:player.username|get_item:"Premier League" %}
                     {% if rank %}
                     <i class="bi bi-trophy-fill text-warning"></i> {{ rank }}
                     {% else %}
@@ -37,7 +37,7 @@
                     {% endwith %}
                 </td>
                 <td>
-                    {% with rank=league_ranks|get_item:username|get_item:"Championship" %}
+                    {% with rank=league_ranks|get_item:player.username|get_item:"Championship" %}
                     {% if rank %}
                     <i class="bi bi-award-fill text-secondary"></i> {{ rank }}
                     {% else %}
@@ -46,7 +46,7 @@
                     {% endwith %}
                 </td>
                 <td>
-                    {% with rank=league_ranks|get_item:username|get_item:"League One" %}
+                    {% with rank=league_ranks|get_item:player.username|get_item:"League One" %}
                     {% if rank %}
                     <i class="bi bi-star-fill text-info"></i> {{ rank }}
                     {% else %}
@@ -55,7 +55,7 @@
                     {% endwith %}
                 </td>
                 <td>
-                    {% with rank=league_ranks|get_item:username|get_item:"League Two" %}
+                    {% with rank=league_ranks|get_item:player.username|get_item:"League Two" %}
                     {% if rank %}
                     <i class="bi bi-star text-muted"></i> {{ rank }}
                     {% else %}
@@ -65,9 +65,9 @@
                 </td>
 
                 {# Player name, total points, money #}
-                <td>{{ username }}</td>
-                <td>{{ player.total }}</td>
-                <td>0</td>
+                <td>{{ player.username }}</td>
+                <td>{{ player.total_points }}</td>
+                <td>&pound;{{ player.net_total|floatformat:2 }}</td>
             </tr>
             {% endwith %}
             {% endfor %}

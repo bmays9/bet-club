@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import Group
+from django.db.models import Sum, F, Value, Subquery, OuterRef, DecimalField
+from django.db.models.functions import Coalesce
 from groups.models import UserGroup
 
 
@@ -100,12 +102,40 @@ class GameLeague(models.Model):
         return f"{self.game.name} – {self.league.name}"
 
 
+class PlayerGameQuerySet(models.QuerySet):
+    def with_net_total(self, game=None):
+        """
+        Annotate each PlayerGame with:
+        - total_payouts (sum of prize payouts assigned to this player)
+        - total_fees (sum of game entry fees for this player)
+        - net_total = payouts - fees
+        """
+        qs = self
+        if game:
+            qs = qs.filter(game=game)
+
+        # Subquery to calculate total entry fees for the game
+        all_fees_subquery = PrizePayout.objects.filter(
+            prize_pool__game=OuterRef('game')
+        ).values('prize_pool__game').annotate(
+            total_fees=Coalesce(Sum('entry_fee_per_player'), Value(Decimal("0.00")))
+        ).values('total_fees')
+
+        return qs.annotate(
+            total_payouts=Coalesce(Sum("payouts__amount"), Value(Decimal("0.00"))),
+            total_fees=Coalesce(Subquery(all_fees_subquery, output_field=DecimalField()), Value(Decimal("0.00"))),
+        ).annotate(
+            money_total=F("total_payouts") - F("total_fees")
+        )
+
 class PlayerGame(models.Model):
     """A user's participation in a Game."""
 
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="players")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="season_player_games")
     joined_at = models.DateTimeField(auto_now_add=True)
+
+    objects = PlayerGameQuerySet.as_manager()
 
     class Meta:
         unique_together = [("game", "user")]
