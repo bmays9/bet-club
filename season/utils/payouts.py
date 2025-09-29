@@ -129,9 +129,10 @@ def allocate_payouts_for_game(game, batch_map):
         if payout.rank - 1 < len(teams_sorted):
             top_team = teams_sorted[payout.rank - 1]["pick"]
             payout.winning_pick = top_team
+            payout.recipient = top_team.player_game
             payout.points = teams_sorted[payout.rank - 1]["total_points"]
-            payout.save(update_fields=["winning_pick", "points"])
-            print(f"Teams-to-Win -> {payout} assigned to {top_team}")
+            payout.save(update_fields=["winning_pick", "points", "recipient"])
+            print(f"Teams-to-Win -> {payout} assigned to {top_team} with recipient { top_team.player_game } ")
     
     # --- Teams to Lose ---
     lose_payouts = payouts.filter(prize_pool__category="teams_to_lose")
@@ -168,6 +169,7 @@ def allocate_payouts_for_game(game, batch_map):
         if payout.rank - 1 < len(worst_teams_sorted):
             worst_team = worst_teams_sorted[payout.rank - 1]["pick"]
             payout.winning_pick = worst_team
+            payout.recipient = worst_team.player_game
             payout.points = worst_teams_sorted[payout.rank - 1]["total_points"]
-            payout.save(update_fields=["winning_pick", "points"])
+            payout.save(update_fields=["winning_pick", "points", "recipient"])
             print(f"Teams-to-Lose -> {payout} assigned to {worst_team}")
