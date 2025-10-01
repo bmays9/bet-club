@@ -1,54 +1,59 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Sum
 from django.utils.timezone import now
-import calendar
-from season.models import PlayerScoreSnapshot, PrizePool, PrizePayout, PrizeCategory
+from season.models import PlayerScoreSnapshot, PrizePool, PrizePayout, PrizeCategory, StandingsBatch
 
 class Command(BaseCommand):
     help = "Finalise monthly winners and create PrizePayout entries."
 
     def handle(self, *args, **options):
         today = now()
-        # Look back at the previous month
-        year = today.year
-        month = today.month - 1 or 12
-        if today.month == 1:
-            year -= 1
 
-        # Date range for that month
-        _, last_day = calendar.monthrange(year, month)
-        start = today.replace(year=year, month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
-        end = today.replace(year=year, month=month, day=last_day, hour=23, minute=59, second=59, microsecond=999999)
+        # 1. Find the most recent month-end batch
+        month_end_batch = StandingsBatch.objects.filter(is_month_end=True).order_by("-taken_at").first()
+        if not month_end_batch:
+            self.stdout.write("No month-end batch found.")
+            return
 
-        # Group by player total
+        # 2. Work out which month that batch closes
+        cutoff_date = month_end_batch.taken_at
+        year = cutoff_date.year
+        month = cutoff_date.month
+
+        self.stdout.write(f"Finalising monthly winner for {year}-{month:02d} using batch {month_end_batch.id}")
+
+        # 3. Group scores up to that batch
         scores = (
-            PlayerScoreSnapshot.objects.filter(batch__taken_at__range=(start, end))
+            PlayerScoreSnapshot.objects.filter(batch=month_end_batch)
             .values("player_game", "player_game__user__username")
             .annotate(total_points=Sum("league_total_points"))
             .order_by("-total_points")
         )
 
         if not scores:
-            self.stdout.write("No scores found for that month.")
+            self.stdout.write("No scores found for that cutoff.")
             return
 
+        # Winner = highest total points
         winner = scores[0]
         player_game_id = winner["player_game"]
         username = winner["player_game__user__username"]
         total_points = winner["total_points"]
 
-        # Find the monthly prize pool for this game
+        # 4. Find the monthly prize pools
         pools = PrizePool.objects.filter(category=PrizeCategory.MONTH_WINNER, active=True)
         for pool in pools:
-            # Check if we already recorded this month
-            already = pool.payouts.filter(rank=1, created_at__month=month, created_at__year=year).exists()
+            # Prevent duplicate payouts for same month
+            already = pool.payouts.filter(awarded_for_month__year=year, awarded_for_month__month=month).exists()
             if already:
                 continue
 
             PrizePayout.objects.create(
                 prize_pool=pool,
                 rank=1,
-                amount=pool.entry_fee or 0,  # or a fixed amount if that’s your rule
-                player_game_id=player_game_id,
+                amount=pool.amount or 0,  # assumes you've precalculated amount on pool/payout rule
+                recipient_id=player_game_id,
+                awarded_for_month=cutoff_date.date().replace(day=1),  # store first day of that month
+                points=total_points,
             )
             self.stdout.write(f"Recorded monthly winner {username} ({total_points} pts) for {pool.game.name}.")

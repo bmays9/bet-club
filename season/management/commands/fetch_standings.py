@@ -3,7 +3,7 @@ import requests
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.timezone import now
-
+from season.utils.month_end import should_mark_month_end
 from season.models import League, Team, StandingsBatch, StandingsRow
 from score_predict.management.commands.update_fixtures import ENGLISH_LEAGUES
 
@@ -43,6 +43,10 @@ def save_standings(league: League, data: dict):
             season_round=None,
             source="sofascore",
         )
+
+        if should_mark_month_end(batch.taken_at):
+            batch.is_month_end = True
+            batch.save(update_fields=["is_month_end"])
 
         for row in standings["rows"]:
             team_id = row["team"]["id"]
