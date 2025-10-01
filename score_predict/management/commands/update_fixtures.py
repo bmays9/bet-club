@@ -137,6 +137,7 @@ def get_next_fixtures():
                 "status_code": fixture.get("status", {}).get("code"),
                 "status_description": fixture.get("status", {}).get("description"),
             })
+            print(dt_utc, "=", fixture["homeTeam"]["name"],fixture["awayTeam"]["name"])
 
     return fixtures
 

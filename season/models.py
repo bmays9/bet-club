@@ -241,6 +241,7 @@ class StandingsBatch(models.Model):
     taken_at = models.DateTimeField(default=timezone.now)
     season_round = models.PositiveSmallIntegerField(blank=True, null=True)
     source = models.CharField(max_length=40, default="sofascore")
+    is_month_end = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-taken_at"]

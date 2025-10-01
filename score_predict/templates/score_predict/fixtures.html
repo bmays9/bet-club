@@ -7,7 +7,7 @@
         <div class="col-6">
             <ul class="nav nav-pills">
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'game_history' %}active{% endif %}"
+                    <a class="btn btn-primary" {% if request.resolver_match.url_name == 'game_history' %}active{% endif %}"
                        href="{% url 'game_history' %}">Game History</a>
                 </li>
             </ul>
