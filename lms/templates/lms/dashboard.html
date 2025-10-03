@@ -21,7 +21,7 @@
   <tbody>
     {% for item in entries_with_rounds %}
       <tr>
-        <td>{{ item.entry.game.get_league_display }}</td>
+          <td>{{ item.entry.game.get_league_display }} <br>Entry: &pound;{{ item.entry.game.entry_fee }}</td>
         <td>{{ item.entry.game.group.name }}</td>
         <td><a href="{% url 'lms_game_detail' item.entry.game.id %}" class="btn btn-sm btn-primary">View Game</a></td>
         <td>
@@ -73,23 +73,25 @@
 <h2>Joinable Games</h2>
 <table class="table">
   <thead>
-    <tr>
-      <th>League</th>
-      <th>Group</th>
-      <th>Round 1 Start</th>
-      <th>Action</th>
-    </tr>
+      <tr>
+          <th>League</th>
+          <th>Group</th>
+          <th>Entry Fee</th>
+          <th>Round 1 Start</th>
+          <th>Action</th>
+      </tr>
   </thead>
   <tbody>
     {% for item in joinable_games %}
       <tr>
-        <td>{{ item.game.get_league_display }}</td>
-        <td>{{ item.game.group.name }}</td>
-        <td>{{ item.round1.start_date|date:"M d, Y" }}</td>
-        <td>
-          <a href="{% url 'lms_pick' item.game.id item.round1.id %}" 
-             class="btn btn-sm btn-outline-primary">Join</a>
-        </td>
+          <td>{{ item.game.get_league_display }}</td>
+          <td>{{ item.game.group.name }}</td>
+          <td>&pound;{{ item.game.entry_fee }}</td>
+          <td>{{ item.round1.start_date|date:"M d, Y" }}</td>
+          <td>
+              <a href="{% url 'lms_pick' item.game.id item.round1.id %}"
+                 class="btn btn-sm btn-outline-primary">Join</a>
+          </td>
       </tr>
     {% empty %}
       <tr><td colspan="4">No games available to join right now.</td></tr>
