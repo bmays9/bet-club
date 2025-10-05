@@ -54,6 +54,26 @@ def get_latest_batch_ids():
             batch_ids.append(b.id)
     return batch_ids
 
+def get_month_start_batch_ids():
+    """
+    Returns a list of the latest StandingsBatch IDs, one per league with is_month_end = true.
+    """
+    month_batches = (
+        StandingsBatch.objects
+        .filter(is_month_end=True)
+        .values("league_id")
+        .annotate(latest_taken_at=Max("taken_at"))
+    )
+
+    month_batch_ids = []
+    for row in month_batches:
+        b = StandingsBatch.objects.filter(
+            league_id=row["league_id"], taken_at=row["latest_taken_at"]
+        ).first()
+        if b:
+            month_batch_ids.append(b.id)
+    return month_batch_ids
+
 def get_latest_batches_map():
     """
     Returns a dict of {league_id: latest_batch_object}

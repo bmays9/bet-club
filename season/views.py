@@ -3,6 +3,7 @@ from .utils.season_helpers import (
     get_group_and_game_selection,
     get_latest_batch_ids,
     get_latest_batches_map,
+    get_month_start_batch_ids
 )
 from calendar import monthrange, month_name
 from collections import OrderedDict
@@ -523,7 +524,7 @@ def season_monthly(request):
 
     # Get latest batch ids for the selected game
     batch_ids = get_latest_batch_ids()  # Returns list of batch IDs across leagues
-
+    
     if not batch_ids:
         return render(request, "season/monthly.html", {
             "current_month_scores": [],
@@ -535,19 +536,39 @@ def season_monthly(request):
         })
 
     # Find the latest month-end batch
-    month_end_batch = StandingsBatch.objects.filter(is_month_end=True).order_by("-taken_at").first()
+    month_start_batch_ids = get_month_start_batch_ids()
+    
+    # Latest totals (as of the latest batch)
+    latest_totals = (
+        PlayerScoreSnapshot.objects
+        .filter(batch_id__in=batch_ids)
+        .values("player_game_id", "player_game__user__username")
+        .annotate(total_points=Sum("league_total_points"))
+)
+    # Previous month-end totals (baseline)
+    prev_totals = (
+        PlayerScoreSnapshot.objects
+        .filter(batch_id__in=month_start_batch_ids)
+        .values("player_game_id")
+        .annotate(total_points=Sum("league_total_points"))
+    )
 
-    if month_end_batch:
-        current_month_scores = (
-            PlayerScoreSnapshot.objects
-            .filter(batch=month_end_batch)
-            .select_related('player_game__user', 'game_league__league')
-            .values('player_game_id', 'player_game__user__username')
-            .annotate(total_points=Sum('league_total_points'))
-            .order_by('-total_points')
-        )
-    else:
-        current_month_scores = []
+    # Map previous totals for quick lookup
+    prev_totals_map = {row["player_game_id"]: row["total_points"] for row in prev_totals}
+
+    # Now calculate differences
+    current_month_scores = []
+    for row in latest_totals:
+        prev_points = prev_totals_map.get(row["player_game_id"], 0)
+        diff = row["total_points"] - prev_points
+        current_month_scores.append({
+            "player_game_id": row["player_game_id"],
+            "username": row["player_game__user__username"],
+            "total_points": diff,
+        })
+
+    # Sort by points descending
+    current_month_scores.sort(key=lambda x: x["total_points"], reverse=True)
 
     # Previous monthly winners: last awarded month for this game
     previous_winners = (
@@ -571,20 +592,6 @@ def season_monthly(request):
             "recipient": pw.recipient,
             "amount": prize_amount,
     })
-
-    # Debug prints
-    # print("Current Month Scores:")
-    # for cms in current_month_scores:
-    #     print(cms)
-
-    print("\nPrevious Winners:")
-    for pw in previous_winners:
-        print(f"Month: {pw.awarded_for_month}, Recipient: {pw.recipient}, Prize: {pw.calculate_prize(pw.prize_pool.game.players.count())}")
-
-    print("\nSelected Group:", selected_group)
-    print("Selected Game:", selected_game)
-    print("User Groups:", [g.name for g in user_groups])
-    print("Group Games:", [g.name for g in group_games])
 
     return render(request, "season/monthly.html", {
         "current_month_scores": current_month_scores,

@@ -18,7 +18,7 @@
             {% for cms in current_month_scores %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ cms.player_game__user__username }}</td>
+                <td>{{ cms.username }}</td>
                 <td>{{ cms.total_points|floatformat:2 }}</td>
             </tr>
             {% empty %}
