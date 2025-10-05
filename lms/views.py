@@ -65,7 +65,8 @@ def lms_pick(request, game_id, round_id):
                             context={"User": request.user, "league": game.get_league_display()},
                             receiver=request.user,
                             actor=request.user,
-                            group=game.group
+                            group=game.group,
+                            link=f"lms_game_detail:{game.id}"
                         )
                     else:
                         # New Pick Message
@@ -74,7 +75,8 @@ def lms_pick(request, game_id, round_id):
                             context={"User": request.user, "league": game.get_league_display(), "round": round.round_number},
                             receiver=request.user,
                             actor=request.user,
-                            group=game.group
+                            group=game.group,
+                            link=f"lms_game_detail:{game.id}"
                         )
 
 
