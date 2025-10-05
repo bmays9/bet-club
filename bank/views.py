@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q, Exists, OuterRef, Prefetch, Count
 from .models import BankBalance, BankMessage
 from player_messages.models import PlayerMessage
+from lms.models import LMSGame, LMSRound, LMSEntry
 from groups.models import UserGroup
 
 
@@ -54,8 +55,6 @@ def money_list(request):
             receiver=request.user
         )
 
-        # print("Personal", personal_messages)
-
         overlap = PlayerMessage.objects.filter(
             group=selected_group,
             receiver=request.user,
@@ -68,8 +67,6 @@ def money_list(request):
             receiver__isnull=True
         ).exclude(Exists(overlap))
         
-        # print("group_messages", group_messages)
-
         unfiltered_group_messages = PlayerMessage.objects.filter(
             group=selected_group,
             receiver__isnull=True

@@ -44,6 +44,10 @@ main {
   flex-direction: column;
 }
 
+.message-link {
+    text-decoration: none;
+}
+
 /* Score Predict */
 .prediction-cell {
   font-weight: 500;

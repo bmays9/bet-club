@@ -534,15 +534,20 @@ def season_monthly(request):
             "selected_game": selected_game,
         })
 
-    # Current month scores: sum of points per PlayerGame across latest batches
-    current_month_scores = (
-        PlayerScoreSnapshot.objects
-        .filter(batch_id__in=batch_ids, batch__taken_at__date__range=(first_day, last_day))
-        .select_related('player_game__user', 'game_league__league')
-        .values('player_game_id', 'player_game__user__username')
-        .annotate(total_points=Sum('league_total_points'))
-        .order_by('-total_points')
-    )
+    # Find the latest month-end batch
+    month_end_batch = StandingsBatch.objects.filter(is_month_end=True).order_by("-taken_at").first()
+
+    if month_end_batch:
+        current_month_scores = (
+            PlayerScoreSnapshot.objects
+            .filter(batch=month_end_batch)
+            .select_related('player_game__user', 'game_league__league')
+            .values('player_game_id', 'player_game__user__username')
+            .annotate(total_points=Sum('league_total_points'))
+            .order_by('-total_points')
+        )
+    else:
+        current_month_scores = []
 
     # Previous monthly winners: last awarded month for this game
     previous_winners = (
