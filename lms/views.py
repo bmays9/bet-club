@@ -189,9 +189,6 @@ def lms_game_detail(request, game_id):
     round_obj = game.rounds.filter(completed=False).order_by("round_number").first()
     all_entry = LMSEntry.objects.filter(user=request.user, game=game)
     entry = LMSEntry.objects.filter(user=request.user, game=game).first()
-    #print("ALL ENTRY", all_entry) 
-    #print("FIRST ENTRY", all_entry.first()) 
-    #print("ENTRY", entry) 
 
     user_pick = None
     if entry and round_obj:
@@ -208,7 +205,7 @@ def lms_game_detail(request, game_id):
     }
     league_display_name = LEAGUE_DISPLAY_NAMES.get(game.league, game.league)
 
-    # ✅ Include all picks (past + current round)
+    # Include all picks (past + current round)
     all_picks = LMSPick.objects.filter(
         entry__game=game
     ).select_related("entry__user", "round").order_by("round__round_number")

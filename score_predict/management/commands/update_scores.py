@@ -39,7 +39,7 @@ def calculate_alt_points(prediction, fixture):
     return 0
 
 def update_scores(stdout=None):
-    # ✅ Get active games with no winner
+    # Get active games with no winner
     active_games = (
         GameInstance.objects
         .filter(winners__isnull=True)
@@ -47,7 +47,7 @@ def update_scores(stdout=None):
         .distinct()
     )
 
-    # ✅ Get only finished fixtures linked to these active games' templates
+    # Get only finished fixtures linked to these active games' templates
     fixtures = Fixture.objects.filter(
         gametemplate__in=active_games.values_list("template", flat=True),
         status_description="finished"
@@ -56,13 +56,8 @@ def update_scores(stdout=None):
     if stdout:
         stdout.write(f"Found {fixtures.count()} finished fixtures for active games.")
 
-    # ✅ Update prediction scores for relevant fixtures
+    # Update prediction scores for relevant fixtures
     for fixture in fixtures:
-        # if stdout:
-        #    stdout.write(
-        #        f"Processing Fixture {fixture.fixture_id}: "
-        #        f"{fixture.home_team} {fixture.home_score} - {fixture.away_score} {fixture.away_team}"
-        #    )
 
         predictions = Prediction.objects.filter(fixture=fixture)
         for prediction in predictions:
@@ -75,7 +70,7 @@ def update_scores(stdout=None):
         # if stdout:
         #    stdout.write(f"Updated scores for Fixture {fixture.fixture_id}")
 
-    # ✅ Update total_score and alt_score for each player in each active game
+    # Update total_score and alt_score for each player in each active game
     for game in active_games:
         for entry in GameEntry.objects.filter(game=game):
             totals = Prediction.objects.filter(
@@ -95,7 +90,7 @@ def update_scores(stdout=None):
                     f"total_score={entry.total_score}, alt_score={entry.alt_score}"
                 )
 
-    # ✅ Check for winners at the end
+    # Check for winners at the end
     check_for_winners(stdout)
 
 
@@ -156,6 +151,7 @@ def check_for_winners(stdout=None):
                         receiver=w.player,
                         actor=w.player,
                         group=game.group
+                        link=f"scores_game:{game.id}"
                     )
 
 

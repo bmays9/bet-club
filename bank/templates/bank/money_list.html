@@ -58,7 +58,7 @@
                             <td class="text-muted">{{ update.created_at|date:"Y-m-d H:i" }}</td>
                             <td>
                                 {% if update.link %}
-                                <a class="message-link" ref= "{{ update.get_link }}">{{ update.message }} </a>
+                                <a class="message-link" href= "{{ update.get_link }}">{{ update.message }} </a>
                                 {% else %}
                                 {{ update.message }}
                                 {% endif %}

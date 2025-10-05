@@ -72,6 +72,7 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user
+                            link=f"lms_game_detail:{game.id}"
                         )
 
                     continue
@@ -89,6 +90,7 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user
+                            link=f"lms_game_detail:{game.id}"
                         )
 
 
@@ -119,6 +121,7 @@ class Command(BaseCommand):
                     context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
                     group=entry.game.group,
                     receiver=winner_entry.user
+                    link=f"lms_game_detail:{game.id}"
                 )
 
                 # --- 💰 Settle Money in Bank app ---

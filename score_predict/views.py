@@ -177,7 +177,8 @@ def submit_predictions(request):
                     context={"User": user},
                     group=group,
                     receiver=user,
-                    actor=user
+                    actor=user,
+                    link="scores"
                 )
 
             return JsonResponse({"status": "success", "game_instance_id": game_instance.id})
