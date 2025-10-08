@@ -29,8 +29,8 @@ urlpatterns = [
     path("bank/", include("bank.urls")),
     path("golf/", include("golf.urls")),
     path('groups/', include('groups.urls')),
-    path("lms/", include("lms.urls"), name="lms"),
-    path("scores/", include("score_predict.urls"), name="scores"),
-    path("season/", include("season.urls"), name="season"),
+    path("lms/", include("lms.urls")),
+    path("scores/", include("score_predict.urls")),
+    path("season/", include("season.urls")),
     path("summernote/", include("django_summernote.urls")),
 ]
