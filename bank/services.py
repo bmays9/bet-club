@@ -67,7 +67,7 @@ def apply_batch(group, entrants=None, winners=None, entry_fee=Decimal("0"), priz
         winners_str = ", ".join([f"{u.username} (+£{payouts[u]:.2f})" for u in payouts]) if payouts else "None"
 
         message_text = (
-            f"💰 {description} processed\n"
+            f"💰 {description} | Processed\n"
             f"Entry fee: £{entry_fee:.2f}\n"
             f"Entrants: {entrants_str}\n"
             f"Prize pool: £{prize_pool:.2f}\n"

@@ -71,7 +71,7 @@ class Command(BaseCommand):
                             code="LM-UKO",
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
-                            receiver=entry.user
+                            receiver=entry.user,
                             link=f"lms_game_detail:{game.id}"
                         )
 
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                             code="LM-UKO",
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
-                            receiver=entry.user
+                            receiver=entry.user,
                             link=f"lms_game_detail:{game.id}"
                         )
 
@@ -120,7 +120,7 @@ class Command(BaseCommand):
                     code="LM-WIN",
                     context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
                     group=entry.game.group,
-                    receiver=winner_entry.user
+                    receiver=winner_entry.user,
                     link=f"lms_game_detail:{game.id}"
                 )
 
@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     winners=winners,
                     entry_fee=Decimal(entry_fee),
                     prize_pool=prize_pool,
-                    description=f"Settlement for {round_obj.game}"
+                    description=f"Settlement for LMS {round_obj.game.get_league_display()}"
                 )
 
             elif alive_count == 0:

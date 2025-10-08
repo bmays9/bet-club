@@ -150,8 +150,8 @@ def check_for_winners(stdout=None):
                         context={"User": w.player, "score": w.total_score, "prize": prize_pool},
                         receiver=w.player,
                         actor=w.player,
-                        group=game.group
-                        link=f"scores_game:{game.id}"
+                        group=game.group,
+                        link=f"game_detail:{game.id}"
                     )
 
 

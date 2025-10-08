@@ -72,8 +72,8 @@
         {% endif %}
 
         {% if bank_messages %}
-            <h3 class="mt-4">💷 Recent Transactions</h3>
-            <ul class="list-group">
+            <h4 class="mt-4">💷 Recent Transactions</h4>
+            <ul class="list-group small-font">
                 {% for msg in bank_messages %}
                 <li class="list-group-item">
                     <small class="text-muted">{{ msg.created_at|date:"Y-m-d H:i" }}</small><br>
