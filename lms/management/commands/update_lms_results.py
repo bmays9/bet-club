@@ -13,7 +13,7 @@ class Command(BaseCommand):
     help = "Update LMS pick results and create the next round if needed"
 
     def handle(self, *args, **options):
-        self.stdout.write("🔄 Updating LMS pick results...")
+        self.stdout.write("Updating LMS pick results...")
 
         # --- 1️⃣ Process earliest incomplete rounds per game ---
         earliest_incomplete_rounds = (
@@ -36,22 +36,46 @@ class Command(BaseCommand):
 
             # --- 1a. Update pending picks ---
             picks_pending = round_obj.picks.filter(result="PENDING")
+
             for pick in picks_pending:
                 fixture = pick.fixture
-                self.stdout.write(f"  Processing Pick {pick.id} ({pick.team_name}) "
-                                  f"{fixture.home_team} vs {fixture.away_team} "
-                                  f"[Score: {fixture.home_score}-{fixture.away_score}, Status: {fixture.status_code}]")
-                
-                if fixture.status_code in (100, 60, 90):  # Fixture finished
+
+                # ⚠️ Only process fixtures that have started or finished
+                if fixture.date > timezone.now():
+                    continue  # skip future fixtures entirely
+    
+                self.stdout.write(
+                    f"  Processing Pick {pick.id} ({pick.team_name}) "
+                    f"{fixture.home_team} vs {fixture.away_team} "
+                    f"[Score: {fixture.home_score}-{fixture.away_score}, Status: {fixture.status_code}]"
+                )
+
+                # only compute if status indicates finished AND both scores are present
+                FINAL_STATUS_CODES = (100,)
+                POSTPONED_STATUS_CODES = (90, 60)
+
+                if fixture.status_code in FINAL_STATUS_CODES:
+                    if fixture.home_score is None or fixture.away_score is None:
+                    # Scores not yet populated — skip for now
+                        self.stdout.write(f"Finished status but missing scores for fixture {fixture.id}; skipping pick {pick.id}")
+                        continue
+
+                    # Now safe to compare
                     if fixture.home_score > fixture.away_score:
                         result = "WIN" if fixture.home_team == pick.team_name else "LOSE"
                     elif fixture.away_score > fixture.home_score:
                         result = "WIN" if fixture.away_team == pick.team_name else "LOSE"
                     else:
                         result = "DRAW"
+
                     pick.result = result
                     pick.save()
-                    self.stdout.write(f"    ✅ Pick result computed: {result}")
+                    self.stdout.write(f"Pick result computed: {result}")
+                else:  
+                    if fixture.status_code in POSTPONED_STATUS_CODES:
+                        result = "LOSE"
+                    # Not final yet (or mid-match) — skip
+                    self.stdout.write(f"Fixture {fixture.id} not final (status {fixture.status_code}) — skipping pick {pick.id}")
 
             # --- 1b. Eliminate entries with losing/drawing picks or no picks ---
             for entry in round_obj.game.entries.all():
@@ -72,7 +96,7 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user,
-                            link=f"lms_game_detail:{game.id}"
+                            link=f"lms_game_detail:{entry.game.id}"
                         )
 
                     continue
@@ -90,7 +114,7 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user,
-                            link=f"lms_game_detail:{game.id}"
+                            link=f"lms_game_detail:{entry.game.id}"
                         )
 
 
@@ -121,7 +145,7 @@ class Command(BaseCommand):
                     context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
                     group=entry.game.group,
                     receiver=winner_entry.user,
-                    link=f"lms_game_detail:{game.id}"
+                    link=f"lms_game_detail:{entry.game.id}"
                 )
 
                 # --- 💰 Settle Money in Bank app ---
@@ -212,17 +236,6 @@ class Command(BaseCommand):
                     end_date=fixtures.last().date,
                 )
                 next_round.fixtures.set(fixtures)
-
-                # Create empty picks for remaining alive players
-                #remaining_entries = game.entries.filter(alive=True)
-                #for entry in remaining_entries:
-                #    LMSPick.objects.create(
-                #        entry=entry,
-                #        round=next_round,
-                #        fixture=fixtures.first(),  # placeholder, will be updated when player picks
-                #        team_name="",
-                #        result="PENDING"
-                #    )
 
                 return next_round
 

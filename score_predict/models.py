@@ -1,6 +1,7 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
-from decimal import Decimal
+from django.utils import timezone
 from groups.models import UserGroup
 
 
@@ -44,6 +45,8 @@ class Fixture(models.Model):
     home_score = models.IntegerField(null=True, blank=True)
     away_score = models.IntegerField(null=True, blank=True)
     result = models.CharField(max_length=1, choices=RESULT_CHOICES, null=True, blank=True, default='N')
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return f"{self.league_short_name}: {self.home_team} vs {self.away_team} - {self.date.strftime('%Y-%m-%d')}"

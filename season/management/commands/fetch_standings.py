@@ -68,8 +68,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "league_code",
-            nargs="?",
+            "--league_code",
             type=str,
             help="Optional league short_name (EPL, ECH, EL1, EL2). Updates all if omitted.",
         )

@@ -11,5 +11,5 @@ class UpdateTrackerAdmin(SummernoteModelAdmin):
 
 @admin.register(LeagueUpdateTracker)
 class LeagueUpdateTrackerAdmin(SummernoteModelAdmin):
-    list_display = ('last_fixtures_check', 'last_results_check', 'last_tables_check')
+    list_display = ('league', 'last_fixtures_check', 'last_results_check', 'last_tables_check')
    
