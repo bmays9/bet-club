@@ -73,6 +73,15 @@ def season_overall(request):
         .annotate(total=Sum("league_total_points"))
         .order_by("-total")
     )
+    print("Selected game:", selected_game)
+    print("Player games count:", player_games.count())
+    print("Batch IDs:", batch_ids)
+
+    if batch_ids:
+        from season.models import StandingsBatch
+        print("Batches found:", list(StandingsBatch.objects.filter(id__in=batch_ids).values("id", "league_id", "taken_at")))
+    print("Overall:", overall)
+    print("Snaps", snaps)
 
     league_ranks = {}
     for snap in snaps:
@@ -104,7 +113,6 @@ def season_overall(request):
     # Then show the annotated totals
     for pg in players:
         print(pg.user.username, pg.total_payouts, pg.total_fees, pg.money_total)
-
 
     overall_list = []
     for snap in overall:  # overall from PlayerScoreSnapshot aggregation
