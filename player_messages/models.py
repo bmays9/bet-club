@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from groups.models import UserGroup
+from django.urls import reverse
 
 # Create your models here.
 class PlayerMessage(models.Model):
@@ -16,6 +17,16 @@ class PlayerMessage(models.Model):
     message = models.TextField()
     link = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_link(self):
+        """Convert the stored link string into a real URL"""
+        if not self.link:
+            return None
+
+        parts = self.link.split(":")
+        viewname = parts[0]
+        args = parts[1:]  # optional extra parts like IDs
+        return reverse(viewname, args=args)
 
     def __str__(self):
         if self.audience == "User":
