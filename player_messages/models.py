@@ -9,7 +9,7 @@ class PlayerMessage(models.Model):
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     actor = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="messages_created", null=True, blank=True)
     code = models.CharField(max_length=20)
-    audience = models.CharField(   # ✅ key field
+    audience = models.CharField(   # key field
         max_length=10,
         choices=[("Group", "Group"), ("User", "User")],
         default="Group"
