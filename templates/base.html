@@ -58,7 +58,7 @@
               <a class="nav-link {% if request.resolver_match.url_name == 'season_overall' %}active{%endif%}" href="{% url 'season_overall' %}">Football Season</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Golf</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'golf-events' %}active{%endif%}" href="{% url 'golf-events' %}">Golf</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">Horses</a>
