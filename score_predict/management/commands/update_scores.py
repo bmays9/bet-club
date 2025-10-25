@@ -5,8 +5,10 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models import Max
+from django.urls import reverse
 from player_messages.utils import create_message
 from score_predict.models import Fixture, Prediction, GameEntry, GameInstance
+
 
 def calculate_points(prediction, fixture):
     if prediction.predicted_home_score == fixture.home_score and prediction.predicted_away_score == fixture.away_score:
@@ -62,6 +64,7 @@ def update_scores(stdout=None):
         predictions = Prediction.objects.filter(fixture=fixture)
         for prediction in predictions:
             points = calculate_points(prediction, fixture)
+            print("Prediction", prediction, "points", points)
             alt_points = calculate_alt_points(prediction, fixture)
             prediction.score = points
             prediction.alternate_score = alt_points
@@ -151,7 +154,7 @@ def check_for_winners(stdout=None):
                         receiver=w.player,
                         actor=w.player,
                         group=game.group,
-                        link=f"game_detail:{game.id}"
+                        link= reverse("game_detail", args=[game.id])
                     )
 
 

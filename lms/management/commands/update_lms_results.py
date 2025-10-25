@@ -2,6 +2,7 @@ from bank.services import apply_batch
 from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db.models import Max, Min
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
@@ -96,7 +97,8 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user,
-                            link=f"lms_game_detail:{entry.game.id}"
+                            actor=entry.user,
+                            link= reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
                     continue
@@ -114,7 +116,8 @@ class Command(BaseCommand):
                             context={"User": entry.user, "league": entry.game.get_league_display()},
                             group=entry.game.group,
                             receiver=entry.user,
-                            link=f"lms_game_detail:{entry.game.id}"
+                            actor=entry.user,
+                            link=reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
 
@@ -144,8 +147,9 @@ class Command(BaseCommand):
                     code="LM-WIN",
                     context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
                     group=entry.game.group,
+                    actor=winner_entry.user,
                     receiver=winner_entry.user,
-                    link=f"lms_game_detail:{entry.game.id}"
+                    link = reverse ("lms_game_detail", args=[entry.game.id])
                 )
 
                 # --- 💰 Settle Money in Bank app ---
