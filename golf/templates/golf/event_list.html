@@ -4,16 +4,41 @@
 <!-- content starts here -->
 
 <h2>Recent and Upcoming Golf Events</h2>
-<ul>
-  {% for event in events %}
-    <li>
-      <strong>{{ event.name }}</strong> – {{ event.start_date }} to {{ event.end_date }}<br>
-      {{ event.course }} ({{ event.tour.tour_name }})
-    </li>
-  {% empty %}
-    <li>No events found in this time window.</li>
-  {% endfor %}
-</ul>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Event</th>
+            <th>Dates</th>
+            <th>Entries</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event in events %}
+        <tr>
+            <td>{{ event.name }}</td>
+            <td>{{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}</td>
+            <td>
+                {% if event.has_entries %}
+                <span class="badge bg-success">✅ Available</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if event.has_entries %}
+                <a href="{% url 'event_entries' event.tourn_id %}" class="btn btn-primary btn-sm">
+                    Make Your Picks
+                </a>
+                {% else %}
+                <button class="btn btn-secondary btn-sm" disabled>Entries Not Yet Available</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 
 {% endblock content %}

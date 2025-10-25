@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- content starts here -->
+
+<h2>{{ event.name }} – Make Your Picks</h2>
+<form method="POST">
+    {% csrf_token %}
+    <ul id="golferList">
+        {% for entry in entries %}
+        <li>
+            <input type="hidden" name="golfer_order" value="{{ entry.golfer.id }}">
+            {{ forloop.counter }}. {{ entry.golfer.first_name }} {{ entry.golfer.last_name }}
+        </li>
+        {% endfor %}
+    </ul>
+    <button type="submit" class="btn btn-primary">Save Picks</button>
+</form>
+
+
+
+{% endblock content %}
