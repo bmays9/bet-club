@@ -98,7 +98,7 @@ class Command(BaseCommand):
                             group=entry.game.group,
                             receiver=entry.user,
                             actor=entry.user,
-                            link= reverse ("lms_game_detail", args=[entry.game.id])
+                           # link= reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
                     continue
@@ -117,7 +117,7 @@ class Command(BaseCommand):
                             group=entry.game.group,
                             receiver=entry.user,
                             actor=entry.user,
-                            link=reverse ("lms_game_detail", args=[entry.game.id])
+                            # link=reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
 
@@ -149,7 +149,7 @@ class Command(BaseCommand):
                     group=entry.game.group,
                     actor=winner_entry.user,
                     receiver=winner_entry.user,
-                    link = reverse ("lms_game_detail", args=[entry.game.id])
+                    # link = reverse ("lms_game_detail", args=[entry.game.id])
                 )
 
                 # --- 💰 Settle Money in Bank app ---
