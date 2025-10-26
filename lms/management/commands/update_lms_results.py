@@ -98,6 +98,7 @@ class Command(BaseCommand):
                             group=entry.game.group,
                             receiver=entry.user,
                             actor=entry.user,
+                            link=f"lms_game_detail:{entry.game.id}"
                            # link= reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
@@ -117,6 +118,7 @@ class Command(BaseCommand):
                             group=entry.game.group,
                             receiver=entry.user,
                             actor=entry.user,
+                            link=f"lms_game_detail:{entry.game.id}"
                             # link=reverse ("lms_game_detail", args=[entry.game.id])
                         )
 
@@ -149,6 +151,7 @@ class Command(BaseCommand):
                     group=entry.game.group,
                     actor=winner_entry.user,
                     receiver=winner_entry.user,
+                    link=f"lms_game_detail:{entry.game.id}"
                     # link = reverse ("lms_game_detail", args=[entry.game.id])
                 )
 
