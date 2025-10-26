@@ -10,6 +10,7 @@ from player_messages.models import PlayerMessage
 from collections import defaultdict, OrderedDict
 from groups.models import UserGroup
 from django.utils.dateparse import parse_date
+from django.utils import timezone
 from django.utils.timezone import make_aware, get_current_timezone
 from decimal import Decimal
 from django.views import generic
@@ -144,6 +145,21 @@ def submit_predictions(request):
                 group=group,
                 defaults={"entry_fee": Decimal("5.00")}
             )
+
+
+            # 🕒 Check if any fixture has already started
+            fixture_ids = [item.get("fixture_id") for item in predictions_data if item.get("fixture_id")]
+            fixtures = Fixture.objects.filter(id__in=fixture_ids)
+
+            now = timezone.now()
+            started_fixtures = fixtures.filter(date__lte=now)
+
+            if started_fixtures.exists():
+                names = ", ".join(f"{f.home_team} vs {f.away_team}" for f in started_fixtures)
+                return JsonResponse({
+                    "error": f"Cannot submit predictions. The following fixtures have already started: {names}"
+                }, status=400)
+
 
             # Save or update predictions
             for item in predictions_data:
