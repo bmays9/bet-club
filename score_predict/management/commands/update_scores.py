@@ -154,7 +154,7 @@ def check_for_winners(stdout=None):
                         receiver=w.player,
                         actor=w.player,
                         group=game.group,
-                        link= reverse("game_detail", args=[game.id])
+                        link=f"game_detail:{game.id}"
                     )
 
 
