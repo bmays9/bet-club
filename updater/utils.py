@@ -18,6 +18,8 @@ def maybe_update():
     UPDATE_INTERVAL_DAYS = 7
     RESULTS_DELAY_HOURS = 2
 
+    results_updated = False
+
     for league in League.objects.all():
         tracker, _ = LeagueUpdateTracker.objects.get_or_create(league=league)
         fixtures = Fixture.objects.filter(league_id=league.tournament_id)
@@ -38,10 +40,9 @@ def maybe_update():
             if pending_fixtures.exists():
                 print(f"Updating results for {league.name} ({league.code}) - {pending_fixtures.count()} pending fixtures")
                 call_command("update_results", league_code=league.code, verbosity=0)
-                call_command("update_scores", verbosity=0)
-                call_command("update_lms_results", verbosity=0)
                 tracker.last_results_check = timezone.now()
                 tracker.save()
+                results_updated = True  # mark that at least one update happened
 
         # --- Fixtures ---
         if tracker.should_update_fixtures(UPDATE_INTERVAL_DAYS):
@@ -56,4 +57,8 @@ def maybe_update():
             tracker.last_tables_check = timezone.now()
             tracker.save()
 
+        # --- Run these once, after all leagues are processed ---
+        if results_updated:
+            call_command("update_scores", verbosity=0)
+            call_command("update_lms_results", verbosity=0)
             

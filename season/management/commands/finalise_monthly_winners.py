@@ -39,9 +39,13 @@ class Command(BaseCommand):
         player_game_id = winner["player_game"]
         username = winner["player_game__user__username"]
         total_points = winner["total_points"]
+        print ("winner", winner)
+        print ("username", username)
+        print ("totalpoints", total_points)
 
         # 4. Find the monthly prize pools
         pools = PrizePool.objects.filter(category=PrizeCategory.MONTH_WINNER, active=True)
+        print ("pools", pools)
         for pool in pools:
             # Prevent duplicate payouts for same month
             already = pool.payouts.filter(awarded_for_month__year=year, awarded_for_month__month=month).exists()

@@ -81,14 +81,15 @@
                 {% with pick=round_picks|get_item:round.id %}
                 <td>
                     {% if pick %}
-                    {% if now < round.start_date %}
-                    <span class="text-success">&#10004;</span>
-                    {% else %}
+                    {% if show_current_picks %}
                     {{ pick.team_name }}
+                    {% else %}
+                    <span class="text-success">&#10004;</span>
                     {% endif %}
                     {% else %}
                     <span class="text-danger">&#10008;</span>
                     {% endif %}
+
                 </td>
                 {% endwith %}
                 {% endwith %}

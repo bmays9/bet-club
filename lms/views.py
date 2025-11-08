@@ -30,12 +30,12 @@ def lms_pick(request, game_id, round_id):
         return redirect("lms_game_detail", game_id=game.id)
 
     if request.method == "POST":
-        print("DEBUG POST DATA:", request.POST)  # 👈 log form data
+        print("DEBUG POST DATA:", request.POST)  #  log form data
 
         form = LMSPickForm(request.POST, game=game, round=round, entry=entry)
         if form.is_valid():
             team_name = form.cleaned_data["team_name"]
-            print("DEBUG VALID TEAM:", team_name)  # 👈 log chosen team
+            print("DEBUG VALID TEAM:", team_name)  #  log chosen team
 
             if entry.picks.filter(team_name=team_name).exists():
                 messages.error(request, f"You already picked {team_name} in a previous round.")
@@ -46,9 +46,18 @@ def lms_pick(request, game_id, round_id):
                     away_team=team_name
                 ).first()
 
-                print("DEBUG MATCHED FIXTURE:", fixture)  # 👈 log fixture
+                print("DEBUG MATCHED FIXTURE:", fixture)  # log fixture
+
+
 
                 if fixture:
+                    if fixture.date <= timezone.now():
+                        messages.error(
+                            request,
+                            f"Cannot pick {team_name}. That fixture has already started."
+                        )
+                        return redirect("lms_game_detail", game_id=game.id)
+
                     LMSPick.objects.create(
                         entry=entry,
                         round=round,
@@ -259,14 +268,29 @@ def lms_game_detail(request, game_id):
     #print("round object", round_obj)
     #print("This entry", entry)
     #print("user has picked", user_pick)
-    print("entries", entries)
+    ##print("entries", entries)
     #print("rounds", rounds)
-    print("pbeandr", picks_by_entry_and_round)
+    ##print("pbeandr", picks_by_entry_and_round)
     ##print("other games", other_games)
     #print("pot", prize_pot)
     #print("winning entry", winner_entry)
     #print("winner last pick", winner_last_pick)
     #print("entries for results", entries_for_results)
+
+    # Determine whether to show current picks
+    show_current_picks = False
+    if round_obj:
+        if round_obj.round_number == 1:
+            # Round 1 picks become visible when the first fixture starts
+            first_fixture = round_obj.fixtures.order_by("date").first()
+            if first_fixture and timezone.now() >= first_fixture.date:
+                show_current_picks = True
+        else:
+            # For later rounds, show picks only after all players have made their pick
+            total_entries = entries.count()
+            total_picks = LMSPick.objects.filter(round=round_obj, entry__game=game).count()
+            if total_picks == total_entries and total_entries > 0:
+                show_current_picks = True
     
     return render(request, "lms/game_detail.html", {
         "game": game,
@@ -282,7 +306,8 @@ def lms_game_detail(request, game_id):
         "winner_entry": winner_entry,
         "winner_last_pick": winner_last_pick,
         "entries_for_results": entries_for_results,
-        "now": timezone.now(),  # ✅ needed for "Picked" / tick icon logic
+        "now": timezone.now(),  # needed for "Picked" / tick icon logic
+        "show_current_picks": show_current_picks,
     })
 
 
