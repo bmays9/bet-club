@@ -280,16 +280,23 @@ def lms_game_detail(request, game_id):
     # Determine whether to show current picks
     show_current_picks = False
     if round_obj:
+        # Count only players still alive
+        active_entries = entries.filter(alive=True)
+        active_count = active_entries.count()
+
         if round_obj.round_number == 1:
             # Round 1 picks become visible when the first fixture starts
             first_fixture = round_obj.fixtures.order_by("date").first()
             if first_fixture and timezone.now() >= first_fixture.date:
                 show_current_picks = True
         else:
-            # For later rounds, show picks only after all players have made their pick
-            total_entries = entries.count()
-            total_picks = LMSPick.objects.filter(round=round_obj, entry__game=game).count()
-            if total_picks == total_entries and total_entries > 0:
+            # For later rounds, reveal picks when all alive players have picked
+            picks_made = LMSPick.objects.filter(
+                round=round_obj,
+                entry__in=active_entries
+            ).count()
+
+            if picks_made == active_count and active_count > 0:
                 show_current_picks = True
     
     return render(request, "lms/game_detail.html", {
