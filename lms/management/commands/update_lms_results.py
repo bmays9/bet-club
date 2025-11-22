@@ -177,7 +177,7 @@ class Command(BaseCommand):
                 create_message(
                     code="LM-OOO",
                     context={"league": round_obj.game.league, "prize": prize_pool},
-                    link=f"lms_game_detail:{entry.game.id}"
+                    link=f"lms_game_detail:{entry.game.id}",
                     group=round_obj.game.group
                 )
 
