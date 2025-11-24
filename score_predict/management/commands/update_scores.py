@@ -106,7 +106,7 @@ def check_for_winners(stdout=None):
             continue  # no fixtures linked, skip
 
         # Only decide winner if ALL fixtures are finished
-        if all(f.status_code in [100, 90, 60] for f in game_fixtures):
+        if all(f.status_code in [100, 90] for f in game_fixtures):
             # Step 1: highest total_score
             highest_total = GameEntry.objects.filter(game=game).aggregate(
                 top_total=Max('total_score')
