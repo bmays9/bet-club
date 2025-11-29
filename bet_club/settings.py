@@ -41,12 +41,13 @@ ALLOWED_HOSTS = [
     'localhost,127.0.0.1',
     '127.0.0.1',
     '.herokuapp.com',
+    'bet-club-a66f722de77d.herokuapp.com'
     'yourdomain.com'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://8000-bmays9-betclub-1ck08jddohy.ws-eu121.gitpod.io", 
-    "https://*.herokuapp.com"
+    "https://bet-club-a66f722de77d.herokuapp.com"
 ]
 
 # Application definition
