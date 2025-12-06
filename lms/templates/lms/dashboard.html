@@ -25,12 +25,24 @@
         <td>{{ item.entry.game.group.name }}</td>
         <td><a href="{% url 'lms_game_detail' item.entry.game.id %}" class="btn btn-sm btn-primary">View Game</a></td>
         <td>
-          {% if item.next_round %}
-            Round {{ item.next_round.round_number }}
-            (starts {{ item.next_round.start_date|date:"M d" }})
-          {% else %}
-            
-          {% endif %}
+            {% if item.next_round %}
+                Round {{ item.next_round.round_number }}
+                (starts {{ item.next_round.start_date|date:"M d" }})<br>
+                Deadline:
+                    {% if item.entry.game.deadline_mode == 'first_game' %}
+                        First Game K.O.
+                        {% if item.next_round.auto_pick_team %}
+                            <p>Auto pick for non-selection: {{ item.next_round.auto_pick_team }}</p>
+                        {% endif %}
+
+                    {% else %}
+                        Extended (Your Pick K.O.)
+
+                    {% endif %}
+
+            {% else %}
+
+            {% endif %}
         </td>
         <td>
           {% if item.existing_pick.team_name %}

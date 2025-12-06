@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
+from lms.services.missing_picks import handle_missing_picks
 from player_messages.utils import create_message
 from score_predict.models import Fixture
 
@@ -16,7 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Updating LMS pick results...")
 
-        # --- 1️⃣ Process earliest incomplete rounds per game ---
+        # --- 10 Process earliest incomplete rounds per game ---
         earliest_incomplete_rounds = (
             LMSRound.objects.filter(game__active=True, completed=False, start_date__lte=timezone.now())   # ✅ only past or current rounds
             .values("game")
@@ -34,6 +35,10 @@ class Command(BaseCommand):
 
         for round_obj in incomplete_rounds:
             self.stdout.write(f"\n➡️ Processing {round_obj}")
+            game = round_obj.game
+
+            # NEW — process missing picks BEFORE computing any results
+            handle_missing_picks(game, round_obj)
 
             # --- 1a. Update pending picks ---
             picks_pending = round_obj.picks.filter(result="PENDING")
@@ -83,6 +88,8 @@ class Command(BaseCommand):
                 picks_for_entry = round_obj.picks.filter(entry=entry)
 
                 if not picks_for_entry.exists():
+                    if game.deadline_mode != "first_game":
+                        continue
                     # No picks made: eliminated at round 0 only if round 1, otherwise current round
                     if entry.alive:
                         entry.alive = False
@@ -142,7 +149,7 @@ class Command(BaseCommand):
                 round_obj.game.winner = winner_entry.user
                 round_obj.game.active = False
                 round_obj.game.save()
-                self.stdout.write(f"🏆 Game over! Winner: {winner_entry.user} ({round_obj.game})")
+                self.stdout.write(f" Game over! Winner: {winner_entry.user} ({round_obj.game})")
                 
                 # Update messages with the LMS Winner!
                 create_message(

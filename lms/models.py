@@ -15,12 +15,40 @@ class LMSGame(models.Model):
         ("EL2", "League Two"),
     ]
 
+    DEADLINE_FIRST_GAME = "first_game"
+    DEADLINE_EXTENDED = "extended"
+
+    DEADLINE_CHOICES = [
+        (DEADLINE_FIRST_GAME, "First game kickoff"),
+        (DEADLINE_EXTENDED, "Extended (pick team before they kickoff)"),
+    ]
+
+    NO_PICK_ELIMINATION = "elimination"
+    NO_PICK_LOWEST_TEAM = "lowest_team"
+    NO_PICK_RANDOM_TEAM = "random_team"
+
+    NO_PICK_CHOICES = [
+        (NO_PICK_ELIMINATION, "Elimination"),
+        (NO_PICK_RANDOM_TEAM, "Assigned random away team"),
+        # (NO_PICK_LOWEST_TEAM, "Assigned lowest-placed team"),
+    ]
+
     entry_fee = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE, related_name="lms_games")
     league = models.CharField(max_length=3, choices=LEAGUE_CHOICES)
     active = models.BooleanField(default=True) #True is active, live game, False is completed
     created_at = models.DateTimeField(auto_now_add=True)
     winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='lms_winner')
+    deadline_mode = models.CharField(
+        max_length=20,
+        choices=DEADLINE_CHOICES,
+        default=DEADLINE_FIRST_GAME,
+    )
+    no_pick_rule = models.CharField(
+        max_length=20,
+        choices=NO_PICK_CHOICES,
+        default=NO_PICK_ELIMINATION,
+    ) 
 
     def __str__(self):
         game_id = self.id
@@ -34,6 +62,7 @@ class LMSRound(models.Model):
     end_date = models.DateTimeField() # 4 hours after the last fixture
     completed = models.BooleanField(default=False)
     fixtures = models.ManyToManyField(Fixture, related_name="lms_rounds", blank=True)
+    auto_pick_team = models.CharField(max_length=100, null=True, blank=True) 
 
     @property
     def is_active(self):
@@ -47,6 +76,7 @@ class LMSRound(models.Model):
 
 
 class LMSEntry(models.Model):
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(LMSGame, on_delete=models.CASCADE, related_name="entries")
     alive = models.BooleanField(default=True)

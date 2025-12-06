@@ -12,7 +12,16 @@ from groups.models import UserGroup
 from score_predict.models import Fixture
 from collections import defaultdict, namedtuple
 from player_messages.utils import create_message
+import random
 
+
+def round_is_closed(round, game):
+    if game.deadline_mode == "extended":
+        return False  # handled later per-team
+
+    # first_game mode: find earliest fixture
+    earliest = round.fixtures.order_by("date").first()
+    return timezone.now() >= earliest.date
 
 @login_required
 def lms_pick(request, game_id, round_id):
@@ -20,6 +29,11 @@ def lms_pick(request, game_id, round_id):
     round = get_object_or_404(LMSRound, id=round_id, game=game)
 
     entry, created = LMSEntry.objects.get_or_create(game=game, user=request.user)
+
+    if game.deadline_mode == "first_game":
+        if round_is_closed(round, game):
+            messages.error(request, "The round is closed — no more picks allowed.")
+            return redirect("lms_game_detail", game_id=game.id)
 
     if not entry.alive:
         messages.error(request, "You have been eliminated from this game.")
@@ -264,7 +278,9 @@ def lms_game_detail(request, game_id):
                 key=lambda e: (e.eliminated_round is None, e.eliminated_round or 0, e.user.username.lower())
             )
 
-    #print("game", game)
+    
+    print("game", game)
+    print("game npr", game.no_pick_rule)
     #print("round object", round_obj)
     #print("This entry", entry)
     #print("user has picked", user_pick)
@@ -327,7 +343,7 @@ def create_game(request):
             game = form.save(commit=False)
             game.save()
 
-            # Create messaging for new game - code LM-NEW
+            # Message creation
             create_message(
                 code="LM-NEW",
                 context={"User": request.user, "league": game.get_league_display()},
@@ -339,19 +355,19 @@ def create_game(request):
 
             print(f"DEBUG: Game League {game.league} ")
 
-            # Look ahead up to 30 days for the first valid block
+            # Look ahead up to 30 days for first valid block
             for days_ahead in range(0, 30):
                 current_day = today + timedelta(days=days_ahead)
-                weekday = current_day.weekday()  # Monday=0 ... Sunday=6
+                weekday = current_day.weekday()
 
-                if weekday == 4:  # Friday → weekend block
+                if weekday == 4:  # Friday
                     block_start = current_day
-                    block_end = block_start + timedelta(days=3)  # Fri–Mon
-                elif weekday == 1:  # Tuesday → midweek block
+                    block_end = block_start + timedelta(days=3)
+                elif weekday == 1:  # Tuesday
                     block_start = current_day
-                    block_end = block_start + timedelta(days=2)  # Tue–Thu
+                    block_end = block_start + timedelta(days=2)
                 else:
-                    continue  # not the start of a block, skip
+                    continue
 
                 fixtures = Fixture.objects.filter(
                     league_short_name=game.league,
@@ -369,12 +385,54 @@ def create_game(request):
                     )
                     created_round.fixtures.set(fixtures)
                     print(f"DEBUG: Created LMSRound {created_round} with {fixtures.count()} fixtures")
-                    break  # stop after creating the first valid round
+
+                    # -------------------------------------------------------
+                    # NEW LOGIC - set auto-pick team (applies only AFTER Round 1)
+                    # -------------------------------------------------------
+
+                    print("game no pick rule", game.no_pick_rule)
+                    print("deadline mode", game.deadline_mode)
+                    if (
+                        created_round.round_number > 0 and
+                        game.deadline_mode == "first_game" and
+                        game.no_pick_rule == "random_team"
+                    ):
+                        # Get away teams
+                        away_teams = [fx.away_team for fx in fixtures]
+
+                        print("away teams", away_teams)
+
+                        # All alive entries (none yet for round 1)
+                        alive_entries = LMSEntry.objects.filter(game=game, alive=True)
+
+                        valid_teams = []
+                        for team in away_teams:
+                            used_by_any = LMSPick.objects.filter(
+                                entry__in=alive_entries,
+                                team_name=team
+                            ).exists()
+
+                            if not used_by_any:
+                                valid_teams.append(team)
+                        
+                        print("valid teams", valid_teams)
+
+                        if valid_teams:
+                            random.shuffle(valid_teams)
+                            chosen = valid_teams[0]
+                            created_round.auto_pick_team = chosen
+                            created_round.save()
+                            print(f"DEBUG: Auto-pick team set to {chosen}")
+
+                    # -------------------------------------------------------
+
+                    break
 
             if not created_round:
                 print("DEBUG: No valid fixture block found within 30 days.")
 
             return redirect("lms_dashboard")
+
     else:
         form = CreateLMSGameForm(user=request.user)
 

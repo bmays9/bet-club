@@ -34,6 +34,25 @@
         {% endif %}
     </p>
 
+    <!-- Status -->
+    <p>
+        <strong>Details:</strong>
+        Entry Fee: <strong> £{{ game.entry_fee }}</strong> |
+        Deadline:
+        {% if game.deadline_mode == 'first_game' %}
+        <strong>First Game K.O.</strong>
+        {% else %}
+        <strong>Extended (Your Pick K.O.)</strong>
+        {% endif %}
+        |
+        {% if game.no_pick_rule == 'elimination' %}
+        No pick = <strong>Elimination</strong>
+        {% elif game.no_pick_rule == 'random_team' %}
+        Auto pick for non-selection: <strong>{{ round.auto_pick_team }}</strong>
+        {% endif %}
+
+    </p>
+
     <hr>
 
     <!-- Player's own pick message -->

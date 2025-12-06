@@ -32,7 +32,7 @@ class CreateLMSGameForm(forms.ModelForm):
 
     class Meta:
         model = LMSGame
-        fields = ["entry_fee", "league", "group"]
+        fields = ["entry_fee", "league", "group", "deadline_mode", "no_pick_rule",]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
