@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.generic.detail import DetailView
 from django.db import transaction
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Q
 from django.shortcuts import get_object_or_404, render
 from .models import GameTemplate, GameInstance, Prediction, Fixture, GameEntry
 from player_messages.models import PlayerMessage
@@ -55,21 +55,32 @@ class FixtureList(generic.ListView):
     context_object_name = "fixtures"
 
     def get_queryset(self):
-        selected_tab = self.request.GET.get("tab", "weekend")
+        
         today = datetime.now(get_current_timezone()).date()
 
         # Get the next GameTemplate of the selected type
         next_template = (
-            GameTemplate.objects
-            .filter(game_type__iexact=selected_tab, end_date__gte=today)
+           GameTemplate.objects
+            .filter(Q(start_date__gte=today) | Q(end_date__gte=today))
             .order_by("start_date")
             .first()
         )
 
+        print(
+            GameTemplate.objects
+            .filter(start_date__month=12)
+            .values_list("id", "game_type", "start_date", "end_date")
+)
+
         self.selected_template = next_template  # Save for use in context
 
         if next_template:
-            return Fixture.objects.filter(gametemplate=next_template).order_by("date")
+            return (
+                Fixture.objects
+                .filter(gametemplate=next_template)
+                .exclude(status_code__in=[60, 90])
+                .order_by("date")
+            )
         return Fixture.objects.none()
 
     def get_context_data(self, **kwargs):
@@ -86,10 +97,8 @@ class FixtureList(generic.ListView):
                 ordered_grouped[LEAGUE_ORDER[key]] = grouped[key]
 
         context["fixture_list"] = ordered_grouped
-        context["selected_tab"] = self.request.GET.get("tab", "weekend")
         context["game_template"] = self.selected_template
-        
-        
+                
         user = self.request.user
 
         if user.is_authenticated:

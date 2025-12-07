@@ -46,7 +46,7 @@ class Command(BaseCommand):
             for pick in picks_pending:
                 fixture = pick.fixture
 
-                # ⚠️ Only process fixtures that have started or finished
+                # ⚠ Only process fixtures that have started or finished
                 if fixture.date > timezone.now():
                     continue  # skip future fixtures entirely
     
@@ -77,11 +77,26 @@ class Command(BaseCommand):
                     pick.result = result
                     pick.save()
                     self.stdout.write(f"Pick result computed: {result}")
-                else:  
-                    if fixture.status_code in POSTPONED_STATUS_CODES:
+                else:
+                    # Treat cancelled fixtures (90) as WIN
+                    if fixture.status_code == 90:
+                        result = "WIN"
+
+                    # Treat postponed-but-not-cancelled fixtures (60) as LOSS or keep as-is
+                    elif fixture.status_code == 60:
                         result = "LOSE"
-                    # Not final yet (or mid-match) — skip
-                    self.stdout.write(f"Fixture {fixture.id} not final (status {fixture.status_code}) — skipping pick {pick.id}")
+
+                    else:
+                        # Not finished, not cancelled, not postponed → skip until next run
+                        self.stdout.write(
+                            f"Fixture {fixture.id} not final (status {fixture.status_code}) — skipping pick {pick.id}"
+                        )
+                        continue
+
+                    pick.result = result
+                    pick.save()
+                    self.stdout.write(f"Pick result computed from postponed/cancelled: {result}")
+
 
             # --- 1b. Eliminate entries with losing/drawing picks or no picks ---
             for entry in round_obj.game.entries.all():
