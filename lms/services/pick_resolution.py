@@ -66,7 +66,11 @@ def handle_unresolved_postponed_picks(game, round_obj):
     POSTPONED_STATUS_CODES = (60, 90)
     FINAL_STATUS_CODES = (100,)
 
-    if timezone.now().date() <= round_obj.end_date:
+     # Safety check
+    if not round_obj.end_date:
+        return
+
+    if timezone.now() <= round_obj.end_date:
         return  # Too early
 
     pending_picks = round_obj.picks.filter(result="PENDING")

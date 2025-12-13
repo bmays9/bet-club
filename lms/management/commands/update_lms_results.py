@@ -9,6 +9,7 @@ from datetime import timedelta
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from lms.services.missing_picks import handle_missing_picks
 from lms.services.pick_resolution import (assign_missing_picks, handle_unresolved_postponed_picks, round_deadline_passed)
+from lms.utils import get_auto_pick_teams_for_round
 from player_messages.utils import create_message
 from score_predict.models import Fixture
 
@@ -82,7 +83,8 @@ class Command(BaseCommand):
             # ----------------------------------------------------
             for pick in round_obj.picks.filter(result="PENDING"):
                 fixture = pick.fixture
-
+                print("Handling this pick now:", pick)
+                print("which is this fixture", fixture)
                 if not fixture or fixture.date > now_ts:
                     continue
 
@@ -98,7 +100,7 @@ class Command(BaseCommand):
                         result = "DRAW"
 
                 elif fixture.status_code == CANCELLED_CODE:
-                    result = "WIN"   # cancelled = free pass
+                    continue   # unresolved
 
                 elif fixture.status_code == POSTPONED_CODE:
                     continue  # still unresolved
@@ -108,11 +110,12 @@ class Command(BaseCommand):
 
                 pick.result = result
                 pick.save()
+                self.stdout.write(f"Pick result computed: {result}")
 
             # ----------------------------------------------------
-            # 6️ Eliminate entries
+            # 6️ Eliminate entries that lost or drew
             # ----------------------------------------------------
-            for entry in game.entries.all():
+            for entry in round_obj.game.entries.all():
                 picks = round_obj.picks.filter(entry=entry)
 
                 if not picks.exists():
@@ -120,16 +123,38 @@ class Command(BaseCommand):
                         continue
 
                     entry.alive = False
-                    entry.eliminated_round = (
-                        0 if round_obj.round_number == 1 else round_obj.round_number
-                    )
+                    entry.eliminated_round = 0 if round_obj.round_number == 1 else round_obj.round_number
                     entry.save()
+                    self.stdout.write(f"Entry {entry.user} eliminated for not picking in round {round_obj.round_number}")
+
+                    # Update messages with the losers
+                    create_message(
+                        code="LM-UKO",
+                        context={"User": entry.user, "league": entry.game.get_league_display()},
+                        group=entry.game.group,
+                        receiver=entry.user,
+                        actor=entry.user,
+                        link=f"lms_game_detail:{entry.game.id}"
+                       # link= reverse ("lms_game_detail", args=[entry.game.id])
+                    )
                     continue
 
                 if picks.filter(result__in=["LOSE", "DRAW"]).exists():
                     entry.alive = False
                     entry.eliminated_round = round_obj.round_number
                     entry.save()
+                    self.stdout.write(f"Entry {entry.user} eliminated for incorrect pick(s) in round {round_obj.round_number}")
+
+                    # Update messages with the losers
+                    create_message(
+                        code="LM-UKO",
+                        context={"User": entry.user, "league": entry.game.get_league_display()},
+                        group=entry.game.group,
+                        receiver=entry.user,
+                        actor=entry.user,
+                        link=f"lms_game_detail:{entry.game.id}"
+                        # link=reverse ("lms_game_detail", args=[entry.game.id])
+                    )
 
             # ----------------------------------------------------
             # 7️ Complete round
@@ -137,46 +162,97 @@ class Command(BaseCommand):
             if not round_obj.picks.filter(result="PENDING").exists():
                 round_obj.completed = True
                 round_obj.save()
+                self.stdout.write(f"Round {round_obj.round_number} marked as completed.")
 
             # ----------------------------------------------------
             # 8️ Check for winner
             # ----------------------------------------------------
             alive = game.entries.filter(alive=True)
             alive_count = alive.count()
+            entry_fee = round_obj.game.entry_fee  # stored in LMSGame
+            entrants = game.entries.count()
+            prize_pool = Decimal(entry_fee) * entrants
 
             if alive_count == 1:
                 winner_entry = alive.first()
                 game.winner = winner_entry.user
                 game.active = False
                 game.save()
+                self.stdout.write(f" Game over! Winner: {winner_entry.user} ({round_obj.game})")
 
-                entrants = game.entries.count()
-                prize_pool = Decimal(game.entry_fee) * entrants
+                # Update messages with the LMS Winner!
+                create_message(
+                    code="LM-WIN",
+                    context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
+                    group=entry.game.group,
+                    actor=winner_entry.user,
+                    receiver=winner_entry.user,
+                    link=f"lms_game_detail:{entry.game.id}"
+                    # link = reverse ("lms_game_detail", args=[entry.game.id])
+                    )
 
+                 # --- Settle Money in Bank app ---
+                entrants = [e.user for e in round_obj.game.entries.all()]  # all users who joined this game
+                winners = [winner_entry.user]                              # the single winner
+                
                 apply_batch(
-                    group=game.group,
-                    entrants=[e.user for e in game.entries.all()],
-                    winners=[winner_entry.user],
-                    entry_fee=Decimal(game.entry_fee),
+                    group=round_obj.game.group, 
+                    entrants=entrants,
+                    winners=winners,
+                    entry_fee=Decimal(entry_fee),
                     prize_pool=prize_pool,
-                    description=f"LMS {game.get_league_display()}",
-                )
+                    description=f"Settlement for LMS {round_obj.game.get_league_display()}"
+                    )
 
             elif alive_count == 0:
-                game.active = False
-                game.save()
+                round_obj.game.active = False
+                round_obj.game.save()
+                self.stdout.write(f"Game over with no winner: {round_obj.game}")
+
+                # Update messages with no LMS Winner - rollover!
+                create_message(
+                    code="LM-OOO",
+                    context={"league": round_obj.game.league, "prize": prize_pool},
+                    link=f"lms_game_detail:{entry.game.id}",
+                    group=round_obj.game.group
+                )
+
 
             # ---------------------------------------------------
             # 9️ Create next round
             # ----------------------------------------------------
             latest_round = LMSRound.objects.filter(game=game).aggregate(
                 Max("round_number")
-            )["round_number__max"]
+                )["round_number__max"]
 
             if round_obj.completed and round_obj.round_number == latest_round:
-                self.create_next_round(round_obj)
-
-        self.stdout.write("✅ LMS pick results update complete.")
+                next_round_num = round_obj.round_number + 1
+                created_round = self.create_next_round(round_obj)
+                if created_round:
+                    self.stdout.write(f"Created Round {created_round.round_number} for {round_obj.game}")
+                else:
+                    self.stdout.write(f" Not enough fixtures to create Round {next_round_num} for {round_obj.game}")
+        
+                    
+        # --- Final check: active games missing a next round ---
+        self.stdout.write("\nChecking active games for missing next rounds...")
+        for game in LMSGame.objects.filter(active=True):
+            latest_round = LMSRound.objects.filter(game=game).order_by("-round_number").first()
+            if latest_round:
+                if latest_round.completed:
+                    next_round_num = latest_round.round_number + 1
+                    if not LMSRound.objects.filter(game=game, round_number=next_round_num).exists():
+                        created_round = self.create_next_round(latest_round)
+                        if created_round:
+                            self.stdout.write(f"Created Round {created_round.round_number} for {game}")
+                        else:
+                            self.stdout.write(f"No suitable fixtures found for next round of {game}")
+                else:
+                    self.stdout.write(f"Latest round {latest_round.round_number} of {game} not yet completed. Skipping.")
+            else:
+                self.stdout.write(f"No rounds found for {game}")            
+                    
+        self.stdout.write(" LMS pick results update complete.")
 
     # --------------------------------------------------------
     # Helper: create next round
@@ -209,6 +285,17 @@ class Command(BaseCommand):
                     end_date=fixtures.last().date,
                 )
                 new_round.fixtures.set(fixtures)
+                auto_picks = get_auto_pick_teams_for_round(game, new_round, fixtures, count=4)
+                print("auto", auto_picks)
+
+                if auto_picks:
+                    new_round.auto_pick_team = auto_picks[3]
+                    new_round.auto_pick_team1 = auto_picks[0]
+                    new_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
+                    new_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
+                    new_round.save()
+
+                    print("Auto-pick teams set:", auto_picks[0],auto_picks[1] )
                 return new_round
 
 
