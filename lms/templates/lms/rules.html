@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="lms-rules">
+    <h2>Last Man Standing – Game Rules</h2>
+    <p>
+        <a class="btn btn-outline-info" href="{% url 'lms_dashboard' %}">Back to LMS Dashboard</a>
+    </p>
+    <p>
+        In Last Man Standing (LMS), you must pick one team each round.
+        If your team wins, you progress to the next round.
+        If your team loses (or draws), you are eliminated.
+        Each team can only be used once per game.
+    </p>
+
+    <hr>
+
+    <h3>⏰ Pick Deadlines</h3>
+
+    <p>
+        Each LMS game uses one of the following deadline rules:
+    </p>
+
+    <h4>1️⃣ Extended Deadline</h4>
+    <ul>
+        <li>You can make your pick up until the kickoff time of the match you select.</li>
+        <li>Different players can pick at different times within the round.</li>
+        <li>If you do not make a pick, nothing happens automatically until the round is processed.</li>
+        <li>Player picks are not visible until no further picks are necessary, or the deadline has passed.</li>
+    </ul>
+
+    <h4>2️⃣ First Game Deadline</h4>
+    <ul>
+        <li>The round closes when the <strong>first match of the round kicks off</strong>.</li>
+        <li>After this point, no manual picks are allowed.</li>
+        <li>Any player who has not picked will be handled automatically based on the game’s rules.</li>
+    </ul>
+
+    <hr>
+
+    <h3>🤖 What Happens If You Don’t Pick?</h3>
+
+    <p>
+        If the round closes and you haven’t made a pick, the game will apply the
+        configured <strong>No Pick Rule</strong>:
+    </p>
+
+    <h4>Random Away Team</h4>
+    <ul>
+        <li>When the round is created, the system pre-selects one valid away teams.</li>
+        <li>
+            This team is guaranteed to be:
+            <ul>
+                <li>Playing in the round</li>
+                <li>Not already used by any remaining player</li>
+            </ul>
+        </li>
+        <li>If you fail to pick before the deadline, this teams will be automatically assigned to you.</li>
+        <li>This auto-pick is visible in advance, so you always know what will happen.</li>
+    </ul>
+
+    <p>
+        <strong>Note:</strong> Auto-picks are only used from Round 2 onwards.
+        Round 1 always requires a manual pick and entry into the game.
+    </p>
+
+    <hr>
+
+    <h3>📅 Postponed & Cancelled Matches</h3>
+
+    <p>
+        Sometimes fixtures do not go ahead as planned. LMS handles these situations
+        fairly and consistently.
+    </p>
+
+    <h4>Unfinished Matches</h4>
+    <ul>
+        <li>If a match is postponed and still unresolved by the end of the round:</li>
+        <li>The system will automatically assign a valid replacement team and fixture.</li>
+        <li>This only happens once the round’s scheduled end date has passed.</li>
+        <li>The replacement team follows the same rules as auto-picks (unused and valid).</li>
+    </ul>
+
+    <hr>
+
+    <h3>🏆 Winning the Game</h3>
+
+    <ul>
+        <li>The game continues round by round until only one player remains.</li>
+        <li>If exactly one player is left alive, they win the prize pot.</li>
+        <li>If all remaining players are eliminated in the same round, the game ends with no winner.</li>
+    </ul>
+
+    <p>
+        Good luck — and remember: sometimes not picking is still a strategy 😉
+    </p>
+</section>
+
+
+{% endblock %}

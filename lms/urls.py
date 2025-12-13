@@ -8,4 +8,5 @@ urlpatterns = [
     path("game/<int:game_id>/", views.lms_game_detail, name="lms_game_detail"),
     path("game/<int:game_id>/round/<int:round_id>/pick/", views.lms_pick, name="lms_pick"),
     path('history/', views.lms_history, name='lms_history'),
+    path('rules/', views.lms_rules, name='lms_rules')
 ]

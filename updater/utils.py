@@ -53,12 +53,12 @@ def maybe_update():
         # --- Tables ---
         if tracker.should_update_tables(fixtures, interval_minutes=120):
             call_command("fetch_standings", league_code=league.code, verbosity=0)
-            call_command("update_season_scores", verbosity=0)
             tracker.last_tables_check = timezone.now()
             tracker.save()
 
-        # --- Run these once, after all leagues are processed ---
-        if results_updated:
-            call_command("update_scores", verbosity=0)
-            call_command("update_lms_results", verbosity=0)
+    # --- Run these once, after all leagues are processed ---
+    if results_updated:
+        call_command("update_scores", verbosity=0)
+        # call_command("update_lms_results", verbosity=0)
+        call_command("update_season_scores", verbosity=0)
             

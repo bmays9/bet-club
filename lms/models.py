@@ -63,6 +63,9 @@ class LMSRound(models.Model):
     completed = models.BooleanField(default=False)
     fixtures = models.ManyToManyField(Fixture, related_name="lms_rounds", blank=True)
     auto_pick_team = models.CharField(max_length=100, null=True, blank=True) 
+    auto_pick_team1 = models.CharField(max_length=100, null=True, blank=True)
+    auto_pick_team2 = models.CharField(max_length=100, null=True, blank=True)
+    auto_pick_team3 = models.CharField(max_length=100, null=True, blank=True)
 
     @property
     def is_active(self):
@@ -93,6 +96,7 @@ class LMSPick(models.Model):
     entry = models.ForeignKey(LMSEntry, on_delete=models.CASCADE, related_name="picks")
     round = models.ForeignKey(LMSRound, on_delete=models.CASCADE, related_name="picks")
     fixture = models.ForeignKey(Fixture, on_delete=models.CASCADE)
+    auto_assigned = models.BooleanField(default=False)
     team_name = models.CharField(max_length=100)  
     result = models.CharField(max_length=10, choices=[
         ("PENDING", "Pending"),

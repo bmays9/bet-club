@@ -11,7 +11,7 @@ class LMSGameAdmin(SummernoteModelAdmin):
 
 @admin.register(LMSRound)
 class LMSRoundAdmin(SummernoteModelAdmin):
-    list_display = ('game', 'round_number', 'start_date', 'end_date', 'completed', 'is_active','auto_pick_team')
+    list_display = ('game', 'round_number', 'start_date', 'end_date', 'completed', 'is_active','auto_pick_team1')
     search_fields = ['game']
     list_filter = ['completed']
 

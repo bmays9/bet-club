@@ -9,6 +9,7 @@ from datetime import timedelta
 from .models import LMSGame, LMSRound, LMSEntry, LMSGame, LMSPick
 from .forms import LMSPickForm, CreateLMSGameForm
 from groups.models import UserGroup
+from lms.utils import get_auto_pick_teams_for_round
 from score_predict.models import Fixture
 from collections import defaultdict, namedtuple
 from player_messages.utils import create_message
@@ -390,41 +391,17 @@ def create_game(request):
                     # NEW LOGIC - set auto-pick team (applies only AFTER Round 1)
                     # -------------------------------------------------------
 
-                    print("game no pick rule", game.no_pick_rule)
-                    print("deadline mode", game.deadline_mode)
-                    if (
-                        created_round.round_number > 0 and
-                        game.deadline_mode == "first_game" and
-                        game.no_pick_rule == "random_team"
-                    ):
-                        # Get away teams
-                        away_teams = [fx.away_team for fx in fixtures]
+                    auto_picks = get_auto_pick_teams_for_round(game, created_round, fixtures, count=4)
+                    print("auto", auto_picks)
 
-                        print("away teams", away_teams)
+                    if auto_picks:
+                        created_round.auto_pick_team = auto_picks[3]
+                        created_round.auto_pick_team1 = auto_picks[0]
+                        created_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
+                        created_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
+                        created_round.save()
 
-                        # All alive entries (none yet for round 1)
-                        alive_entries = LMSEntry.objects.filter(game=game, alive=True)
-
-                        valid_teams = []
-                        for team in away_teams:
-                            used_by_any = LMSPick.objects.filter(
-                                entry__in=alive_entries,
-                                team_name=team
-                            ).exists()
-
-                            if not used_by_any:
-                                valid_teams.append(team)
-                        
-                        print("valid teams", valid_teams)
-
-                        if valid_teams:
-                            random.shuffle(valid_teams)
-                            chosen = valid_teams[0]
-                            created_round.auto_pick_team = chosen
-                            created_round.save()
-                            print(f"DEBUG: Auto-pick team set to {chosen}")
-
-                    # -------------------------------------------------------
+                        print("Auto-pick teams set:", auto_picks[0],auto_picks[1] )
 
                     break
 
@@ -490,3 +467,6 @@ def lms_history(request):
     }
 
     return render(request, "lms/lms_history.html", context)
+
+def lms_rules(request):
+    return render(request, 'lms/rules.html')

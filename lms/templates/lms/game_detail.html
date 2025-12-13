@@ -35,23 +35,76 @@
     </p>
 
     <!-- Status -->
-    <p>
-        <strong>Details:</strong>
-        Entry Fee: <strong> £{{ game.entry_fee }}</strong> |
-        Deadline:
-        {% if game.deadline_mode == 'first_game' %}
-        <strong>First Game K.O.</strong>
-        {% else %}
-        <strong>Extended (Your Pick K.O.)</strong>
-        {% endif %}
-        |
-        {% if game.no_pick_rule == 'elimination' %}
-        No pick = <strong>Elimination</strong>
-        {% elif game.no_pick_rule == 'random_team' %}
-        Auto pick for non-selection: <strong>{{ round.auto_pick_team }}</strong>
-        {% endif %}
+    <div class="card border-primary mb-3">
+        <div class="card-body">
 
-    </p>
+            <!-- <h5 class="card-title">Game Rules</h5> -->
+
+            <div class="row">
+                <!-- Entry Fee -->
+                <div class="col-md-4 mb-2">
+                    <strong>Entry Fee:</strong><br>
+                    <span class="badge bg-success fs-5">
+                        £{{ game.entry_fee }}
+                    </span>
+                </div>
+
+                <!-- Deadline -->
+                <div class="col-md-4 mb-2">
+                    <strong>Pick Deadline</strong><br>
+                    {% if game.deadline_mode == 'first_game' %}
+                    <span class="badge bg-primary">First Game Kick-Off</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Extended (Your Pick KO)</span>
+                    {% endif %}
+                </div>
+
+                <!-- No Pick Rule -->
+                <div class="col-md-4 mb-2">
+                    <strong>If You Don’t Pick</strong><br>
+                    {% if game.no_pick_rule == 'elimination' %}
+                    <span class="badge bg-danger">Elimination</span>
+                    {% elif game.no_pick_rule == 'random_team' %}
+                    <span class="badge bg-warning text-dark">Auto Pick Assigned</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            
+            <hr>
+
+            <!-- Auto Pick Details -->
+            <div class="row">
+                {% if game.no_pick_rule == 'random_team' %}
+                <div class="col-md-6 mb-2">
+                    <strong>Auto Pick (No Selection)</strong><br>
+                    {% if round.auto_pick_team %}
+                    <span class="badge bg-info">{{ round.auto_pick_team }}</span>
+                    {% else %}
+                    <span class="text-muted">Not set</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="col-md-6 mb-2">
+                    <strong class="small-font">Auto Picks (Postponed Games)</strong><br>
+                    {% if round.auto_pick_team1 %}
+                    <span class="badge bg-light text-dark">1️⃣ {{ round.auto_pick_team1 }}</span>
+                    {% endif %}
+                    {% if round.auto_pick_team2 %}
+                    <span class="badge bg-light text-dark">2️⃣ {{ round.auto_pick_team2 }}</span>
+                    {% endif %}
+                    {% if round.auto_pick_team3 %}
+                    <span class="badge bg-light text-dark">3️⃣ {{ round.auto_pick_team3 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+
+        </div>
+    </div>
+
+
 
     <hr>
 
