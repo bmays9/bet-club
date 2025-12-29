@@ -59,6 +59,6 @@ def maybe_update():
     # --- Run these once, after all leagues are processed ---
     if results_updated:
         call_command("update_scores", verbosity=0)
-        # call_command("update_lms_results", verbosity=0)
+        call_command("update_lms_results", verbosity=0)
         call_command("update_season_scores", verbosity=0)
             

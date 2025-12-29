@@ -5,7 +5,7 @@ from django.db.models import Max, Min
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import now
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from lms.services.missing_picks import handle_missing_picks
 from lms.services.pick_resolution import (assign_missing_picks, handle_unresolved_postponed_picks, round_deadline_passed)
@@ -53,6 +53,15 @@ class Command(BaseCommand):
             now_ts = timezone.now()
 
             self.stdout.write(f"\n➡️ Processing {round_obj}")
+
+            # ----------------------------------------------------
+            # Skip rounds that haven't started yet
+            # ----------------------------------------------------
+            if round_obj.start_date and now_ts < round_obj.start_date:
+                self.stdout.write(
+                    f"Skipping Round {round_obj.round_number} (starts {round_obj.start_date})"
+                )
+                continue
 
             # ----------------------------------------------------
             # 2️ Determine pick deadline
@@ -227,7 +236,10 @@ class Command(BaseCommand):
 
             if round_obj.completed and round_obj.round_number == latest_round:
                 next_round_num = round_obj.round_number + 1
-                created_round = self.create_next_round(round_obj)
+                created_round = self.create_next_round(
+                    game=game,
+                    previous_round=round_obj
+                    )
                 if created_round:
                     self.stdout.write(f"Created Round {created_round.round_number} for {round_obj.game}")
                 else:
@@ -237,65 +249,167 @@ class Command(BaseCommand):
         # --- Final check: active games missing a next round ---
         self.stdout.write("\nChecking active games for missing next rounds...")
         for game in LMSGame.objects.filter(active=True):
-            latest_round = LMSRound.objects.filter(game=game).order_by("-round_number").first()
-            if latest_round:
-                if latest_round.completed:
-                    next_round_num = latest_round.round_number + 1
-                    if not LMSRound.objects.filter(game=game, round_number=next_round_num).exists():
-                        created_round = self.create_next_round(latest_round)
-                        if created_round:
-                            self.stdout.write(f"Created Round {created_round.round_number} for {game}")
-                        else:
-                            self.stdout.write(f"No suitable fixtures found for next round of {game}")
+            rounds = LMSRound.objects.filter(game=game).order_by("-round_number")
+
+            # ------------------------------------------------
+            # 1️ No rounds at all → create Round 1
+            # ------------------------------------------------
+            if not rounds.exists():
+                self.stdout.write(f"No rounds found for {game}. Attempting to create Round 1...")
+                created_round = self.create_next_round(
+                    game=game,
+                    previous_round=None
+                )
+
+                if created_round:
+                    self.stdout.write(f"Created Round {created_round.round_number} for {game}")
                 else:
-                    self.stdout.write(f"Latest round {latest_round.round_number} of {game} not yet completed. Skipping.")
+                    self.stdout.write(f"No suitable fixtures found to create Round 1 for {game}")
+                continue
+
+            latest_round = rounds.first()
+
+            # ------------------------------------------------
+            # 2️ Latest round exists but not completed
+            # ------------------------------------------------
+            if not latest_round.completed:
+                self.stdout.write(
+                    f"Latest round {latest_round.round_number} of {game} not yet completed. Skipping."
+                )
+                continue
+
+            # ------------------------------------------------
+            # 3️ Latest round completed → ensure next round exists
+            # ------------------------------------------------
+            next_round_num = latest_round.round_number + 1
+
+            if LMSRound.objects.filter(game=game, round_number=next_round_num).exists():
+                continue
+
+            created_round = self.create_next_round(
+               game=game,
+               previous_round=latest_round
+            )
+
+            if created_round:
+                self.stdout.write(f"Created Round {created_round.round_number} for {game}")
             else:
-                self.stdout.write(f"No rounds found for {game}")            
-                    
-        self.stdout.write(" LMS pick results update complete.")
+                self.stdout.write(f"No suitable fixtures found for next round of {game}")
+
+        self.stdout.write("LMS pick results update complete.")
 
     # --------------------------------------------------------
     # Helper: create next round
     # --------------------------------------------------------
-    def create_next_round(self, previous_round):
-        game = previous_round.game
-        today = now().date()
+    
+    def create_next_round(self, *, game, previous_round=None):
+        """
+        Create the next LMS round for a game based on upcoming fixtures.
+        """
 
-        for days_ahead in range(0, 30):
-            current_day = today + timedelta(days=days_ahead)
-            weekday = current_day.weekday()
+    # --------------------------------------------------
+    # 1️⃣ Find next fixture after previous round
+    # --------------------------------------------------
+        qs = Fixture.objects.filter(
+            league_short_name=game.league
+        )
 
-            if weekday == 4:
-                start, end = current_day, current_day + timedelta(days=3)
-            elif weekday == 1:
-                start, end = current_day, current_day + timedelta(days=2)
-            else:
-                continue
+        if previous_round:
+            qs = qs.filter(date__gt=previous_round.end_date)
+        else:
+            qs = qs.filter(date__gte=timezone.now())
 
-            fixtures = Fixture.objects.filter(
-                league_short_name=game.league,
-                date__range=(start, end),
-            ).order_by("date")
+        next_fixture = qs.order_by("date").first()
 
-            if fixtures.count() >= 7:
-                new_round = LMSRound.objects.create(
-                    game=game,
-                    round_number=previous_round.round_number + 1,
-                    start_date=fixtures.first().date,
-                    end_date=fixtures.last().date,
-                )
-                new_round.fixtures.set(fixtures)
-                auto_picks = get_auto_pick_teams_for_round(game, new_round, fixtures, count=4)
-                print("auto", auto_picks)
+        if not next_fixture:
+            self.stdout.write(f"No future fixtures for {game}")
+            return None
 
-                if auto_picks:
-                    new_round.auto_pick_team = auto_picks[3]
-                    new_round.auto_pick_team1 = auto_picks[0]
-                    new_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
-                    new_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
-                    new_round.save()
+        kickoff_date = next_fixture.date.date()
+        weekday = kickoff_date.weekday()
 
-                    print("Auto-pick teams set:", auto_picks[0],auto_picks[1] )
-                return new_round
+    # --------------------------------------------------
+    # 2️⃣ Determine block window (DATE logic)
+    # --------------------------------------------------
+        if weekday in (4, 5, 6, 0):  # Fri–Mon
+            block_start = kickoff_date - timedelta(days=(weekday - 4) % 7)
+            block_end = block_start + timedelta(days=3)
 
+        elif weekday in (1, 2, 3):  # Tue–Thu
+            block_start = kickoff_date
+            block_end = kickoff_date + timedelta(days=2)
 
+        else:
+            self.stdout.write(
+                f"Invalid weekday ({weekday}) for fixture {next_fixture}"
+            )
+            return None
+
+    # --------------------------------------------------
+    # 3️⃣ Convert to full-day datetimes
+    # --------------------------------------------------
+        block_start_dt = timezone.make_aware(
+            datetime.combine(block_start, time.min)
+        )
+        block_end_dt = timezone.make_aware(
+            datetime.combine(block_end, time.max)
+        )
+
+        self.stdout.write(
+            f"Fixture search for {game}\n"
+            f"  Block window: {block_start_dt} → {block_end_dt}"
+        )
+
+    # --------------------------------------------------
+    # 4️⃣ Fetch fixtures in block
+    # --------------------------------------------------
+        fixtures = Fixture.objects.filter(
+            league_short_name=game.league,
+            date__range=(block_start_dt, block_end_dt),
+        ).order_by("date")
+
+        self.stdout.write(f"  Fixtures found: {fixtures.count()}")
+        for f in fixtures:
+            self.stdout.write(f"   - {f.date} | {f.home_team} vs {f.away_team}")
+
+        if fixtures.count() < 7:
+            self.stdout.write(
+                f"Not enough fixtures ({fixtures.count()}) for {game}"
+            )
+            return None
+
+    # --------------------------------------------------
+    # 5️⃣ Create round
+    # --------------------------------------------------
+        round_number = (
+            previous_round.round_number + 1 if previous_round else 1
+        )
+
+        new_round = LMSRound.objects.create(
+            game=game,
+            round_number=round_number,
+            start_date=fixtures.first().date,
+            end_date=fixtures.last().date,
+        )
+
+        new_round.fixtures.set(fixtures)
+
+    # --------------------------------------------------
+    # 6️⃣ Assign auto-picks
+    # --------------------------------------------------
+        auto_picks = get_auto_pick_teams_for_round(
+            game, new_round, fixtures, count=4
+        )
+
+        if auto_picks:
+            new_round.auto_pick_team1 = auto_picks[0]
+            new_round.auto_pick_team2 = auto_picks[1]
+            new_round.auto_pick_team3 = auto_picks[2]
+            new_round.auto_pick_team = auto_picks[3]
+            new_round.save()
+
+        self.stdout.write(
+            f"Created Round {new_round.round_number} for {game}"
+        )
+
+        return new_round

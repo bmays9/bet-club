@@ -186,6 +186,7 @@ def lms_dashboard(request):
         .exclude(entries__user=request.user)
         .prefetch_related("rounds")
     )
+    print ("Potential Games", potential_games)
 
     joinable_games = []
     for game in potential_games:
@@ -195,6 +196,7 @@ def lms_dashboard(request):
                 'game': game,
                 'round1': round1,
             })
+    print ("Joinable Games", joinable_games)
 
     context = {
         "entries_with_rounds": entries_with_rounds,

@@ -101,12 +101,13 @@ def check_for_winners(stdout=None):
     print("Checking for Winners..")
     for game in GameInstance.objects.filter(winners__isnull=True):
         print("Checking for a winner in game:", game)
-        game_fixtures = Fixture.objects.filter(gametemplate=game.template)
-        if not game_fixtures.exists():
-            continue  # no fixtures linked, skip
+        unfinished_count = Fixture.objects.filter(
+            fixture__game_instance=game
+            ).exclude(
+                status_code__in=[100, 90, 60]
+                ).distinct().count()
 
-        # Only decide winner if ALL fixtures are finished
-        if all(f.status_code in [100, 90, 60] for f in game_fixtures):
+        if unfinished_count == 0:
             # Step 1: highest total_score
             highest_total = GameEntry.objects.filter(game=game).aggregate(
                 top_total=Max('total_score')
