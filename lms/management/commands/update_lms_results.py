@@ -310,9 +310,15 @@ class Command(BaseCommand):
     # --------------------------------------------------
     # 1️⃣ Find next fixture after previous round
     # --------------------------------------------------
+        cutoff = max(
+            previous_round.end_date if previous_round else timezone.now(),
+            timezone.now()
+            )
+
         qs = Fixture.objects.filter(
-            league_short_name=game.league
-        )
+            league_short_name=game.league,
+            date__gt=cutoff
+            )
 
         if previous_round:
             qs = qs.filter(date__gt=previous_round.end_date)
