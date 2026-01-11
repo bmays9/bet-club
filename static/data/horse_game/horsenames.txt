@@ -41,6 +41,7 @@ Ballybawn Flow
 Banhoek Red
 Bashiri
 Basilico
+Be The Mystery
 Bellagio Deal
 Beltrain
 Bergsson
@@ -71,6 +72,7 @@ Brighton Belle
 Bring It On
 Brixton Smile
 Broadrunner
+Brought To Task
 Buananotte
 Bullet Chain
 Burlington
@@ -101,6 +103,7 @@ Chautauqua
 Chuchotement Bleu
 Cigar
 Coeur de Glace
+Colberto
 Collyanna
 Comet Warrior
 Complexity
@@ -179,9 +182,11 @@ Frankall
 Freeze Amadeus
 French Recruit
 Fresh As A Duke
+Frowned Upon
 Full Of Dreams
 Gaelic Purchase
 Galactic Sprinter
+Galapheon
 Gallopin Des Chance
 Gepeto
 Get To The Money
@@ -209,6 +214,7 @@ Harbour Master
 Harmison
 Harping On
 Hasselbaink
+Hemisphere
 Hertford Hero
 Highland Reel
 Hightop Glass
@@ -272,6 +278,7 @@ La Rochelle
 Lake Coniston
 Lamela
 Leovita
+Liberty Fuss
 Light Years 
 Lightning Comet
 Lightning Hooves
@@ -329,6 +336,7 @@ Mr Baxter
 Mr Strikeback
 Mustang Sally
 Nashwan
+National Divide
 Native Dancer
 Nebraska Town
 Nebula Charger
@@ -344,6 +352,7 @@ Oak Reef
 Obelisk
 Odegaard
 Off The Wall
+Ola Maleah
 Olazabal
 Omega Racer
 On The River Nile
@@ -378,6 +387,7 @@ Pizaglo
 Planet Infusion
 Port Ghalib
 Portman Road
+Porto Beauty
 Poured It Over
 Practical Jest
 Pragmatic
@@ -415,6 +425,7 @@ Red Titan Charger
 Red Tuxedo
 Red Violin
 Rendora
+Reticent
 Risque Tout
 Riverside Dancer
 Roaring Lion
@@ -427,6 +438,7 @@ Ruler of the World
 Sacramento
 Sad Ken
 Saint Fallon
+Salechi
 Saliarna
 Sans Retour
 Saturn Collonges
@@ -437,6 +449,7 @@ Scholar's Mate
 Scoutabout
 Sea For All
 Seabreeze Cometh
+Secret Spool
 Shadow Racer
 Shadowstrike
 Shallow
@@ -449,6 +462,7 @@ Simmering Sun
 Simposium
 Sizing Aurora
 Sizing Sweden
+Skimming Zodiac
 Skyfire Charger
 Skyward Blitz
 Slovak Drama
@@ -497,6 +511,7 @@ Terrestrial
 Thanksamillion
 The Better Half
 The Big Show
+The Choice We Made
 The Cometaire
 The Crimson Streak
 The Crow's Nest
@@ -539,6 +554,7 @@ Trentalexa
 Trigonomic
 Turbonica Jazz
 Turling Comet
+Turn The Works
 Twente Minutes
 Under The Influence
 Underarmer
@@ -549,6 +565,7 @@ Urban Denial
 Valencia
 Vancroix
 Vautorn
+Veanimix
 Velocity Ace
 Velocity Storm
 Velours Noir
@@ -588,10 +605,10 @@ Yosemite
 Young Diva
 Young Magician
 YouveBeenWarned
+Zablanx
 Zalaque
 Zambour
 Zealand
 Zenyatta
 Zidane
 Zondervan
-Zablanx
