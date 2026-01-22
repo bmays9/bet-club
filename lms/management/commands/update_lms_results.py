@@ -304,88 +304,106 @@ class Command(BaseCommand):
     
     def create_next_round(self, *, game, previous_round=None):
         """
-        Create the next LMS round for a game based on upcoming fixtures.
+        Create the next LMS round for a game by scanning forward block-by-block
+        until a block with enough fixtures is found.
         """
 
     # --------------------------------------------------
-    # 1️⃣ Find next fixture after previous round
+    # 1️⃣ Establish search start (never in the past)
     # --------------------------------------------------
-        cutoff = max(
+        search_after = max(
             previous_round.end_date if previous_round else timezone.now(),
             timezone.now()
-            )
-
-        qs = Fixture.objects.filter(
-            league_short_name=game.league,
-            date__gt=cutoff
-            )
-
-        if previous_round:
-            qs = qs.filter(date__gt=previous_round.end_date)
-        else:
-            qs = qs.filter(date__gte=timezone.now())
-
-        next_fixture = qs.order_by("date").first()
-
-        if not next_fixture:
-            self.stdout.write(f"No future fixtures for {game}")
-            return None
-
-        kickoff_date = next_fixture.date.date()
-        weekday = kickoff_date.weekday()
-
-    # --------------------------------------------------
-    # 2️⃣ Determine block window (DATE logic)
-    # --------------------------------------------------
-        if weekday in (4, 5, 6, 0):  # Fri–Mon
-            block_start = kickoff_date - timedelta(days=(weekday - 4) % 7)
-            block_end = block_start + timedelta(days=3)
-
-        elif weekday in (1, 2, 3):  # Tue–Thu
-            block_start = kickoff_date
-            block_end = kickoff_date + timedelta(days=2)
-
-        else:
-            self.stdout.write(
-                f"Invalid weekday ({weekday}) for fixture {next_fixture}"
-            )
-            return None
-
-    # --------------------------------------------------
-    # 3️⃣ Convert to full-day datetimes
-    # --------------------------------------------------
-        block_start_dt = timezone.make_aware(
-            datetime.combine(block_start, time.min)
         )
-        block_end_dt = timezone.make_aware(
-            datetime.combine(block_end, time.max)
-        )
+
+        lookahead_limit = timezone.now() + timedelta(days=60)
 
         self.stdout.write(
-            f"Fixture search for {game}\n"
-            f"  Block window: {block_start_dt} → {block_end_dt}"
+            f"Searching for next round for {game} starting after {search_after}"
         )
 
-    # --------------------------------------------------
-    # 4️⃣ Fetch fixtures in block
-    # --------------------------------------------------
-        fixtures = Fixture.objects.filter(
-            league_short_name=game.league,
-            date__range=(block_start_dt, block_end_dt),
-        ).order_by("date")
+        # --------------------------------------------------
+        # 2️⃣ Scan blocks until a valid one is found
+        # --------------------------------------------------
+        while search_after < lookahead_limit:
 
-        self.stdout.write(f"  Fixtures found: {fixtures.count()}")
-        for f in fixtures:
-            self.stdout.write(f"   - {f.date} | {f.home_team} vs {f.away_team}")
+            next_fixture = (
+                Fixture.objects
+                .filter(
+                    league_short_name=game.league,
+                    date__gt=search_after
+                )
+                .order_by("date")
+                .first()
+            )
 
-        if fixtures.count() < 7:
+            if not next_fixture:
+                self.stdout.write(f"No future fixtures found for {game}")
+                return None
+    
+            kickoff_date = next_fixture.date.date()
+            weekday = kickoff_date.weekday()
+    
+            # --------------------------------------------------
+            # 3️⃣ Determine block window
+            # --------------------------------------------------
+            if weekday in (4, 5, 6, 0):  # Fri–Mon
+                block_start = kickoff_date - timedelta(days=(weekday - 4) % 7)
+                block_end = block_start + timedelta(days=3)
+    
+            elif weekday in (1, 2, 3):  # Tue–Thu
+                block_start = kickoff_date
+                block_end = kickoff_date + timedelta(days=2)
+
+            else:
+                self.stdout.write(f"Invalid weekday for fixture {next_fixture}")
+                return None
+
+            block_start_dt = timezone.make_aware(
+                datetime.combine(block_start, time.min)
+            )
+            block_end_dt = timezone.make_aware(
+                datetime.combine(block_end, time.max)
+            )
+
+        # --------------------------------------------------
+        # 4️⃣ Fetch fixtures in this block
+        # --------------------------------------------------
+            fixtures = Fixture.objects.filter(
+                league_short_name=game.league,
+                date__range=(block_start_dt, block_end_dt),
+            ).order_by("date")
+
             self.stdout.write(
-                f"Not enough fixtures ({fixtures.count()}) for {game}"
+                f"Checking block {block_start} → {block_end} "
+                f"({fixtures.count()} fixtures)"
+            )
+
+        # --------------------------------------------------
+        # 5️⃣ Valid block found ✅
+        # --------------------------------------------------
+            if fixtures.count() >= 7:
+                break
+
+        # --------------------------------------------------
+        # 6️⃣ Not enough fixtures → advance to next block
+        # --------------------------------------------------
+            self.stdout.write(
+                f"Block {block_start} → {block_end} rejected "
+                f"({fixtures.count()} fixtures)"
+            )
+
+            search_after = block_end_dt
+
+        else:
+            self.stdout.write(
+                f"Aborting round creation for {game} — "
+                f"no valid block within 60 days"
             )
             return None
 
     # --------------------------------------------------
-    # 5️⃣ Create round
+    # 7️⃣ Create round
     # --------------------------------------------------
         round_number = (
             previous_round.round_number + 1 if previous_round else 1
@@ -396,12 +414,12 @@ class Command(BaseCommand):
             round_number=round_number,
             start_date=fixtures.first().date,
             end_date=fixtures.last().date,
-        )
+        )   
 
         new_round.fixtures.set(fixtures)
 
     # --------------------------------------------------
-    # 6️⃣ Assign auto-picks
+    # 8️⃣ Assign auto-picks
     # --------------------------------------------------
         auto_picks = get_auto_pick_teams_for_round(
             game, new_round, fixtures, count=4
@@ -415,7 +433,8 @@ class Command(BaseCommand):
             new_round.save()
 
         self.stdout.write(
-            f"Created Round {new_round.round_number} for {game}"
+            f"Created Round {new_round.round_number} "
+            f"({block_start} → {block_end}) for {game}"
         )
 
         return new_round
