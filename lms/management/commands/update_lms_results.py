@@ -119,12 +119,13 @@ class Command(BaseCommand):
 
                 pick.result = result
                 pick.save()
+                
                 self.stdout.write(f"Pick result computed: {result}")
 
             # ----------------------------------------------------
             # 6️ Eliminate entries that lost or drew
             # ----------------------------------------------------
-            for entry in round_obj.game.entries.all():
+            for entry in round_obj.game.entries.filter(alive=True):
                 picks = round_obj.picks.filter(entry=entry)
 
                 if not picks.exists():
