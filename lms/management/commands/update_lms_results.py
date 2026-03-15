@@ -363,9 +363,20 @@ class Command(BaseCommand):
             block_start_dt = timezone.make_aware(
                 datetime.combine(block_start, time.min)
             )
+
             block_end_dt = timezone.make_aware(
                 datetime.combine(block_end, time.max)
             )
+
+            # --------------------------------------------------
+            # Skip blocks that already started
+            # --------------------------------------------------
+            if block_start_dt <= timezone.now():
+                self.stdout.write(
+                    f"Skipping block {block_start} → {block_end} (already started)"
+                )
+                search_after = block_end_dt
+                continue
 
         # --------------------------------------------------
         # 4️⃣ Fetch fixtures in this block
