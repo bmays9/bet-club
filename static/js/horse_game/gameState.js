@@ -1,5 +1,11 @@
+import {
+    adjustRatingByAge
+
+} from './initialise.js';
+
 export let playerData = [];
 export let horseData = [];
+export let horsePool = [];
 export let raceData = {};
 export let meetingNumber = 0;
 export let raceEntries = {
@@ -22,6 +28,9 @@ export function sortPlayerData() {
 
 export function setHorseData(data) {
     horseData = data;
+}
+export function setHorsePool(data) {
+    horsePool = data;
 }
 
 export function setRaceData(data) {
@@ -74,7 +83,25 @@ export function incrementHorseRest(horses) {
         horse.rest++;
     }
     console.log("Incrementing Rest: Check it was done")
-    console.log(horses)
+}
+
+export function resetHorseRest(horses) {
+    console.log("Resetting Rest:")
+    for (let horse of horses) {
+        horse.rest = 1;
+    }
+    console.log("Resetting rest done")
+}
+
+export function incrementHorseAge(horses) {
+    console.log("Incrementing Ages:")
+    console.log("Horse1 Ages Before", horses[0].age)
+    for (let horse of horses) {
+        horse.age++;
+        horse.rating = adjustRatingByAge(horse.baseRating, horse.age);
+    }
+    console.log("Horse1 Age After", horses[0].age)
+    console.log("Incrementing Ages: Done")
 }
 
 export function fitnessModifier(fitnessLevel) {

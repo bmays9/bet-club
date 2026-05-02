@@ -1,8 +1,13 @@
-import { raceEntries, playerData, horseData, raceData, setRaceEntries, 
+import {
+    raceEntries, playerData, horseData, raceData, setRaceEntries, 
     setHorseData, setPlayerData, sortPlayerData, setRaceData, incrementHorseRest,
-    fitnessModifier, convertFractionalOddsToDecimal } from './gameState.js';
+    resetHorseRest, incrementHorseAge, fitnessModifier, convertFractionalOddsToDecimal
+} from './gameState.js';
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
-import { lineups , raceTime, meeting_number, incrementMeetingNumber, going, displayGameState, showHistoryModal } from './horseracing.js';
+import {
+    lineups, raceTime, meeting_number, incrementMeetingNumber, resetMeetingNumber,
+    going, displayGameState, showHistoryModal
+} from './horseracing.js';
 import { shuffleArray } from './initialise.js';
 
 let gameRaceNumber = 0
@@ -35,7 +40,8 @@ export function showRacecard(racenum) {
     // Randomize the Betting Order
     shuffleArray(playerData);
     
-    console.log("Let's Race, gameRaceNumber / racenum / meetingracenum", gameRaceNumber, racenum);
+    console.log("Let's Race, meetingNumber / gameRaceNumber", meeting_number, gameRaceNumber);
+    console.log("Let's Race, racenum / meetingracenum", racenum, meetingRaceNumber);
     document.getElementById('race-screen').style.display = "block";
     racecardBody.innerHTML = ""; // clear previous
 
@@ -68,9 +74,13 @@ export function showRacecard(racenum) {
     const ratedHorses = getHorseRatings(raceHorses, rDist, rGoing);
     priceHorses = assignFormOdds(ratedHorses, rDist);
 
+    // 
     console.log("Lineup", lineups[racenum]);
+    // 
     console.log("Race Horses", raceHorses);
+    // 
     console.log("Priced Horses", priceHorses);
+    console.log("Rated Horses", ratedHorses);
 
     // Random Draw Numbers (1 to N)
     const drawNumbers = shuffleArray([...Array(entries.length)].map((_, i) => i + 1));
@@ -117,7 +127,7 @@ export function showRacecard(racenum) {
                     <a href="#" class="form-link" data-horse-name="${runner.horseName}">${runner.form}</a>
                 </td>
                 <td>${runner.odds}</td>
-                <td>-</td>
+                <td>--</td>                
             </tr>
         `;
         racecardBody.innerHTML += row;
@@ -537,24 +547,25 @@ function handleNextRace() {
 }
 
 function handleContinueToNextMeeting() {
-    console.log("Continuing to next meeting...");
+    console.log("Continuing to next meeting...", meeting_number);
     // update horse rest +1
     incrementHorseRest(horseData)
-
+    meetingRaceNumber = 0;
 
     
-    if (meeting_number < 16) {
+    if (meeting_number < 0) {
         incrementMeetingNumber();  // Advance the meeting
-        meetingRaceNumber = 0;
-        
         nextRaceBtn.textContent = "Next Race";
         nextRaceBtn.disabled = true;
         startBtn.disabled = true;
 
-        displayGameState(meeting_number);  // Your function to set up the next meeting
+        displayGameState(meeting_number);  // function to set up the next meeting
     } else {
-        displayFinalStandings();
+        newSeason();
         nextRaceBtn.disabled = true;
+        resetMeetingNumber() // resets meeting_numer and increases season ++
+        resetHorseRest(horseData)
+        displayGameState(meeting_number)
     }
 }
 
@@ -643,3 +654,12 @@ function assignFormOdds(raceHorses, targetDistanceStr) {
     return assignedOdds;
 }
 
+function newSeason() {
+    console.log(`--- Preparing for new season ---`);
+    // Update Ages
+    // Retire 11 Year Olds
+    // For each 11 year old retiring, add a new 4 year old
+    // add a / character to form line
+    // reset meeting number
+    incrementHorseAge(horseData)
+}

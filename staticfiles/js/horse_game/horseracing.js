@@ -30,9 +30,11 @@ import {
     raceEntries,
     playerData,
     horseData,
+    horsePool,
     raceData,
     setRaceEntries,
     setHorseData,
+    setHorsePool,
     setPlayerData,
     setRaceData,
     sortPlayerData
@@ -588,16 +590,24 @@ export function incrementMeetingNumber() {
 }
 
 
+export function resetMeetingNumber() {
+        meeting_number = 0;
+        season++;
+}
+
+
 export async function runHorseRacing(players) {
     await buildRaceData();
     console.log("Players", players);
     const builtData = resetPlayerData(players); // <-- BUILD playerData
     setPlayerData(builtData); // <-- SAVE to shared state
 
-    setHorseData(buildHorseData()); // <-- Same with horses
+    setHorseData(buildHorseData(false)); // <-- Same with horses
+    setHorsePool(buildHorseData(true)); // <-- Same with horses true = pool horses, all age 4
     console.log("Horse Data:", horseData)
+    console.log("Horse Pool Data:", horsePool)
 
     displayGameState(meeting_number);
-
-    endOfSeasonUpdate(horseData);
+    //console.log("About to call the endof season update")
+    //endOfSeasonUpdate(horseData);
 }

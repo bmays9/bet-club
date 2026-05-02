@@ -371,7 +371,7 @@ class Command(BaseCommand):
             # --------------------------------------------------
             # Skip blocks that already started
             # --------------------------------------------------
-            if block_start_dt <= timezone.now():
+            if block_start_dt.date() < timezone.now().date():
                 self.stdout.write(
                     f"Skipping block {block_start} → {block_end} (already started)"
                 )

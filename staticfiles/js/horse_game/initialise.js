@@ -46,10 +46,11 @@ export function resetPlayerData(playersList) {
     }));
 }
     
-export function buildHorseData() {
+export function buildHorseData(pool) {
     
     let horses = [];
-    
+    let adj = 0;
+    if (pool === true) adj = 144;
     console.log("playerData:", playerData);
 
     for (let i = 0; i < 144; i++) {
@@ -58,20 +59,26 @@ export function buildHorseData() {
         const bestDist = Math.floor(Math.random() * 28) + 5;  // 5 to 32
         let spread;
         if (bestDist < 13) {
-            spread = parseFloat((Math.random() * 2 + 1).toFixed(2)); // 1.00 to 3.00
+            spread = parseFloat((Math.random() * 1.8 + 1).toFixed(2)); // 1.00 to 2.8
         } else {
             spread = parseFloat((Math.random() * 4 + 2).toFixed(2)); // 2.00 to 6.00
         }
-        
-        let age = Math.floor(Math.random() * 7 + 3);
+        let age;
+        if (pool == true) {
+            age = 4
+        } else {
+            age = Math.floor(Math.random() * 7 + 4);
+        }
         let rest = 1;
         let form = "";
+        let ownerIndex;
+        let owner;
         const goingPref = getRandomGoingPreference();
-        const name = raceData.horsenames[i];
+        const name = raceData.horsenames[i + adj];
         // Assign owner in chunks of 24
-        const ownerIndex = Math.floor(i / 24);
-        const owner = playerData[ownerIndex].name || `Unknown`;
-        let number = i + 1
+        if (pool == false) ownerIndex = Math.floor(i / 24);
+        if (pool == false) owner = playerData[ownerIndex].name || `Unknown`;
+        let number = i + 1 + adj
         let runs = 0, wins = 0, money = 0  
         let history = [];
         
@@ -110,6 +117,7 @@ export function adjustRatingByAge(baseRating, age) {
 }
 
 export function endOfSeasonUpdate(horses) {
+    console.log("endOfSeason Update happening, ages  + and adjustment")
     for (let horse of horses) {
         horse.age++;
         horse.rating = adjustRatingByAge(horse.baseRating, horse.age);
