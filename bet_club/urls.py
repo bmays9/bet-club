@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import TemplateView
 from game_horse import views as horse_views
 from .views import horse_view, home_view  # Import the view
 from bank.views import money_list
@@ -24,6 +25,7 @@ urlpatterns = [
     path("", money_list, name="index"),   # homepage → money_list,
     path("home/", money_list, name="home"),
     path("horse.html", horse_view, name="horse"),
+    path("horse_hof/", TemplateView.as_view(template_name="hall_of_fame.html"), name="horse_hof"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("bank/", include("bank.urls")),

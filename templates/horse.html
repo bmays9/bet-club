@@ -5,7 +5,7 @@
 <!-- ── 1. GAME BANNER ── -->
 <h1 id="game-banner">
     🏇 Flat Jumpers
-    <a href="{% static 'horse/hall_of_fame.html' %}" target="_blank"
+    <a href="{% url 'horse_hof' %}" target="_blank"
        class="btn btn-sm ms-2">🏆 Hall of Fame</a>
 </h1>
 
@@ -271,18 +271,97 @@
     </div>
 </div>
 
+<!-- 6. Season Summary Modal -->
+<div class="modal fade" id="seasonSummaryModal" tabindex="-1"
+     data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header modal-header-dark">
+                <h5 class="modal-title">🏁 Season <span id="ss-season"></span> — Final Summary</h5>
+            </div>
+            <div class="modal-body">
+
+                <!-- Awards row -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="text-center p-2 rounded" style="background:#f0f7f2;border:1px solid #dee2e6">
+                            <div style="font-size:1.4rem">🏆</div>
+                            <div class="small fw-bold text-muted" style="font-size:0.7rem">CHAMPION TRAINER</div>
+                            <div id="ss-champion" class="mt-1" style="font-size:0.82rem"></div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center p-2 rounded" style="background:#fff9e6;border:1px solid #dee2e6">
+                            <div style="font-size:1.4rem">💰</div>
+                            <div class="small fw-bold text-muted" style="font-size:0.7rem">BETTING CHAMPION</div>
+                            <div id="ss-bet-champ" class="mt-1" style="font-size:0.82rem"></div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center p-2 rounded" style="background:#fff4ec;border:1px solid #dee2e6">
+                            <div style="font-size:1.4rem">🐴</div>
+                            <div class="small fw-bold text-muted" style="font-size:0.7rem">TOP EARNER (HORSE)</div>
+                            <div id="ss-top-horse" class="mt-1" style="font-size:0.82rem"></div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center p-2 rounded" style="background:#f4f5f5;border:1px solid #dee2e6">
+                            <div style="font-size:1.4rem">🥇</div>
+                            <div class="small fw-bold text-muted" style="font-size:0.7rem">MOST WINS (HORSE)</div>
+                            <div id="ss-most-wins" class="mt-1" style="font-size:0.82rem"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full standings -->
+                <h6 style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+                   border-bottom:1px solid #dee2e6;padding-bottom:4px;">
+                    Final Standings
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" style="font-size:0.78rem">
+                        <thead style="background:var(--turf-dark,#1a3d2b);color:#fff;font-size:0.7rem">
+                            <tr>
+                                <th>Pos</th>
+                                <th>Trainer</th>
+                                <th>Wins</th>
+                                <th>Prize £</th>
+                                <th>Bet P/L</th>
+                                <th>Fees</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ss-player-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success fw-bold" id="ss-continue">
+                    ▶ Continue to Season <span id="ss-next"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 {% block additional %}
 <script type="module" src="{% static 'js/horse_game/load_data.js' %}"></script>
 <script type="module" src="{% static 'js/horse_game/horseracing.js' %}"></script>
 
 <script>
-    // ── Sync radio buttons to hidden select for JS compatibility ──
+    // Sync radio buttons to hidden select for JS compatibility
     document.addEventListener('change', function (e) {
         if (e.target.name === 'bet-type-radio') {
             document.getElementById('bet-type').value = e.target.value;
             document.getElementById('bet-type').dispatchEvent(new Event('change'));
         }
+    });
+    // Update "Continue to Season X" button label when summary modal opens
+    document.getElementById('seasonSummaryModal').addEventListener('show.bs.modal', function () {
+        const season = parseInt(document.getElementById('ss-season').textContent || '1');
+        const nextEl = document.getElementById('ss-next');
+        if (nextEl) nextEl.textContent = season + 1;
     });
 </script>
 {% endblock additional %}

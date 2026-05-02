@@ -3,6 +3,8 @@ import { fetchTextFiles, players } from "./load_data.js";
 import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
 import { playerData, setPlayerData, horseData, setHorseData, raceData } from './gameState.js';
 
+const STARTING_BALANCE = 50000;
+
 export function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -27,11 +29,14 @@ export function resetPlayerData(playersList) {
     return playersList.map(player => ({
         name: player.name,
         wins: 0,
-        betting: 0,
-        entries: 0,
-        winnings: 0,
-        total: 0,
-        human: player.human
+        entries: 0,              // total entry fees paid (negative on total)
+        prizeWinnings: 0,              // prize money from horse finishing places
+        betStaked: 0,              // total staked on bets
+        betReturned: 0,              // total returned from winning bets
+        total: STARTING_BALANCE, // starting bankroll
+        human: player.human,
+        bettingProfile: null,          // set in runHorseRacing for AI players
+        seasonHistory: []
     }));
 }
 
@@ -40,30 +45,25 @@ export function buildHorseData(pool) {
     const adj = pool === true ? 144 : 0;
 
     for (let i = 0; i < 144; i++) {
-        const rating = randomNormalRating();
+        const baseRating = randomNormalRating();
         const bestDist = Math.floor(Math.random() * 28) + 5; // 5–32 furlongs
 
-        // Spread = comfortable plateau either side of bestDist (furlongs).
-        // Sprinters are tight specialists; stayers more versatile within staying trips.
         let spread;
-        if (bestDist <= 8) {
-            // Sprint (5–8f): plateau of 1.0–2.5f either side
-            spread = parseFloat((1.0 + Math.random() * 1.5).toFixed(2));
-        } else if (bestDist <= 14) {
-            // Middle distance (9–14f): plateau of 2.0–4.0f either side
-            spread = parseFloat((2.0 + Math.random() * 2.0).toFixed(2));
-        } else {
-            // Staying (15f+): plateau of 3.0–6.0f either side
-            spread = parseFloat((3.0 + Math.random() * 3.0).toFixed(2));
-        }
+        if (bestDist <= 8) spread = parseFloat((1.0 + Math.random() * 1.5).toFixed(2));
+        else if (bestDist <= 14) spread = parseFloat((2.0 + Math.random() * 2.0).toFixed(2));
+        else spread = parseFloat((3.0 + Math.random() * 3.0).toFixed(2));
 
         const age = pool ? 4 : Math.floor(Math.random() * 7 + 4);
         const goingPref = getRandomGoingPreference();
-        const name = raceData.horsenames[i + adj];
+        const nameRaw = raceData.horsenames[i + adj];
+        const name = nameRaw || `Recruit ${i + 1}`;
 
-        let owner, ownerIndex;
+        // Apply age modifier to initial rating
+        const rating = adjustRatingByAge(baseRating, age);
+
+        let owner;
         if (!pool) {
-            ownerIndex = Math.floor(i / 24);
+            const ownerIndex = Math.floor(i / 24);
             owner = playerData[ownerIndex]?.name || 'Unknown';
         }
 
@@ -71,7 +71,7 @@ export function buildHorseData(pool) {
             number: i + 1 + adj,
             name,
             owner,
-            baseRating: rating,
+            baseRating,
             rating,
             bestDist,
             spread,
@@ -92,19 +92,17 @@ export function buildHorseData(pool) {
 
 export function adjustRatingByAge(baseRating, age) {
     let modifier = 1;
-    if (age === 2) modifier = 0.70; // unraced youngsters
-    else if (age === 3) modifier = 0.82;
+    if (age <= 3) modifier = 0.82;
     else if (age === 4) modifier = 0.90;
     else if (age === 5) modifier = 0.95;
     else if (age >= 6 && age <= 8) modifier = 1.00; // peak
-    else if (age === 9) modifier = 0.90;
-    else if (age === 10) modifier = 0.80;
-    // 11+ retire at season start so no modifier needed
+    else if (age === 9) modifier = 0.92;
+    else if (age === 10) modifier = 0.83;
     return Math.round(baseRating * modifier);
 }
 
 export function endOfSeasonUpdate(horses) {
-    for (let horse of horses) {
+    for (const horse of horses) {
         horse.age++;
         horse.rating = adjustRatingByAge(horse.baseRating, horse.age);
     }
