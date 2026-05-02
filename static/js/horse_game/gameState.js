@@ -1,13 +1,14 @@
 import {
     adjustRatingByAge
-
 } from './initialise.js';
 
 export let playerData = [];
 export let horseData = [];
 export let horsePool = [];
+export let retiredHorses = [];
 export let raceData = {};
 export let meetingNumber = 0;
+export let currentSeason = 1;
 export let raceEntries = {
     0: [],
     1: [],
@@ -15,7 +16,7 @@ export let raceEntries = {
     3: [],
     4: [],
     5: []
-  };
+};
 
 export function setPlayerData(data) {
     playerData = data;
@@ -25,16 +26,24 @@ export function sortPlayerData() {
     playerData.sort((a, b) => (b.total || 0) - (a.total || 0));
 }
 
-
 export function setHorseData(data) {
     horseData = data;
 }
+
 export function setHorsePool(data) {
     horsePool = data;
 }
 
 export function setRaceData(data) {
     raceData = data;
+}
+
+export function addRetiredHorses(horses) {
+    retiredHorses = retiredHorses.concat(horses);
+}
+
+export function setCurrentSeason(num) {
+    currentSeason = num;
 }
 
 export function setRaceEntries(data) {
@@ -66,7 +75,15 @@ export function getMeetingNumber() {
     return meetingNumber;
 }
 
-// checkers 
+export function getRetiredHorses() {
+    return retiredHorses;
+}
+
+export function getCurrentSeason() {
+    return currentSeason;
+}
+
+// checkers
 export function allRacesHaveEntries() {
     for (let i = 0; i < 6; i++) {
         if ((raceEntries[i] || []).length === 0) {
@@ -77,31 +94,22 @@ export function allRacesHaveEntries() {
 }
 
 export function incrementHorseRest(horses) {
-    console.log("Incrementing Rest:")
-    console.log(horses)
     for (let horse of horses) {
         horse.rest++;
     }
-    console.log("Incrementing Rest: Check it was done")
 }
 
 export function resetHorseRest(horses) {
-    console.log("Resetting Rest:")
     for (let horse of horses) {
         horse.rest = 1;
     }
-    console.log("Resetting rest done")
 }
 
 export function incrementHorseAge(horses) {
-    console.log("Incrementing Ages:")
-    console.log("Horse1 Ages Before", horses[0].age)
     for (let horse of horses) {
         horse.age++;
         horse.rating = adjustRatingByAge(horse.baseRating, horse.age);
     }
-    console.log("Horse1 Age After", horses[0].age)
-    console.log("Incrementing Ages: Done")
 }
 
 export function fitnessModifier(fitnessLevel) {
@@ -111,18 +119,16 @@ export function fitnessModifier(fitnessLevel) {
     if (fitnessLevel === 4) return 0.95;
     if (fitnessLevel === 5) return 0.9;
     if (fitnessLevel === 6) return 0.85;
-    
     return 0.85;
 }
 
 export function getNearDistances(dist) {
-    const distanceKeys = ["5f", "1m", "1m2", "1m4", "2m", "2m4", "3m", "4m"];
+    // Keys must match exact strings used in raceData.distances
+    const distanceKeys = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
     const index = distanceKeys.indexOf(dist);
     const near = [];
-
     if (index > 0) near.push(distanceKeys[index - 1]);
     if (index < distanceKeys.length - 1) near.push(distanceKeys[index + 1]);
-
     return near;
 }
 

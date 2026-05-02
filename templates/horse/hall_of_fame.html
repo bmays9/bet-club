@@ -1,0 +1,799 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall of Fame – Flat Jumpers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --silver: #a8a9ad;
+            --bronze: #cd7f32;
+            --dark: #1a1a2e;
+            --mid: #16213e;
+            --accent: #0f3460;
+            --text: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--dark);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* ── BANNER ───────────────────────────────────────────── */
+        .banner {
+            background: linear-gradient(135deg, var(--accent), var(--mid));
+            padding: 2rem 1.5rem 1.5rem;
+            border-bottom: 3px solid var(--gold);
+            text-align: center;
+        }
+
+            .banner h1 {
+                font-size: 2rem;
+                font-weight: 800;
+                letter-spacing: 2px;
+                color: var(--gold);
+                margin: 0;
+                text-transform: uppercase;
+            }
+
+            .banner p {
+                color: #aaa;
+                font-size: 0.9rem;
+                margin: 0.4rem 0 0;
+            }
+
+        /* ── NAV PILLS ────────────────────────────────────────── */
+        .nav-pills .nav-link {
+            color: #aaa;
+            background: transparent;
+            border: 1px solid #333;
+            margin: 0.2rem;
+            font-size: 0.85rem;
+        }
+
+            .nav-pills .nav-link.active {
+                background: var(--accent);
+                border-color: var(--gold);
+                color: var(--gold);
+            }
+
+        /* ── STAT CARDS ───────────────────────────────────────── */
+        .stat-card {
+            background: var(--mid);
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 1.2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+            .stat-card .number {
+                font-size: 2rem;
+                font-weight: 700;
+                color: var(--gold);
+            }
+
+            .stat-card .label {
+                font-size: 0.78rem;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+        /* ── TABLES ───────────────────────────────────────────── */
+        .hof-table {
+            background: var(--mid);
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 0.82rem;
+        }
+
+            .hof-table thead {
+                background: var(--accent);
+                color: var(--gold);
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                letter-spacing: 0.5px;
+            }
+
+                .hof-table thead th {
+                    border: none;
+                    padding: 0.7rem 0.6rem;
+                }
+
+            .hof-table tbody tr {
+                border-bottom: 1px solid #2a2a4a;
+                color: var(--text);
+            }
+
+                .hof-table tbody tr:hover {
+                    background: rgba(255,255,255,0.04);
+                }
+
+            .hof-table td {
+                padding: 0.55rem 0.6rem;
+                border: none;
+                vertical-align: middle;
+            }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 0.78rem;
+        }
+
+        .rank-1 {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .rank-2 {
+            background: var(--silver);
+            color: #000;
+        }
+
+        .rank-3 {
+            background: var(--bronze);
+            color: #fff;
+        }
+
+        .rank-other {
+            background: #333;
+            color: #aaa;
+        }
+
+        .badge-active {
+            background: #198754;
+            color: #fff;
+            font-size: 0.7rem;
+        }
+
+        .badge-retired {
+            background: #6c757d;
+            color: #fff;
+            font-size: 0.7rem;
+        }
+
+        .badge-young {
+            background: #0d6efd;
+            color: #fff;
+            font-size: 0.7rem;
+        }
+
+        .form-string {
+            font-family: monospace;
+            letter-spacing: 2px;
+            font-size: 0.78rem;
+            color: #bbb;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        /* going dots */
+        .going-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 3px;
+        }
+
+        /* section titles */
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gold);
+            border-bottom: 1px solid #2a2a4a;
+            padding-bottom: 0.4rem;
+            margin: 1.5rem 0 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* search */
+        .search-bar {
+            background: var(--mid);
+            border: 1px solid #333;
+            color: var(--text);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            width: 100%;
+            max-width: 300px;
+        }
+
+            .search-bar:focus {
+                outline: none;
+                border-color: var(--gold);
+            }
+
+        /* empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #555;
+        }
+
+            .empty-state .icon {
+                font-size: 3rem;
+            }
+
+        .tab-content {
+            padding-top: 1rem;
+        }
+
+        .container-xl {
+            max-width: 1200px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="banner">
+        <h1>🏆 Hall of Fame</h1>
+        <p id="subtitle">Flat Jumpers — All-Time Horse Records</p>
+    </div>
+
+    <div class="container-xl py-4 px-3">
+
+        <!-- Summary stats row -->
+        <div class="row g-3 mb-3" id="summary-stats">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="number" id="stat-total">—</div>
+                    <div class="label">Total Horses</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="number" id="stat-active">—</div>
+                    <div class="label">Active</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="number" id="stat-retired">—</div>
+                    <div class="label">Retired</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="number" id="stat-season">—</div>
+                    <div class="label">Current Season</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-pills mb-2 flex-wrap" id="hofTabs">
+            <li class="nav-item"><button class="nav-link active" data-tab="top-earners">💰 Top Earners</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="most-wins">🏆 Most Wins</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="active">🐴 Active Horses</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="retired">🪦 Retired</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="young">⭐ Rising Stars</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="search">🔍 Search</button></li>
+        </ul>
+
+        <div id="tab-content">
+
+            <!-- TOP EARNERS -->
+            <div id="tab-top-earners">
+                <div class="section-title">Top 20 Earners — All Time</div>
+                <div class="hof-table">
+                    <table class="table table-borderless mb-0" id="table-earners">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Horse</th>
+                                <th>Status</th>
+                                <th>Age</th>
+                                <th>Owner</th>
+                                <th>Runs</th>
+                                <th>Wins</th>
+                                <th>Win%</th>
+                                <th>Earnings</th>
+                                <th>Form</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-earners"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MOST WINS -->
+            <div id="tab-most-wins" style="display:none">
+                <div class="section-title">Most Career Wins — Top 20</div>
+                <div class="hof-table">
+                    <table class="table table-borderless mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Horse</th>
+                                <th>Status</th>
+                                <th>Age</th>
+                                <th>Owner</th>
+                                <th>Wins</th>
+                                <th>Runs</th>
+                                <th>Win%</th>
+                                <th>Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-wins"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ACTIVE -->
+            <div id="tab-active" style="display:none">
+                <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+                    <div class="section-title mb-0">Active Horses</div>
+                    <select class="search-bar" id="filter-owner" style="max-width:180px">
+                        <option value="">All Owners</option>
+                    </select>
+                    <select class="search-bar" id="sort-active" style="max-width:180px">
+                        <option value="money">Sort: Earnings</option>
+                        <option value="wins">Sort: Wins</option>
+                        <option value="age">Sort: Age</option>
+                        <option value="rating">Sort: Rating</option>
+                    </select>
+                </div>
+                <div class="hof-table">
+                    <table class="table table-borderless mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Horse</th>
+                                <th>Age</th>
+                                <th>Owner</th>
+                                <th>Rating</th>
+                                <th>Rest</th>
+                                <th>Runs</th>
+                                <th>Wins</th>
+                                <th>Earnings</th>
+                                <th>Form</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-active"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RETIRED -->
+            <div id="tab-retired" style="display:none">
+                <div class="section-title">Retired Horses</div>
+                <div id="no-retired" class="empty-state" style="display:none">
+                    <div class="icon">🪦</div>
+                    <p>No horses have retired yet. Complete a full season to see retirements.</p>
+                </div>
+                <div class="hof-table" id="retired-table-wrap">
+                    <table class="table table-borderless mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Horse</th>
+                                <th>Retired</th>
+                                <th>Age</th>
+                                <th>Owner</th>
+                                <th>Runs</th>
+                                <th>Wins</th>
+                                <th>Earnings</th>
+                                <th>Form</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-retired"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RISING STARS -->
+            <div id="tab-young" style="display:none">
+                <div class="section-title">Rising Stars — Age 4 &amp; Under</div>
+                <div class="hof-table">
+                    <table class="table table-borderless mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Horse</th>
+                                <th>Age</th>
+                                <th>Owner</th>
+                                <th>Rating</th>
+                                <th>Runs</th>
+                                <th>Wins</th>
+                                <th>Earnings</th>
+                                <th>Best Dist</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-young"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SEARCH -->
+            <div id="tab-search" style="display:none">
+                <div class="section-title">Search Horses</div>
+                <input class="search-bar mb-3" id="search-input" placeholder="Type a horse name…" autocomplete="off">
+                <div id="search-results"></div>
+            </div>
+
+        </div><!-- /tab-content -->
+
+    </div><!-- /container -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>// ═══════════════════════════════════════════════════════════════
+//  DATA BRIDGE
+//  The game stores its state as ES-module exports that can't be
+//  accessed from a plain <script>.  The game should call
+//  window.HoF.load(horseData, retiredHorses, season) after each
+//  meeting / season transition.  For demo purposes we also
+//  generate synthetic sample data if the game hasn't loaded any.
+// ═══════════════════════════════════════════════════════════════
+
+const HoF = (() => {
+
+  let _active   = [];
+  let _retired  = [];
+  let _season   = 1;
+
+  // Public API ─────────────────────────────────────────────────
+  function load(activeHorses, retiredHorsesArr, season) {
+    _active  = activeHorses  || [];
+    _retired = retiredHorsesArr || [];
+    _season  = season || 1;
+    render();
+  }
+
+  function render() {
+    const all = [..._active.map(h => ({...h, retired: false})),
+                 ..._retired.map(h => ({...h, retired: true}))];
+
+    updateStats(all);
+    renderEarners(all);
+    renderWins(all);
+    renderActive(_active);
+    renderRetired(_retired);
+    renderYoung(_active);
+    populateOwnerFilter(_active);
+  }
+
+  // ── Stats bar ────────────────────────────────────────────────
+  function updateStats(all) {
+    const active  = all.filter(h => !h.retired);
+    const retired = all.filter(h => h.retired);
+    document.getElementById('stat-total').textContent   = all.length;
+    document.getElementById('stat-active').textContent  = active.length;
+    document.getElementById('stat-retired').textContent = retired.length;
+    document.getElementById('stat-season').textContent  = _season;
+    document.getElementById('subtitle').textContent =
+      `Flat Jumpers — Season ${_season} — ${active.length} Active · ${retired.length} Retired`;
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function rankBadge(n) {
+    const cls = n === 1 ? 'rank-1' : n === 2 ? 'rank-2' : n === 3 ? 'rank-3' : 'rank-other';
+    return `<span class="rank-badge ${cls}">${n}</span>`;
+  }
+
+  function statusBadge(h) {
+    if (h.retired) return `<span class="badge badge-retired">Retired</span>`;
+    if (h.age <= 3) return `<span class="badge badge-young">Youngster</span>`;
+    return `<span class="badge badge-active">Active</span>`;
+  }
+
+  function winPct(h) {
+    if (!h.runs) return '—';
+    return ((h.wins / h.runs) * 100).toFixed(0) + '%';
+  }
+
+  function fmt(n) {
+    return '£' + Number(n || 0).toLocaleString();
+  }
+
+  function formStr(h) {
+    const f = h.form || '';
+    return `<span class="form-string" title="${f}">${f || '—'}</span>`;
+  }
+
+  function distLabel(d) {
+    if (!d) return '—';
+    if (d <= 5) return '5f';
+    if (d <= 7) return '6-7f';
+    if (d <= 8) return '1m';
+    if (d <= 10) return '1m2f';
+    if (d <= 12) return '1m4f';
+    if (d <= 16) return '2m';
+    if (d <= 20) return '2m4f';
+    if (d <= 24) return '3m';
+    return '4m+';
+  }
+
+  function restIndicator(r) {
+    const colors = {0:'red', 1:'orange', 2:'forestgreen', 3:'lightgreen', 4:'turquoise'};
+    const color = colors[r] || 'tan';
+    const label = (r >= 0 && r <= 4) ? r : '=';
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;
+      width:20px;height:20px;border-radius:50%;background:${color};color:#fff;
+      font-size:11px;font-weight:700">${label}</span>`;
+  }
+
+  // ── Top Earners ───────────────────────────────────────────────
+  function renderEarners(all) {
+    const sorted = [...all].sort((a, b) => (b.money||0) - (a.money||0)).slice(0, 20);
+    const tbody = document.getElementById('tbody-earners');
+    if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No data yet.</td></tr>'; return; }
+    tbody.innerHTML = sorted.map((h, i) => `
+      <tr>
+        <td>${rankBadge(i+1)}</td>
+        <td><strong>${h.name}</strong></td>
+        <td>${statusBadge(h)}</td>
+        <td>${h.age}</td>
+        <td>${h.owner || '—'}</td>
+        <td>${h.runs || 0}</td>
+        <td>${h.wins || 0}</td>
+        <td>${winPct(h)}</td>
+        <td style="color:var(--gold);font-weight:600">${fmt(h.money)}</td>
+        <td>${formStr(h)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Most Wins ─────────────────────────────────────────────────
+  function renderWins(all) {
+    const sorted = [...all].sort((a, b) => (b.wins||0) - (a.wins||0)).slice(0, 20);
+    const tbody = document.getElementById('tbody-wins');
+    if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No data yet.</td></tr>'; return; }
+    tbody.innerHTML = sorted.map((h, i) => `
+      <tr>
+        <td>${rankBadge(i+1)}</td>
+        <td><strong>${h.name}</strong></td>
+        <td>${statusBadge(h)}</td>
+        <td>${h.age}</td>
+        <td>${h.owner || '—'}</td>
+        <td style="color:var(--gold);font-weight:600">${h.wins || 0}</td>
+        <td>${h.runs || 0}</td>
+        <td>${winPct(h)}</td>
+        <td>${fmt(h.money)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Active ────────────────────────────────────────────────────
+  let _currentOwnerFilter = '';
+  let _currentSort = 'money';
+
+  function renderActive(horses, ownerFilter, sortKey) {
+    ownerFilter = ownerFilter || _currentOwnerFilter;
+    sortKey     = sortKey     || _currentSort;
+    _currentOwnerFilter = ownerFilter;
+    _currentSort        = sortKey;
+
+    let filtered = horses.filter(h => !ownerFilter || h.owner === ownerFilter);
+    filtered.sort((a, b) => (b[sortKey]||0) - (a[sortKey]||0));
+
+    const tbody = document.getElementById('tbody-active');
+    if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No horses match.</td></tr>'; return; }
+    tbody.innerHTML = filtered.map((h, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${h.name}</strong></td>
+        <td>${h.age}</td>
+        <td>${h.owner || '—'}</td>
+        <td>${h.rating || '—'}</td>
+        <td>${restIndicator(h.rest)}</td>
+        <td>${h.runs || 0}</td>
+        <td>${h.wins || 0}</td>
+        <td style="color:var(--gold)">${fmt(h.money)}</td>
+        <td>${formStr(h)}</td>
+      </tr>`).join('');
+  }
+
+  function populateOwnerFilter(horses) {
+    const owners = [...new Set(horses.map(h => h.owner).filter(Boolean))].sort();
+    const sel = document.getElementById('filter-owner');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Owners</option>' +
+      owners.map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
+  }
+
+  // ── Retired ───────────────────────────────────────────────────
+  function renderRetired(horses) {
+    const noEl   = document.getElementById('no-retired');
+    const wrapEl = document.getElementById('retired-table-wrap');
+    if (!horses.length) {
+      noEl.style.display   = 'block';
+      wrapEl.style.display = 'none';
+      return;
+    }
+    noEl.style.display   = 'none';
+    wrapEl.style.display = 'block';
+
+    const sorted = [...horses].sort((a,b) => (b.money||0)-(a.money||0));
+    const tbody = document.getElementById('tbody-retired');
+    tbody.innerHTML = sorted.map((h, i) => `
+      <tr>
+        <td>${rankBadge(i+1)}</td>
+        <td><strong>${h.name}</strong></td>
+        <td><span class="badge badge-retired">S${h.retiredSeason || '?'}</span></td>
+        <td>${h.age}</td>
+        <td>${h.owner || '—'}</td>
+        <td>${h.runs || 0}</td>
+        <td>${h.wins || 0}</td>
+        <td style="color:var(--gold)">${fmt(h.money)}</td>
+        <td>${formStr(h)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Rising Stars ─────────────────────────────────────────────
+  function renderYoung(horses) {
+    const young = horses
+      .filter(h => h.age <= 4)
+      .sort((a, b) => (b.rating||0) - (a.rating||0));
+    const tbody = document.getElementById('tbody-young');
+    if (!young.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No young horses found.</td></tr>'; return;
+    }
+    tbody.innerHTML = young.map((h, i) => `
+      <tr>
+        <td>${rankBadge(i+1)}</td>
+        <td><strong>${h.name}</strong> <span class="badge badge-young">⭐</span></td>
+        <td>${h.age}</td>
+        <td>${h.owner || '—'}</td>
+        <td style="color:var(--gold);font-weight:600">${h.rating || '—'}</td>
+        <td>${h.runs || 0}</td>
+        <td>${h.wins || 0}</td>
+        <td>${fmt(h.money)}</td>
+        <td>${distLabel(h.bestDist)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Search ───────────────────────────────────────────────────
+  function search(query) {
+    const all = [..._active.map(h => ({...h, retired:false})),
+                 ..._retired.map(h => ({...h, retired:true}))];
+    const q   = query.toLowerCase().trim();
+    const res = q ? all.filter(h => h.name.toLowerCase().includes(q)) : [];
+    const el  = document.getElementById('search-results');
+    if (!q) { el.innerHTML = ''; return; }
+    if (!res.length) { el.innerHTML = '<p style="color:#666">No horses found.</p>'; return; }
+
+    el.innerHTML = res.map(h => {
+      const histRows = (h.history || []).slice(-10).map(r => `
+        <tr>
+          <td>S${r.season||'?'} W${r.meeting}</td>
+          <td>${r.course}</td>
+          <td>${r.going}</td>
+          <td>${r.distance}</td>
+          <td>${r.position === 0 ? '10+' : r.position}</td>
+          <td>${fmt(r.winnings)}</td>
+        </tr>`).join('');
+
+      return `
+        <div class="hof-table mb-3 p-3">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <strong style="font-size:1.1rem;color:var(--gold)">${h.name}</strong>
+            ${statusBadge(h)}
+          </div>
+          <div class="row g-2 mb-2" style="font-size:0.8rem">
+            <div class="col-6 col-md-3"><span style="color:#888">Owner:</span> ${h.owner||'—'}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Age:</span> ${h.age}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Rating:</span> ${h.rating||'—'}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Best Dist:</span> ${distLabel(h.bestDist)}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Runs:</span> ${h.runs||0}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Wins:</span> ${h.wins||0}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Win%:</span> ${winPct(h)}</div>
+            <div class="col-6 col-md-3"><span style="color:#888">Earnings:</span> <span style="color:var(--gold)">${fmt(h.money)}</span></div>
+          </div>
+          <div style="font-size:0.78rem;color:#888">Form: <span class="form-string">${h.form||'—'}</span></div>
+          ${histRows ? `
+          <div class="mt-2">
+            <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Last 10 Races</div>
+            <table class="table table-borderless mb-0" style="font-size:0.75rem">
+              <thead style="color:#666"><tr><th>Wk</th><th>Course</th><th>Going</th><th>Dist</th><th>Pos</th><th>£</th></tr></thead>
+              <tbody>${histRows}</tbody>
+            </table>
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // ── DEMO DATA (loads if game hasn't connected) ────────────────
+  function loadDemo() {
+    const owners = ['Player One','C Appleby','R Hannon','W Mullins','N Henderson','G Elliot'];
+    const dists  = [5,8,10,12,16,20,24,32];
+    const goingOpts = ['Good','Soft','Heavy','Good-Firm','Good-Soft'];
+    const names = ['Hurricane Lane','Enable','Frankel','Zenyatta','Winx Junior',
+      'Roaring Lion','Sea For All','Golden Milchik','Nashwan','California Chrome',
+      'Arctic Tern','Laser Light','Stellar Nova','Iron Thunder','Crimson Titan'];
+
+    const active = names.map((n, i) => {
+      const runs = Math.floor(Math.random() * 30) + 2;
+      const wins = Math.floor(Math.random() * runs * 0.4);
+      const money = wins * 15000 + Math.floor(Math.random() * 20000);
+      const age = Math.floor(Math.random() * 6) + 4;
+      const history = Array.from({length: Math.min(runs, 8)}, (_, j) => ({
+        meeting: j+1, course: 'Newmarket', going: goingOpts[j%5],
+        distance: ['5f','1m','1m2f','2m'][j%4], position: Math.floor(Math.random()*6)+1,
+        winnings: j < wins ? 8000 : 0
+      }));
+      return {
+        name: n, owner: owners[i % owners.length], age,
+        rating: Math.floor(Math.random()*40)+90,
+        bestDist: dists[i % dists.length],
+        runs, wins, money, form: Array.from({length:Math.min(runs,8)},()=>Math.floor(Math.random()*8)+1).join(''),
+        rest: Math.floor(Math.random()*5), history, retired: false
+      };
+    });
+
+    const retired = [
+      { name:'Legendary Spirit', owner:'C Appleby', age:11, runs:48, wins:18,
+        money:320000, form:'11213456/', retired:true, retiredSeason:1, history:[], bestDist:8 },
+      { name:'Old Thunder', owner:'W Mullins', age:11, runs:52, wins:12,
+        money:190000, form:'32412513/', retired:true, retiredSeason:1, history:[], bestDist:20 }
+    ];
+
+    load(active, retired, 1);
+  }
+
+  return { load, render, search, loadDemo };
+})();
+
+// ── TABS ─────────────────────────────────────────────────────────
+const tabs = {
+  'top-earners': 'tab-top-earners',
+  'most-wins':   'tab-most-wins',
+  'active':      'tab-active',
+  'retired':     'tab-retired',
+  'young':       'tab-young',
+  'search':      'tab-search'
+};
+
+document.querySelectorAll('.nav-link[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-link[data-tab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.values(tabs).forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById(tabs[btn.dataset.tab]).style.display = 'block';
+  });
+});
+
+// ── ACTIVE TAB FILTERS ────────────────────────────────────────────
+document.getElementById('filter-owner').addEventListener('change', function() {
+  HoF.render(); // re-render picks up filter
+});
+document.getElementById('sort-active').addEventListener('change', function() {
+  HoF.render();
+});
+
+// ── SEARCH ────────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', function() {
+  HoF.search(this.value);
+});
+
+// ── INIT ──────────────────────────────────────────────────────────
+// If the main game is open in the same window it can call:
+//   window.HoF.load(horseData, retiredHorses, currentSeason)
+window.HoF = HoF;
+
+// Load demo data if game hasn't connected within 300ms
+setTimeout(() => {
+  if (document.getElementById('stat-total').textContent === '—') {
+    HoF.loadDemo();
+  }
+}, 300);</script>
+</body>
+</html>

@@ -1,172 +1,288 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<!-- content starts here -->
 
-<h1 class="text-center" id='game-banner'>Flat Jumpers</h1>
+<!-- ── 1. GAME BANNER ── -->
+<h1 id="game-banner">
+    🏇 Flat Jumpers
+    <a href="{% static 'horse/hall_of_fame.html' %}" target="_blank"
+       class="btn btn-sm ms-2">🏆 Hall of Fame</a>
+</h1>
 
+<!-- ── GAME STATE PANEL ── -->
 <div class="game-state" id="game-state">
-  <div class="meeting-info">
-    <h6><span id="next-meeting">Next Meeting: </span><span id="gs-meeting">Catterick (1 of 16)</span></h6>
-  </div>
-  <div class="meeting-races" id="page-info">
-    <table class="table table-hover table-sm" id="gs-meeting-races">
-      <!-- Javascript will fill the table-->
-    </table>
-  </div>
+    <div class="meeting-info">
+        <h6>
+            <span id="season-number">Season 1 | </span>
+            <span id="next-meeting">Next Meeting: </span>
+            <span id="gs-meeting">Catterick (1 of 16)</span>
+        </h6>
+    </div>
 
-  <div class="player-standings" id="player-standings">
-    <div class="player-title">
-      <h4 id="gs-standings">Current Standings</h4>
+    <!-- 12. SEASON BANNER — collapsible card ── -->
+    <div id="season-banner">
+        <!-- filled by JS: champion alert, then a collapsible for retirements/new horses -->
     </div>
-    <div class="player-table small-font">
-      <table class="table table-hover table-sm" id="gs-players">
-        <!-- Javascript will fill the table-->
-      </table>
+
+    <!-- Meeting races table -->
+    <div class="meeting-races" id="page-info">
+        <table class="table table-hover table-sm" id="gs-meeting-races"></table>
     </div>
-  </div>
-  <button id="clear-game-state" class="btn btn-primary">Continue</button>
+
+    <div class="player-standings" id="player-standings">
+        <h6 id="gs-standings" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;
+        letter-spacing:0.5px;color:var(--turf-dark);border-bottom:1px solid #dee2e6;padding-bottom:4px;">
+            Current Standings
+        </h6>
+        <div class="player-table small-font">
+            <table class="table table-hover table-sm" id="gs-players"></table>
+        </div>
+    </div>
+
+    <button id="clear-game-state" class="btn">Continue →</button>
 </div>
 
+<!-- ── RACE ENTRY: race selection grid ── -->
 <div id="race-selections">
     <div class="selection-table small-font">
-      <table class="table table-hover table-sm" id="race-selection">
-        <!-- Javascript will fill the table-->
-      </table>
+        <table class="table table-hover table-sm" id="race-selection"></table>
     </div>
 </div>
 
+<!-- ── RACE ENTRY: player race assignment strip ── -->
 <div id="player-selections">
-  <h6 id="stable-name"></h6>
-  <div class="selection-table small-font table-responsive" style="overflow-x: auto;">
-    <table class="table table-hover table-sm" id="st-selection">
-      <!-- Javascript will fill the table -->
-    </table>
-  </div>
-</div>
-
-  <div id="player-stable">
     <h6 id="stable-name"></h6>
-    <div class="stable-table">
-      <table class="table table-hover table-sm ms-3 mt-1" id="st-horses">
-        <!-- Javascript will fill the table-->
-      </table>
+    <div class="selection-table small-font table-responsive" style="overflow-x:auto;">
+        <table class="table table-hover table-sm" id="st-selection"></table>
     </div>
-  </div>
-
-
-<div id="race-screen" class="container my-4">
-
-  <!-- 📍 Race Header -->
-  <div class="mb-4">
-    <h2><span id="r-time">2:30 PM</span><span id="r-name"> Race Name</h2>
-    <p><strong><span id="r-dist"> </span></strong> Prize Money: £<span id="r-prize">1000</span>
-    <br><span id="r-runners">11</span> runners</p>
-  </div>
-  
-  <!-- 🟢 Start / Next Race Buttons -->
-  <div class="text-center mt-4">
-    <button id="start-race" class="btn btn-lg btn-success">Start Race</button>
-    <button id="next-race" class="btn btn-lg btn-success" disabled>Next Race</button>
-  </div>
-
-  <!-- 📋 Racecard Table -->
-  <div class="table-responsive small-font">
-    <table class="table table-bordered text-center align-middle table table-hover table-sm">
-      <thead class="table-light" id="racecard-header">
-
-      </thead>
-      <tbody id="racecard-body">
-        <!-- Rows will be dynamically inserted here -->
-      </tbody>
-    </table>
-  </div>
 </div>
 
-
-
-<div class="modal" id="gameOptionsModal" aria-labelledby="gameOptionsLabel" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Start New Game!</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true"></span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Players:</p>
-            <!-- Player Entries -->
-          <div class="player-entry">
-            <input type="text" class="form-control" value="Player One" id="p1-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p1-check" checked="">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p1-label">Human Player</label>
-            </div>
-          </div>
-          <div class="player-entry">
-            <input type="text" class="form-control" value="C Appleby" id="p2-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p2-check">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p2-label">AI Player</label>
-            </div>
-          </div>
-          <div class="player-entry">
-            <input type="text" class="form-control" value="R Hannon" id="p3-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p3-check">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p3-label">AI Player</label>
-            </div>
-          </div>
-          <div class="player-entry">
-            <input type="text" class="form-control" value="W Mullins" id="p4-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p4-check">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p4-label">AI Player</label>
-            </div>
-          </div>
-          <div class="player-entry">
-            <input type="text" class="form-control" value="N Henderson" id="p5-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p5-check">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p5-label">AI Player</label>
-            </div>
-          </div>
-          <div class="player-entry">
-            <input type="text" class="form-control" value="G Elliot" id="p6-name">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="p6-check">
-                <label class="form-check-label" for="flexSwitchCheckChecked" id="p6-label">AI Player</label>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="start-game">Go Racing!</button>
-        </div>
-      </div>
+<!-- ── 13. STABLE TABLE — sticky header + horizontal scroll ── -->
+<div id="player-stable">
+    <h6 id="stable-title" style="font-size:0.8rem;font-weight:700;margin-bottom:4px;"></h6>
+    <div class="stable-table-wrap">
+        <table class="table table-sm mb-0" id="st-horses"></table>
     </div>
-  </div>
+</div>
 
-  <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+<!-- ── RACE SCREEN ── -->
+<div id="race-screen">
+
+    <!-- 1. DARK RACE HEADER PANEL -->
+    <div class="race-header-panel">
+        <h4><span id="r-time"></span> <span id="r-name"></span></h4>
+        <div class="race-meta">
+            <strong><span id="r-dist"></span></strong>
+            &nbsp;·&nbsp; Prize: <span id="r-prize"></span>
+            &nbsp;·&nbsp; <span id="r-runners"></span> runners
+        </div>
+        <div id="place-terms"></div>
+    </div>
+
+    <!-- 5. BETTING STATUS BAR -->
+    <div id="betting-status"></div>
+
+    <!-- BUTTONS -->
+    <div class="d-flex gap-2 py-2 px-2" id="race-buttons">
+        <button id="start-race" class="btn btn-success btn-lg fw-bold">▶ Start Race</button>
+        <button id="next-race" class="btn btn-primary btn-lg fw-bold" disabled>Next Race →</button>
+    </div>
+
+    <!-- 2. RACECARD TABLE -->
+    <div class="table-responsive small-font px-1 mb-2">
+        <table class="table table-bordered text-center align-middle table-hover table-sm mb-0">
+            <thead id="racecard-header"></thead>
+            <tbody id="racecard-body"></tbody>
+        </table>
+    </div>
+
+    <!-- BETS PANEL -->
+    <div class="bets-panel">
+        <h6>📋 Bets This Race</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Horse</th>
+                        <th>Odds</th>
+                        <th>Type</th>
+                        <th>Stake</th>
+                        <th>Potential</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="bets-body">
+                    <tr><td colspan="7" class="text-muted text-center">No bets placed</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div><!-- /#race-screen -->
+<!-- ══════════════════════════════════════ MODALS ══════════════════════════════════════ -->
+<!-- New Game Modal -->
+<div class="modal" id="gameOptionsModal" aria-labelledby="gameOptionsLabel"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-dark">
+                <h5 class="modal-title">🏇 Start New Game</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-2">Set player names and toggle Human / AI</p>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="Player One" id="p1-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p1-check" checked>
+                        <label class="form-check-label small" for="p1-check" id="p1-label">Human</label>
+                    </div>
+                </div>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="C Appleby" id="p2-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p2-check">
+                        <label class="form-check-label small" for="p2-check" id="p2-label">AI</label>
+                    </div>
+                </div>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="R Hannon" id="p3-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p3-check">
+                        <label class="form-check-label small" for="p3-check" id="p3-label">AI</label>
+                    </div>
+                </div>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="W Mullins" id="p4-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p4-check">
+                        <label class="form-check-label small" for="p4-check" id="p4-label">AI</label>
+                    </div>
+                </div>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="N Henderson" id="p5-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p5-check">
+                        <label class="form-check-label small" for="p5-check" id="p5-label">AI</label>
+                    </div>
+                </div>
+                <div class="player-entry">
+                    <input type="text" class="form-control form-control-sm" value="G Elliot" id="p6-name">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="p6-check">
+                        <label class="form-check-label small" for="p6-check" id="p6-label">AI</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success fw-bold" id="start-game">🏁 Go Racing!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 11. Horse History Modal — dark header -->
+<div class="modal fade" id="historyModal" tabindex="-1"
+     aria-labelledby="historyModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="historyModalLabel">Horse Race History</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content">
+            <div class="modal-header modal-header-dark">
+                <h5 class="modal-title" id="historyModalLabel">Race History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="historyModalContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
-        <div class="modal-body" id="historyModalContent">
-          <!-- Filled dynamically -->
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
 
-<!-- content ends here -->
+<!-- 11. Bet Placement Modal — dark header -->
+<div class="modal fade" id="betModal" tabindex="-1"
+     aria-labelledby="betModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-dark">
+                <h5 class="modal-title" id="betModalLabel">💰 Place a Bet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Horse + odds summary -->
+                <div class="d-flex justify-content-between align-items-center mb-2
+                    p-2 rounded" style="background:#f0f7f2;">
+                    <div>
+                        <div class="fw-bold" id="bet-horse-name" style="font-size:1rem;color:var(--turf-dark)">—</div>
+                        <div class="small text-muted" id="bet-place-info"></div>
+                    </div>
+                    <div class="text-end">
+                        <div style="font-size:1.4rem;font-weight:800;color:var(--turf-dark)" id="bet-odds">—</div>
+                        <div class="small text-muted">odds</div>
+                    </div>
+                </div>
+
+                <!-- Bet type -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold mb-1">Bet Type</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="bet-type-radio" id="bet-type-win" value="win" checked>
+                        <label class="btn btn-outline-success btn-sm" for="bet-type-win">Win</label>
+                        <input type="radio" class="btn-check" name="bet-type-radio" id="bet-type-ew" value="ew">
+                        <label class="btn btn-outline-primary btn-sm" for="bet-type-ew">Each Way</label>
+                    </div>
+                    <!-- hidden select kept for JS compatibility -->
+                    <select id="bet-type" class="d-none">
+                        <option value="win">Win</option>
+                        <option value="ew">Each Way</option>
+                    </select>
+                </div>
+
+                <!-- Stake -->
+                <div class="mb-2">
+                    <label class="form-label small fw-bold mb-1">Stake</label>
+                    <div class="input-group">
+                        <span class="input-group-text fw-bold">£</span>
+                        <input type="number" id="bet-stake" class="form-control"
+                               min="10" step="10" placeholder="0">
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">Max: <span id="bet-max-stake">—</span></small>
+                        <small class="text-muted">Balance: <span id="bet-balance">—</span></small>
+                    </div>
+                    <div class="small text-muted mt-1">Each Way = two bets (stake × 2 total)</div>
+                </div>
+
+                <!-- Quick stake buttons -->
+                <div class="d-flex gap-1 mb-2 flex-wrap" id="quick-stakes"></div>
+
+                <!-- Potential return -->
+                <div id="bet-potential" class="p-2 rounded mb-1" style="background:#f0f7f2;min-height:2rem;font-size:0.85rem;"></div>
+                <div id="bet-error" class="text-danger small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        data-bs-dismiss="modal">
+                    No Bet
+                </button>
+                <button type="button" class="btn btn-success fw-bold" id="bet-confirm">Confirm Bet ✓</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 {% block additional %}
 <script type="module" src="{% static 'js/horse_game/load_data.js' %}"></script>
 <script type="module" src="{% static 'js/horse_game/horseracing.js' %}"></script>
+
+<script>
+    // ── Sync radio buttons to hidden select for JS compatibility ──
+    document.addEventListener('change', function (e) {
+        if (e.target.name === 'bet-type-radio') {
+            document.getElementById('bet-type').value = e.target.value;
+            document.getElementById('bet-type').dispatchEvent(new Event('change'));
+        }
+    });
+</script>
 {% endblock additional %}
