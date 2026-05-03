@@ -2,6 +2,18 @@
     adjustRatingByAge
 } from './initialise.js';
 
+// ── STABLE COLOURS — single source of truth for all modules ──────────────────
+export const STABLE_COLOURS = [
+    { bg: '#1a3a8f', label: 'blue' },
+    { bg: '#c0392b', label: 'red' },
+    { bg: '#1a6b3c', label: 'green' },
+    { bg: '#d4a017', label: 'gold' },
+    { bg: '#6b2fa0', label: 'purple' },
+    { bg: '#c0680a', label: 'orange' },
+    { bg: '#0e7d8a', label: 'teal' },
+    { bg: '#b5395e', label: 'pink' },
+];
+
 export let playerData = [];
 export let horseData = [];
 export let horsePool = [];
@@ -12,14 +24,32 @@ export let currentSeason = 1;
 export let raceEntries = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] };
 
 // ── SETTERS ───────────────────────────────────────────────────────────────────
-export function setPlayerData(data) { playerData = data; }
-export function setHorseData(data) { horseData = data; }
-export function setHorsePool(data) { horsePool = data; }
+// Arrays are mutated in place (splice/push) so all importing modules
+// always see the live updated data via their imported binding.
+// Objects (raceData, currentSeason, meetingNumber) are reassigned normally —
+// those importers must read via getter functions or the exported binding.
+
+export function setPlayerData(data) {
+    playerData.splice(0, playerData.length, ...data);
+}
+export function setHorseData(data) {
+    horseData.splice(0, horseData.length, ...data);
+}
+export function setHorsePool(data) {
+    horsePool.splice(0, horsePool.length, ...data);
+}
+export function addRetiredHorses(horses) {
+    retiredHorses.push(...horses);
+}
 export function setRaceData(data) { raceData = data; }
-export function setRaceEntries(data) { raceEntries = data; }
+export function setRaceEntries(data) {
+    // Clear and repopulate each slot
+    for (let i = 0; i < 6; i++) {
+        raceEntries[i] = data[i] || [];
+    }
+}
 export function setMeetingNumber(num) { meetingNumber = num; }
 export function setCurrentSeason(num) { currentSeason = num; }
-export function addRetiredHorses(horses) { retiredHorses = retiredHorses.concat(horses); }
 
 // ── GETTERS ───────────────────────────────────────────────────────────────────
 export function getPlayerData() { return playerData; }

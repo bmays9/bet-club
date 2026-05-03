@@ -21,6 +21,7 @@ Alydar
 Amber Split
 Ambleside
 American Idaho
+Ankova Black
 Apartmental
 Apex Delight
 Apollo’s Thunder
@@ -42,6 +43,7 @@ Banhoek Red
 Bashiri
 Basilico
 Be The Mystery
+Beaumont's Wish
 Bellagio Deal
 Beltrain
 Bergsson
@@ -51,6 +53,7 @@ Big Burrows
 Biloxi Parish
 Bistro Kid
 Black Hawk Racer
+Black Ninety Nine
 Black Rodeo
 Blaze of Glory
 Blazing Phantom
@@ -99,6 +102,7 @@ Centrifugal Force
 Chamonix
 Chancery Lane
 Chaperone
+Charrington
 Chautauqua
 Chuchotement Bleu
 Cigar
@@ -116,6 +120,7 @@ Corbinette
 Cosmic Inferno
 Cosmic Sprinter
 Count Me Out
+Covert Operation
 Crack The Code
 Cresta Hill
 Criminal Beat
@@ -133,6 +138,8 @@ Dashboard Elle
 Dawn Ruler
 DeChambeau
 Deja Vous
+Delusion
+Dembele
 Denmania
 Denton Abbey
 Dessert Orchid
@@ -157,11 +164,14 @@ Electric Tango
 Electric Tempest
 Embrace The Day
 Embulo
+Eminate
 Emperor Shinto
 Enable
 Equinox King
 Étoile du Nord
 Ever So Sweet
+Every Second Twice
+Exoterria
 Facile D'oudaires
 Fascinate
 Fashionista
@@ -178,10 +188,12 @@ Flintoff
 Flowers For Hours
 Flutter Me Up
 Forgotten Link
+Found A Fortune
 Frankall
 Freeze Amadeus
 French Recruit
 Fresh As A Duke
+Freudenberg
 Frowned Upon
 Full Of Dreams
 Gaelic Purchase
@@ -193,6 +205,7 @@ Get To The Money
 Getaway Bridge
 Getaway Smoke
 Ghostzapper
+Glenwood
 Global Funk
 Going For Gold
 Gold Or Bronze
@@ -216,6 +229,7 @@ Harping On
 Hasselbaink
 Hemisphere
 Hertford Hero
+Highland Dancer
 Highland Reel
 Hightop Glass
 Himalaya
@@ -224,6 +238,7 @@ Hitcharide
 HMS Belfast
 Holding Aces
 Honkington
+Hooky Street
 Hooping Around
 Howling Jim
 Humble Brag
@@ -264,20 +279,27 @@ Joytastic
 Jubilee Bravo
 Jupyter Express
 Justify
+Kallis
 Kauto Scar
 Kayamandi
 Kendall's Rap
+K'gari
 King Ezekial
+King For A Day
 King Scraper
 Kopek De Maude
 Krakatoan
 Krystalline
+Kunurra
 Kyoto Embrace
 La Canourgue
+La Louvere
 La Rochelle
+Lake Argyll
 Lake Coniston
 Lamela
 Leovita
+Les Hautes Rivieres
 Liberty Fuss
 Light Years 
 Lightning Comet
@@ -296,6 +318,7 @@ Made In York
 Madrid Maestro
 Magellan
 Magnifica
+Malayana
 Malbec Maestro
 Man On War
 Mannings Way
@@ -354,6 +377,7 @@ Odegaard
 Off The Wall
 Ola Maleah
 Olazabal
+Oliginies
 Omega Racer
 On The River Nile
 One For Rome
@@ -362,6 +386,7 @@ One Night in Ajax
 Operation Forest
 Orinoco
 Ornathologist
+Ostrava
 Ounce Or Pounce
 Our Confession
 Out Of Ammo
@@ -375,6 +400,7 @@ Passenger Forty
 Pedrovia
 Pegasus Fire
 Pegasus Lightning
+Pellew Island
 Penedono
 Peralta Six
 Percy For Mercy
@@ -385,6 +411,7 @@ Phoenix Stride
 Photographic
 Pizaglo
 Planet Infusion
+Pontificate
 Port Ghalib
 Portman Road
 Porto Beauty
@@ -396,6 +423,7 @@ Progress In Turn
 Punk Rock Princess
 Quantum Burst
 Quantum Ice
+Quaregnon
 Queen Of Clubs
 Queen Of The Bronx
 Quella De Vio
@@ -416,6 +444,7 @@ Ravenelli
 Ravenstore
 Ready To Fly
 Real Minty
+Reathmore
 Reclaim
 Red Architect
 Red Lightning
@@ -438,6 +467,7 @@ Ruler of the World
 Sacramento
 Sad Ken
 Saint Fallon
+Saint Symphoren
 Salechi
 Saliarna
 Sans Retour
@@ -501,11 +531,13 @@ Take Back Sunday
 Tales Of Tregawne
 Tangential
 Tapit
+Tatra Hills
 Tear Jerker
 Teenage Rockstar
 Telecom
 Tempura Flyer
 Tendulkar
+Tengara
 Tennessee Target
 Terrestrial
 Thanksamillion
@@ -534,6 +566,7 @@ The Trapper
 The Wildfire King
 Theatre Guide
 Thistlecatch
+Three of Spades
 Throwaway
 Thunder To Exit
 Thunderbolton
@@ -556,13 +589,16 @@ Turbonica Jazz
 Turling Comet
 Turn The Works
 Twente Minutes
+Unbroken Spirit
 Under The Influence
 Underarmer
 Undercooked
 Unintended
+Unprincipled
 Up The Bracket
 Urban Denial
 Valencia
+Valveri
 Vancroix
 Vautorn
 Veanimix

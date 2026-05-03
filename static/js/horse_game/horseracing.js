@@ -3,7 +3,7 @@ import { showRacecard } from "./race.js";
 import {
     allRacesHaveEntries, canEnterRace, computerAutoSelect, computerSelect,
     enterHorse, displayRaceEntries, fillEmptyRacesWithTiredHorses,
-    getBestFinishSymbol, getRestIndicator
+    getBestFinishSymbol, getRestIndicator, TRAINER_STYLES
 } from './entry.js';
 import {
     shuffleArray, buildHorseData, resetPlayerData
@@ -11,7 +11,7 @@ import {
 import {
     raceEntries, playerData, horseData, horsePool, raceData, retiredHorses,
     currentSeason, setRaceEntries, setHorseData, setHorsePool, setPlayerData,
-    setRaceData, setCurrentSeason, sortPlayerData
+    setRaceData, setCurrentSeason, sortPlayerData, STABLE_COLOURS
 } from './gameState.js';
 
 export let meeting_number = 0;
@@ -20,15 +20,13 @@ const TOTALHORSES = 144;
 let selectedRaceIndex = 0;
 export let lineups = [];
 
-// ── STABLE COLOURS ────────────────────────────────────────────────────────────
-const STABLE_COLOURS = [
-    { bg: '#1a6b3c', label: 'green' },
-    { bg: '#c0392b', label: 'red' },
-    { bg: '#1a3a8f', label: 'blue' },
-    { bg: '#d4a017', label: 'yellow' },
-    { bg: '#c0680a', label: 'orange' },
-    { bg: '#6b2fa0', label: 'purple' },
-];
+// ── STABLE COLOURS — imported from gameState.js (single source of truth) ──────
+// Always use p.colourIndex — never derive from current sort position
+function playerColour(player) {
+    if (!player) return STABLE_COLOURS[0];
+    const idx = (player.colourIndex ?? 0) % STABLE_COLOURS.length;
+    return STABLE_COLOURS[idx];
+}
 
 // ── MEETING / SEASON ──────────────────────────────────────────────────────────
 export function incrementMeetingNumber() {
@@ -69,7 +67,7 @@ export function showSeasonSummary(players, horses, season, onContinue) {
     const playerRows = sorted.map((p, i) => {
         const betPL = (p.betReturned || 0) - (p.betStaked || 0);
         const plClass = betPL >= 0 ? 'text-success' : 'text-danger';
-        const colour = STABLE_COLOURS[players.findIndex(x => x.name === p.name) % STABLE_COLOURS.length];
+        const colour = playerColour(p);
         return `<tr>
             <td>${i + 1}</td>
             <td><span class="trainer-pill" style="background:${colour.bg}">${p.name}</span></td>
@@ -84,7 +82,7 @@ export function showSeasonSummary(players, horses, season, onContinue) {
     const modalEl = document.getElementById('seasonSummaryModal');
     document.getElementById('ss-season').textContent = season;
     document.getElementById('ss-champion').innerHTML =
-        `<span class="trainer-pill" style="background:${STABLE_COLOURS[players.findIndex(x => x.name === champion?.name) % 6].bg}">${champion?.name || '—'}</span>
+        `<span class="trainer-pill" style="background:${playerColour(champion).bg}">${champion?.name || '—'}</span>
          <span class="ms-1">£${(champion?.total || 0).toLocaleString()}</span>`;
     document.getElementById('ss-bet-champ').innerHTML =
         `${betChampion?.name || '—'} (+£${Math.max(0, (betChampion?.betReturned || 0) - (betChampion?.betStaked || 0)).toLocaleString()})`;
@@ -113,6 +111,19 @@ export function displayGameState() {
     document.getElementById('race-selections').style.display = 'none';
     document.getElementById('player-selections').style.display = 'none';
     document.getElementById('player-stable').style.display = 'none';
+
+    // ── Clear all residual race-screen content ──
+    const raceHeader = document.getElementById('racecard-header');
+    const raceBody = document.getElementById('racecard-body');
+    const betsBody = document.getElementById('bets-body');
+    const betStatus = document.getElementById('betting-status');
+    const placeTerms = document.getElementById('place-terms');
+    if (raceHeader) raceHeader.innerHTML = '';
+    if (raceBody) raceBody.innerHTML = '';
+    if (betsBody) betsBody.innerHTML =
+        '<tr><td colspan="7" class="text-muted text-center small">No bets placed</td></tr>';
+    if (betStatus) betStatus.innerHTML = '';
+    if (placeTerms) placeTerms.innerHTML = '';
 
     if (!raceData?.distances) { console.error("Race data not loaded."); return; }
 
@@ -170,12 +181,14 @@ export function displayGameState() {
         const betPL = (p.betReturned || 0) - (p.betStaked || 0);
         const plSign = betPL >= 0 ? '+' : '';
         const plCls = betPL >= 0 ? 'text-success' : 'text-danger';
-        const idx = playerData.findIndex(pd => pd.name === p.name);
-        const colour = STABLE_COLOURS[idx % STABLE_COLOURS.length];
+        const colour = playerColour(p);
+        const styleLabel = p.trainerStyle && p.trainerStyle !== 'human'
+            ? `<span class="small text-muted ms-1" style="font-size:0.65rem;opacity:0.8">${p.trainerStyle.replace(/_/g, ' ')}</span>`
+            : '';
         playerTableHtml += `<tr class="${i === 0 ? 'fw-bold' : ''}">
             <td>${i + 1}</td>
             <td style="border-left:4px solid ${colour.bg};padding-left:6px">
-                <span class="trainer-pill" style="background:${colour.bg}">${p.name}</span>
+                <span class="trainer-pill" style="background:${colour.bg}">${p.name}</span>${styleLabel}
             </td>
             <td>${p.wins || 0}</td>
             <td>-£${(p.entries || 0).toLocaleString()}</td>
@@ -192,6 +205,10 @@ export function displayGameState() {
 }
 
 // ── CLEAR-GAME-STATE BUTTON ───────────────────────────────────────────────────
+// entryOrder: the fixed sequence of players for this meeting's entry round.
+// Set once per meeting, never re-shuffled mid-round.
+let entryOrder = [];
+
 document.getElementById('clear-game-state').addEventListener('click', function () {
     const racesEl = document.getElementById('gs-meeting-races');
     const playersEl = document.getElementById('gs-players');
@@ -208,12 +225,15 @@ document.getElementById('clear-game-state').addEventListener('click', function (
     document.getElementById('race-screen').style.display = "none";
 
     selectedRaceIndex = 0;
-    shuffleArray(playerData);
+
+    // Shuffle a COPY of playerData for entry order — never shuffle playerData itself
+    entryOrder = shuffleArray([...playerData]);
+
     setRaceEntries({ 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] });
     lineups = [];
 
     displayRaceSelections();
-    displayStable(0);
+    displayStable(0);  // index into entryOrder, not playerData
 });
 
 // ── RACE SELECTION DISPLAY ────────────────────────────────────────────────────
@@ -257,8 +277,11 @@ function displayStable(currentPlayerIndex) {
     document.getElementById('race-screen').style.display = "none";
     document.getElementById('clear-game-state').style.display = "none";
 
-    const playerName = playerData[currentPlayerIndex].name;
-    const colour = STABLE_COLOURS[currentPlayerIndex % STABLE_COLOURS.length];
+    // Always read from entryOrder (the fixed shuffled sequence for this meeting)
+    const currentPlayer = entryOrder[currentPlayerIndex];
+    const playerName = currentPlayer.name;
+    const colour = playerColour(currentPlayer);  // reads currentPlayer.colourIndex
+
     const titleEl = document.getElementById('stable-title');
     if (titleEl) {
         titleEl.textContent = `${playerName}'s Stable`;
@@ -278,7 +301,7 @@ function displayStable(currentPlayerIndex) {
     let playerHorses = horseData.filter(h => h.owner === playerName);
     const distanceKeys = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
 
-    if (!playerData[currentPlayerIndex].human) {
+    if (!currentPlayer.human) {
         if (currentSeason === 1 && meeting_number < 3) {
             computerAutoSelect(playerName, meeting_number);
         } else {
@@ -338,7 +361,7 @@ function displayStable(currentPlayerIndex) {
         }).join('');
 
         stableHtml += `<tr class="${rowClass}">
-            <td>${playerData[currentPlayerIndex].human ? `
+            <td>${entryOrder[currentPlayerIndex].human ? `
                 <input type="radio" class="btn-check horse-select" name="btnradio"
                     id="btnradio${i}" autocomplete="off">
                 <label class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn"
@@ -368,7 +391,7 @@ function displayStable(currentPlayerIndex) {
         button.addEventListener('click', function () {
             if (selectedRaceIndex === null) { alert("Select a race first."); return; }
             const horseName = this.getAttribute('data-horse-name');
-            const pName = playerData[currentPlayerIndex].name;
+            const pName = entryOrder[currentPlayerIndex].name;
             let alreadyEntered = false;
             for (let i = 0; i < 6; i++) {
                 raceEntries[i] = raceEntries[i].filter(e => {
@@ -387,11 +410,11 @@ function displayStable(currentPlayerIndex) {
     });
 
     testBtn.onclick = function () {
-        const pHorses = horseData.filter(h => h.owner === playerData[currentPlayerIndex].name);
+        const pHorses = horseData.filter(h => h.owner === entryOrder[currentPlayerIndex].name);
         for (let i = 0; i < 6; i++) raceEntries[i] = [];
         for (let i = 0; i < 6; i++) {
             if (pHorses[i]) raceEntries[i].push({
-                playerName: playerData[currentPlayerIndex].name, horseName: pHorses[i].name
+                playerName: entryOrder[currentPlayerIndex].name, horseName: pHorses[i].name
             });
         }
         displayRaceSelections(); displayStable(currentPlayerIndex);
@@ -407,7 +430,7 @@ function displayStable(currentPlayerIndex) {
         }
         for (let i = 0; i < 6; i++) raceEntries[i] = [];
         currentPlayerIndex++;
-        if (currentPlayerIndex >= playerData.length) {
+        if (currentPlayerIndex >= entryOrder.length) {
             document.getElementById("race-selections").style.display = "none";
             document.getElementById("player-selections").style.display = "none";
             document.getElementById("player-stable").style.display = "none";
@@ -465,12 +488,24 @@ export function showHistoryModal(horseName) {
 // ── RUN GAME ──────────────────────────────────────────────────────────────────
 export async function runHorseRacing(players) {
     await buildRaceData();
+
     const PROFILES = ['favourite_backer', 'outsider', 'each_way', 'high_risk',
         'form_follower', 'own_horse', 'cautious'];
-    const builtData = resetPlayerData(players).map(p => ({
+
+    const colourIndices = [...Array(STABLE_COLOURS.length).keys()];
+    shuffleArray(colourIndices);
+
+    // Shuffle styles so AI players get varied personalities each game
+    const stylePool = [...TRAINER_STYLES];
+    shuffleArray(stylePool);
+
+    const builtData = resetPlayerData(players).map((p, i) => ({
         ...p,
-        bettingProfile: p.human ? null : PROFILES[Math.floor(Math.random() * PROFILES.length)]
+        colourIndex: colourIndices[i % colourIndices.length],
+        bettingProfile: p.human ? null : PROFILES[Math.floor(Math.random() * PROFILES.length)],
+        trainerStyle: p.human ? 'human' : stylePool[i % stylePool.length]
     }));
+
     setPlayerData(builtData);
     setHorseData(buildHorseData(false));
     setHorsePool(buildHorseData(true));

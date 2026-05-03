@@ -2,15 +2,18 @@ import {
     raceEntries, playerData, horseData, horsePool, raceData, retiredHorses,
     setRaceEntries, setHorseData, incrementHorseRest, resetHorseRest,
     incrementHorseAge, fitnessModifier, convertFractionalOddsToDecimal,
-    addRetiredHorses, currentSeason
+    addRetiredHorses, currentSeason, STABLE_COLOURS
 } from './gameState.js';
-import { allEntries, canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries } from './entry.js';
+import {
+    canEnterRace, enterHorse, displayRaceEntries, allRacesHaveEntries
+} from './entry.js';
 import {
     lineups, raceTime, meeting_number, incrementMeetingNumber, resetMeetingNumber,
     displayGameState, showHistoryModal, showSeasonSummary
 } from './horseracing.js';
 import { shuffleArray, adjustRatingByAge } from './initialise.js';
 
+// ── RACE STATE ────────────────────────────────────────────────────────────────
 let gameRaceNumber = 0;
 let meetingRaceNumber = 0;
 let rDist = "";
@@ -28,25 +31,29 @@ let currentRatedHorses = [];
 let currentBets = [];
 let humanBetPending = false;
 let bettingQueue = [];    // human players still to bet this race
-let currentBetPlayer = null;  // human player whose turn it currently is
+let currentBetPlayer = null;  // human player whose turn it is
 
 const racecardBody = document.getElementById("racecard-body");
 const racecardHeader = document.getElementById("racecard-header");
 const startBtn = document.getElementById('start-race');
 const nextRaceBtn = document.getElementById('next-race');
 
-// ── STABLE COLOURS ────────────────────────────────────────────────────────────
-const STABLE_COLOURS = [
-    { bg: '#1a6b3c', label: 'green' },
-    { bg: '#c0392b', label: 'red' },
-    { bg: '#1a3a8f', label: 'blue' },
-    { bg: '#d4a017', label: 'yellow' },
-    { bg: '#c0680a', label: 'orange' },
-    { bg: '#6b2fa0', label: 'purple' },
-];
+// ── STABLE COLOURS — imported from gameState.js (single source of truth) ──────
+
+function playerColour(player) {
+    if (!player) return STABLE_COLOURS[0];
+    const idx = (player.colourIndex ?? 0) % STABLE_COLOURS.length;
+    return STABLE_COLOURS[idx];
+}
 function getPlayerColour(trainerName) {
-    const idx = playerData.findIndex(p => p.name === trainerName);
-    return STABLE_COLOURS[idx >= 0 ? idx % STABLE_COLOURS.length : 0];
+    // Primary: look up by name in playerData
+    const p = playerData.find(p => p.name === trainerName);
+    if (p) return playerColour(p);
+    // Fallback: derive a consistent colour from the name string itself
+    // so at least different trainers get different colours even if playerData isn't ready
+    let hash = 0;
+    for (let i = 0; i < trainerName.length; i++) hash = trainerName.charCodeAt(i) + ((hash << 5) - hash);
+    return STABLE_COLOURS[Math.abs(hash) % STABLE_COLOURS.length];
 }
 function trainerPill(trainerName) {
     const c = getPlayerColour(trainerName);
@@ -75,35 +82,21 @@ function getPlaceTerms(n) {
     return t;
 }
 
-// ── 5. RACE CLASS ELIGIBILITY ─────────────────────────────────────────────────
-// Returns horses from a lineup filtered to those eligible for the race class.
-// Class 1 = elite (must have won at class 2+). Class 2 = must have placed class 3+.
-// Class 3-5 = open. Fallback: if filtering leaves < 4 runners, relax to open.
+// ── RACE CLASS ELIGIBILITY ────────────────────────────────────────────────────
 function filterByClass(raceClass, horseList) {
     const cls = Number(raceClass);
-    if (!cls || cls >= 3) return horseList; // class 3-5 open to all
-
+    if (!cls || cls >= 3) return horseList;
     const eligible = horseList.filter(horse => {
-        if (!horse.history || !horse.history.length) return cls >= 4;
-        if (cls === 1) {
-            // Must have won at least once (any class)
-            return horse.wins > 0;
-        }
-        if (cls === 2) {
-            // Must have placed (top 3) at least twice
-            const places = horse.history.filter(r => r.position > 0 && r.position <= 3).length;
-            return places >= 2;
-        }
+        if (!horse.history?.length) return cls >= 4;
+        if (cls === 1) return horse.wins > 0;
+        if (cls === 2) return horse.history.filter(r => r.position > 0 && r.position <= 3).length >= 2;
         return true;
     });
-
-    // Fallback — if strict filtering leaves fewer than 4 runners, open the race
     return eligible.length >= 4 ? eligible : horseList;
 }
 
 // ── START BUTTON ──────────────────────────────────────────────────────────────
 startBtn.addEventListener('click', () => {
-    // Drain any remaining betting turns — Start Race always skips remaining bets
     bettingQueue = [];
     currentBetPlayer = null;
     humanBetPending = false;
@@ -149,18 +142,17 @@ export function showRacecard(racenum) {
     document.getElementById("r-prize").innerHTML = `£${rPrize.toLocaleString()}`;
     document.getElementById("r-runners").innerHTML = `${entries.length}`;
 
-    // 5. Apply class eligibility filter
     const allRaceHorses = entries
         .map(e => horseData.find(h => h.name === e.horseName))
         .filter(Boolean);
     const eligibleHorses = filterByClass(rGrade, allRaceHorses);
 
-    const ratedHorses = getHorseRatings(eligibleHorses, rDist, rGoing);
+    const ratedHorses = getHorseRatings(eligibleHorses);
     priceHorses = assignFormOdds(ratedHorses, rDist);
 
     const drawNumbers = shuffleArray([...Array(entries.length)].map((_, i) => i + 1));
 
-    let racecardData = entries.map((entry, i) => {
+    const racecardData = entries.map((entry, i) => {
         const horse = horseData.find(h => h.name === entry.horseName);
         if (!horse) return null;
         const pricedHorse = priceHorses.find(h => h.name === horse.name);
@@ -179,7 +171,8 @@ export function showRacecard(racenum) {
         ? 'Win only (fewer than 5 runners)'
         : `${placeTerms.places} places at 1/${placeTerms.fraction} odds`;
     const ptEl = document.getElementById('place-terms');
-    if (ptEl) ptEl.innerHTML = `<small>Class ${rGrade || '?'} &nbsp;·&nbsp; Each Way: ${placeDesc}</small>`;
+    if (ptEl) ptEl.innerHTML =
+        `<small>Class ${rGrade || '?'} &nbsp;·&nbsp; Each Way: ${placeDesc}</small>`;
 
     racecardHeader.innerHTML = `
         <tr>
@@ -191,8 +184,6 @@ export function showRacecard(racenum) {
         const oddsClass = runner.oddsValue <= 2 ? 'odds-fav'
             : runner.oddsValue <= 8 ? 'odds-mid'
                 : 'odds-out';
-        const formHtml = formatFormBadges(runner.form);
-        const fitHtml = fitnessDot(runner.rest);
         racecardBody.innerHTML += `
             <tr class="bet-row" data-horse="${runner.horseName}" data-odds="${runner.odds}"
                 style="cursor:pointer" title="Click to bet on ${runner.horseName}">
@@ -200,9 +191,9 @@ export function showRacecard(racenum) {
                 <td class="text-start">${runner.horseName}
                     <span class="text-body-secondary small-font">(${runner.age})</span></td>
                 <td>${trainerPill(runner.trainer)}</td>
-                <td class="text-center">${fitHtml}</td>
+                <td class="text-center">${fitnessDot(runner.rest)}</td>
                 <td><a href="#" class="form-link"
-                    data-horse-name="${runner.horseName}">${formHtml}</a></td>
+                    data-horse-name="${runner.horseName}">${formatFormBadges(runner.form)}</a></td>
                 <td class="${oddsClass}">${runner.odds}</td>
                 <td class="bet-cell" id="betcell-${runner.horseName.replace(/\s+/g, '_')}">—</td>
             </tr>`;
@@ -226,7 +217,6 @@ export function showRacecard(racenum) {
 
 // ── BETTING ROUND ─────────────────────────────────────────────────────────────
 function startBettingRound() {
-    // AI players all bet immediately
     for (const player of playerData) {
         if (!player.human) {
             const bet = computerPlaceBet(player);
@@ -236,18 +226,12 @@ function startBettingRound() {
 
     const MIN_BET = 10;
     const brokeHumans = playerData.filter(p => p.human && (p.total || 0) < MIN_BET);
-    // Queue: humans who can afford to bet, preserving playerData order
     bettingQueue = playerData.filter(p => p.human && (p.total || 0) >= MIN_BET);
-
-    if (brokeHumans.length) {
-        console.log(`${brokeHumans.map(p => p.name).join(', ')} skipped — no funds.`);
-    }
 
     renderBetsTable();
     advanceBettingQueue();
 }
 
-// Advance to the next human player's turn
 function advanceBettingQueue() {
     clearBettingHighlight();
 
@@ -264,17 +248,14 @@ function advanceBettingQueue() {
     currentBetPlayer = bettingQueue.shift();
     humanBetPending = true;
 
-    const playerIdx = playerData.findIndex(p => p.name === currentBetPlayer.name);
-    const colour = STABLE_COLOURS[playerIdx % STABLE_COLOURS.length];
-
-    // Tint racecard rows in a light wash of this player's colour
+    const colour = playerColour(currentBetPlayer);
     highlightBettingRows(colour.bg);
     document.getElementById('race-screen').classList.add('betting-active');
 
     const remaining = bettingQueue.length;
     const afterNote = remaining > 0
-        ? ` &nbsp;<span class="text-warning" style="font-size:0.75rem">(${remaining} player${remaining > 1 ? 's' : ''} to follow)</span>`
-        : '';
+        ? ` &nbsp;<span class="text-warning" style="font-size:0.75rem">`
+        + `(${remaining} player${remaining > 1 ? 's' : ''} to follow)</span>` : '';
 
     updateBettingStatus(`
         <span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -283,20 +264,16 @@ function advanceBettingQueue() {
             </span>
             — click a horse to bet${afterNote}
             &nbsp;·&nbsp;
-            <button id="skip-bet-btn"
-                class="btn btn-sm btn-outline-light py-0 px-2"
+            <button id="skip-bet-btn" class="btn btn-sm btn-outline-light py-0 px-2"
                 style="font-size:0.75rem;border-color:rgba(255,255,255,0.5)">
                 Skip my bet →
             </button>
         </span>`);
 
     const skipBtn = document.getElementById('skip-bet-btn');
-    if (skipBtn) {
-        skipBtn.onclick = () => advanceBettingQueue();
-    }
+    if (skipBtn) skipBtn.onclick = () => advanceBettingQueue();
 }
 
-// Apply a subtle colour tint to all bet rows for the current player
 function highlightBettingRows(hexColour) {
     const r = parseInt(hexColour.slice(1, 3), 16);
     const g = parseInt(hexColour.slice(3, 5), 16);
@@ -333,11 +310,10 @@ function updateBettingStatus(msg) {
 }
 
 // ── COMPUTER BETTING ──────────────────────────────────────────────────────────
-// 3. AI bets scaled to their actual balance, not race prize money
 function computerPlaceBet(player) {
     const profile = player.bettingProfile || 'cautious';
     const balance = player.total || 0;
-    if (balance < 10) return null; // broke
+    if (balance < 10) return null;
 
     const rand = Math.random();
     const runners = [...priceHorses].sort((a, b) =>
@@ -353,7 +329,10 @@ function computerPlaceBet(player) {
 
     switch (profile) {
         case 'favourite_backer':
-            if (rand < 0.80) { chosen = favourite; betType = 'win'; balanceFraction = 0.03 + rand * 0.05; }
+            if (rand < 0.80) {
+                chosen = favourite; betType = 'win';
+                balanceFraction = 0.03 + rand * 0.05;
+            }
             break;
         case 'outsider':
             if (outsiders.length && rand < 0.70) {
@@ -390,7 +369,8 @@ function computerPlaceBet(player) {
                 betType = rand < 0.50 ? 'ew' : 'win';
                 balanceFraction = 0.02 + rand * 0.05;
             } else if (rand < 0.35) {
-                chosen = favourite; betType = 'win'; balanceFraction = 0.01 + rand * 0.02;
+                chosen = favourite; betType = 'win';
+                balanceFraction = 0.01 + rand * 0.02;
             }
             break;
         case 'cautious':
@@ -405,7 +385,6 @@ function computerPlaceBet(player) {
 
     if (!chosen || balanceFraction <= 0) return null;
 
-    // Stake = fraction of balance, rounded to nearest £10
     let stake = Math.round((balance * balanceFraction) / 10) * 10;
     stake = Math.max(10, Math.min(stake, balance));
     if (betType === 'ew' && stake * 2 > balance) stake = Math.floor(balance / 20) * 10;
@@ -420,21 +399,15 @@ function computerPlaceBet(player) {
 
 // ── HUMAN BET MODAL ───────────────────────────────────────────────────────────
 function openBetModal(horseName, odds) {
-    const human = currentBetPlayer;  // the player whose turn it is right now
+    const human = currentBetPlayer;
     if (!human) return;
-    if ((human.total || 0) < 10) {
-        advanceBettingQueue();        // skip — can't afford anything
-        return;
-    }
+    if ((human.total || 0) < 10) { advanceBettingQueue(); return; }
 
     const placeTerms = getPlaceTerms(entries.length);
     const maxStake = Math.min(rPrizes[0], human.total || 0);
     const ewAvail = entries.length >= 5;
+    const colour = playerColour(human);
 
-    const playerIdx = playerData.findIndex(p => p.name === human.name);
-    const colour = STABLE_COLOURS[playerIdx % STABLE_COLOURS.length];
-
-    // Colour the modal header to match this player's stable colour
     const modalHeader = document.querySelector('#betModal .modal-header');
     if (modalHeader) modalHeader.style.background = colour.bg;
 
@@ -463,8 +436,10 @@ function openBetModal(horseName, odds) {
         document.getElementById('bet-potential').innerHTML = betType === 'win'
             ? `If wins: <strong class="text-success">£${potentialWin.toLocaleString()}</strong>`
             : `If wins: <strong class="text-success">£${potentialWin.toLocaleString()}</strong>
-               &nbsp;|&nbsp; If places: <strong class="text-primary">£${potentialPlace.toLocaleString()}</strong>
-               <br><small class="text-muted">Two bets of £${stake} = £${(stake * 2).toLocaleString()} total</small>`;
+               &nbsp;|&nbsp; If places:
+               <strong class="text-primary">£${potentialPlace.toLocaleString()}</strong>
+               <br><small class="text-muted">Two bets of £${stake}
+               = £${(stake * 2).toLocaleString()} total</small>`;
     };
 
     document.getElementById('bet-stake').oninput = updatePotential;
@@ -489,12 +464,9 @@ function openBetModal(horseName, odds) {
         updateBetCell(horseName, betType, stake);
         bootstrap.Modal.getInstance(document.getElementById('betModal')).hide();
         renderBetsTable();
-
-        // Advance to next player in the queue
         advanceBettingQueue();
     };
 
-    // "No Bet" / Cancel also advances the queue
     const cancelBtn = document.querySelector('#betModal .btn-outline-secondary');
     if (cancelBtn) {
         cancelBtn.onclick = () => {
@@ -525,45 +497,38 @@ function recordBet(bet) {
 function updateBetCell(horseName, betType, stake) {
     const cell = document.getElementById(`betcell-${horseName.replace(/\s+/g, '_')}`);
     if (!cell) return;
-    cell.innerHTML = `<span class="bet-placed-badge">${betType === 'ew' ? 'E/W' : 'Win'} £${stake}</span>`;
+    cell.innerHTML =
+        `<span class="bet-placed-badge">${betType === 'ew' ? 'E/W' : 'Win'} £${stake}</span>`;
 }
 
 function renderBetsTable() {
     const tbody = document.getElementById('bets-body');
     if (!tbody) return;
     if (!currentBets.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-muted text-center small">No bets placed</td></tr>`;
+        tbody.innerHTML =
+            `<tr><td colspan="7" class="text-muted text-center small">No bets placed</td></tr>`;
         return;
     }
     tbody.innerHTML = currentBets.map(b => {
-        const typeLabel = b.type === 'ew' ? 'E/W' : 'Win';
-        const stakeStr = b.type === 'ew' ? `£${b.stake.toLocaleString()} ×2` : `£${b.stake.toLocaleString()}`;
+        const stakeStr = b.type === 'ew'
+            ? `£${b.stake.toLocaleString()} ×2` : `£${b.stake.toLocaleString()}`;
         const retStr = b.type === 'ew'
             ? `£${b.potentialWin.toLocaleString()} / £${b.potentialPlace.toLocaleString()}`
             : `£${b.potentialWin.toLocaleString()}`;
         const resultHtml = b.result
-            ? `<span class="${b.won ? 'text-success fw-bold' : 'text-danger'}">${b.result}</span>` : '—';
+            ? `<span class="${b.won ? 'text-success fw-bold' : 'text-danger'}">${b.result}</span>`
+            : '—';
         return `<tr>
             <td>${trainerPill(b.playerName)}</td>
-            <td>${b.horseName}</td><td>${b.odds}</td>
-            <td>${typeLabel}</td><td>${stakeStr}</td>
-            <td>${retStr}</td><td>${resultHtml}</td>
+            <td>${b.horseName}</td>
+            <td>${b.odds}</td>
+            <td>${b.type === 'ew' ? 'E/W' : 'Win'}</td>
+            <td>${stakeStr}</td>
+            <td>${retStr}</td>
+            <td>${resultHtml}</td>
         </tr>`;
     }).join('');
 }
-
-// ── 3. FORM BADGES ────────────────────────────────────────────────────────────
-function formatFormBadges(formStr) {
-    if (!formStr) return '—';
-    return formStr.split('').map(ch => {
-        if (ch === '/') return `<span class="form-sep">/</span>`;
-        const cls = ch === '1' ? 'form-1' : ch === '2' ? 'form-2' : ch === '3' ? 'form-3'
-            : ch === '0' ? 'form-0' : ['4', '5', '6'].includes(ch) ? 'form-4' : 'form-7';
-        return `<span class="form-badge ${cls}">${ch}</span>`;
-    }).join('');
-}
-
-function updateBetCell2(horseName, betType, stake) { updateBetCell(horseName, betType, stake); }
 
 function buildQuickStakes(maxStake) {
     const el = document.getElementById('quick-stakes');
@@ -614,45 +579,40 @@ function settleBets(finishingOrder) {
     });
 }
 
-// ── 2. RACE SIMULATION WITH INCIDENTS ─────────────────────────────────────────
+// ── RACE SIMULATION WITH INCIDENTS ───────────────────────────────────────────
 function simulateRace(horses) {
     const maxVar = Math.max(...horses.map(h => h.raceRating)) / 10;
-
-    const results = horses.map(horse => {
-        let score = horse.raceRating + Math.random() * maxVar * (Math.random() < 0.5 ? -1 : 1);
-
-        // Random incident (5% chance per horse)
-        // Hampered: small score hit
-        // Shock bolt: outsider massively outperforms
+    return horses.map(horse => {
+        let score = horse.raceRating
+            + Math.random() * maxVar * (Math.random() < 0.5 ? -1 : 1);
         const incident = Math.random();
         if (incident < 0.03) {
-            // Hampered — lose several lengths
             score -= (3 + Math.random() * 8);
             horse._incident = 'hampered';
         } else if (incident < 0.05) {
-            // Bolt — big unexpected performance boost (more likely for outsiders)
-            const boost = (horse.raceRating < 90 ? 15 : 8) + Math.random() * 10;
-            score += boost;
+            score += ((horse.raceRating < 90 ? 15 : 8) + Math.random() * 10);
             horse._incident = 'bolted up';
         }
-
         return { ...horse, finalScore: score };
-    });
-
-    return results.sort((a, b) => b.finalScore - a.finalScore);
+    }).sort((a, b) => b.finalScore - a.finalScore);
 }
 
 // ── DISPLAY RESULTS ───────────────────────────────────────────────────────────
 function displayResults(finishingOrder) {
     racecardHeader.innerHTML = `
-        <tr><th>Pos.</th><th>Horse</th><th>Trainer</th><th>Odds</th><th>Prize</th><th>Note</th></tr>`;
+        <tr>
+            <th>Pos.</th><th>Horse</th><th>Trainer</th>
+            <th>Odds</th><th>Prize</th><th>Note</th>
+        </tr>`;
     racecardBody.innerHTML = "";
     const medals = ['🥇', '🥈', '🥉'];
 
     finishingOrder.forEach((horse, i) => {
         const odds = priceHorses.find(h => h.name === horse.name)?.odds || "?";
         const prize = i < 3 ? `£${rPrizes[i].toLocaleString()}` : "";
-        const rowClass = i === 0 ? 'result-1st' : i === 1 ? 'result-2nd' : i === 2 ? 'result-3rd' : '';
+        const rowClass = i === 0 ? 'result-1st'
+            : i === 1 ? 'result-2nd'
+                : i === 2 ? 'result-3rd' : '';
         const incident = horse._incident
             ? `<span class="badge bg-warning text-dark">${horse._incident}</span>` : '';
         racecardBody.innerHTML += `
@@ -671,7 +631,6 @@ function displayResults(finishingOrder) {
     settleBets(finishingOrder);
     renderBetsTable();
 
-    // 8. Live sync Hall of Fame
     if (window.HoF) window.HoF.load(horseData, retiredHorses, currentSeason);
 }
 
@@ -679,11 +638,13 @@ function displayResults(finishingOrder) {
 function updateHorseData(results, grade) {
     const rCourse = raceData.meetings[meeting_number];
     const curGoing = raceData.goings[meeting_number];
+
     results.forEach((horse, i) => {
         const hi = horseData.findIndex(h => h.name === horse.name);
         if (hi === -1) return;
         const h = horseData[hi];
         const pos = (i + 1) <= 9 ? i + 1 : 0;
+
         h.form = (h.form || "") + pos;
         h.formLong = (h.formLong ? h.formLong + "," : "") + `${rDist}-${curGoing}-${pos}`;
         if (pos === 1) h.wins = (h.wins || 0) + 1;
@@ -691,23 +652,33 @@ function updateHorseData(results, grade) {
         if (pos === 1 && Number(grade) === 1) h.grade1s[rDist] = (h.grade1s[rDist] || 0) + 1;
         h.rest = -1;
         h.runs = (h.runs || 0) + 1;
+
         const pm = i < 3 ? (Number(rPrizes[i]) || 0) : 0;
         h.money = (h.money || 0) + pm;
+
         h.history = h.history || [];
         h.history.push({
-            season: currentSeason, meeting: meeting_number + 1,
-            course: rCourse, name: rName, going: curGoing,
-            distance: rDist, position: pos, winnings: pm
+            season: currentSeason,
+            meeting: meeting_number + 1,
+            course: rCourse,
+            name: rName,
+            going: curGoing,
+            distance: rDist,
+            position: pos,
+            winnings: pm,
+            racePrize: rPrize   // ← stored so entry.js can weight result quality
         });
+
         horseData[hi] = h;
     });
+
     startBtn.disabled = true;
     nextRaceBtn.disabled = false;
 }
 
 // ── UPDATE PLAYER DATA ────────────────────────────────────────────────────────
 function updatePlayerData(results) {
-    // Entry fee per horse entered (from lineup)
+    // Entry fee per horse entered (from lineup, not results)
     const fee = rPrize * 0.1;
     entries.forEach(entry => {
         const pi = playerData.findIndex(p => p.name === entry.trainer);
@@ -716,7 +687,7 @@ function updatePlayerData(results) {
         playerData[pi].total = (playerData[pi].total || 0) - fee;
     });
 
-    // Prize money top 3
+    // Prize money for top 3
     results.forEach((horse, i) => {
         const pi = playerData.findIndex(p => p.name === horse.owner);
         if (pi === -1) return;
@@ -729,7 +700,7 @@ function updatePlayerData(results) {
     });
 }
 
-// ── NEXT RACE / MEETING ───────────────────────────────────────────────────────
+// ── NEXT RACE ─────────────────────────────────────────────────────────────────
 document.getElementById('next-race').addEventListener('click', handleNextRace);
 
 function handleNextRace() {
@@ -751,6 +722,7 @@ function handleContinueToNextMeeting() {
     incrementHorseRest(horseData);
     meetingRaceNumber = 0;
     const isLast = meeting_number >= raceData.meetings.length - 1;
+
     if (!isLast) {
         incrementMeetingNumber();
         nextRaceBtn.textContent = "Next Race";
@@ -758,8 +730,7 @@ function handleContinueToNextMeeting() {
         startBtn.disabled = true;
         displayGameState();
     } else {
-        // 6. End of season — show summary, THEN transition
-        resetMeetingNumber();  // increments currentSeason, resets meeting to 0
+        resetMeetingNumber();   // increments currentSeason, resets meeting to 0
         showSeasonSummary(playerData, horseData, currentSeason - 1, () => {
             newSeason();
             resetHorseRest(horseData);
@@ -779,7 +750,8 @@ const commonFractionalOdds = [
     [12, 1], [14, 1], [16, 1], [18, 1], [20, 1], [22, 1], [25, 1], [28, 1],
     [33, 1], [40, 1], [50, 1], [66, 1], [80, 1], [100, 1]
 ];
-const commonOddsWithProb = commonFractionalOdds.map(([n, d]) => ({ n, d, impliedProb: d / (n + d) }));
+const commonOddsWithProb = commonFractionalOdds.map(([n, d]) =>
+    ({ n, d, impliedProb: d / (n + d) }));
 
 function distanceToFurlongs(s) {
     if (!s) return 0;
@@ -796,7 +768,8 @@ function assignFormOdds(raceHorses, targetDist) {
         for (const r of (h.history || [])) {
             const dd = Math.abs(distanceToFurlongs(r.distance) - td);
             const dw = Math.max(0, 1 - dd / 10);
-            if (!isNaN(r.position) && r.position > 0) s += Math.max(0, 10 - r.position) * dw;
+            if (!isNaN(r.position) && r.position > 0)
+                s += Math.max(0, 10 - r.position) * dw;
         }
         if (h.age === 4) s += 1;
         else if (h.age === 5) s += 2;
@@ -843,8 +816,16 @@ function getHorseRatings(raceHorses) {
     });
 }
 
-// ── 4. HORSE DEVELOPMENT — called in newSeason via incrementHorseAge ─────────
-// (baseRating development is handled inside gameState.js incrementHorseAge)
+// ── FORM BADGE HELPERS ────────────────────────────────────────────────────────
+function formatFormBadges(formStr) {
+    if (!formStr) return '—';
+    return formStr.split('').map(ch => {
+        if (ch === '/') return `<span class="form-sep">/</span>`;
+        const cls = ch === '1' ? 'form-1' : ch === '2' ? 'form-2' : ch === '3' ? 'form-3'
+            : ch === '0' ? 'form-0' : ['4', '5', '6'].includes(ch) ? 'form-4' : 'form-7';
+        return `<span class="form-badge ${cls}">${ch}</span>`;
+    }).join('');
+}
 
 // ── NEW SEASON ────────────────────────────────────────────────────────────────
 function newSeason() {
@@ -852,7 +833,23 @@ function newSeason() {
     raceData.goings = Array.from({ length: 20 }, () =>
         goingOpts[Math.floor(Math.random() * goingOpts.length)]);
 
-    // Age all horses — this also develops baseRating (see gameState.js)
+    playerData.forEach(p => {
+        if (!p.seasonHistory) p.seasonHistory = [];
+        p.seasonHistory.push({
+            season: currentSeason - 1,
+            wins: p.wins,
+            prizeWinnings: p.prizeWinnings || 0,
+            betStaked: p.betStaked || 0,
+            betReturned: p.betReturned || 0,
+            entries: p.entries || 0,
+            total: p.total || 0
+        });
+    });
+
+    const champ = [...playerData].sort((a, b) => (b.total || 0) - (a.total || 0))[0];
+    raceData._lastChampion = champ?.name || null;
+    raceData._lastChampionSeason = currentSeason - 1;
+
     incrementHorseAge(horseData);
 
     const retiring = horseData.filter(h => h.age >= 11);
@@ -871,7 +868,6 @@ function newSeason() {
             age: 4, rest: 2, runs: 0, wins: 0, money: 0,
             form: "", history: [], retired: false, owner: r.owner
         });
-        // Apply age modifier to new horse's rating
         nh.rating = adjustRatingByAge(nh.baseRating, 4);
         replacements.push(nh);
     }
@@ -883,7 +879,6 @@ function newSeason() {
         `${h.name} (${h.owner || '?'}, ${h.runs} runs, £${(h.money || 0).toLocaleString()})`);
     raceData._newHorseNotices = replacements.map(h => `${h.name} (${h.owner || '?'})`);
 
-    // 8. Live sync Hall of Fame
     if (window.HoF) window.HoF.load(horseData, retiredHorses, currentSeason);
 }
 
@@ -901,7 +896,11 @@ function generateFreshHorse(namePool, index) {
     return {
         number: index + 1,
         name: (namePool?.length) ? namePool[index % namePool.length] : `Recruit ${index + 1}`,
-        owner: null, baseRating: base, rating: base, bestDist: bd, spread: sp,
+        owner: null,
+        baseRating: base,
+        rating: base,
+        bestDist: bd,
+        spread: sp,
         goingPref: goings[Math.floor(Math.random() * goings.length)],
         age: 4, rest: 2, runs: 0, wins: 0, money: 0, form: "", history: [], grade1s: {}, retired: false
     };

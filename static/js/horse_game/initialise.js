@@ -1,6 +1,6 @@
 // initialise.js
 import { fetchTextFiles, players } from "./load_data.js";
-import { allEntries, canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
+import { canEnterRace, enterHorse, displayRaceEntries } from './entry.js';
 import { playerData, setPlayerData, horseData, setHorseData, raceData } from './gameState.js';
 
 const STARTING_BALANCE = 50000;

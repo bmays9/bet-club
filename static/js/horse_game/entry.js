@@ -1,61 +1,65 @@
+/**
+ * entry.js — Computer race entry selection
+ *
+ * INFORMATION MODEL:
+ *   bestDist, spread, goingPref are HIDDEN from all AI logic.
+ *   The AI infers distance suitability and going preference entirely
+ *   from race history. Race quality is weighted by prize money so that
+ *   a win in a £25,000 class 1 race counts far more than a £3,000 seller.
+ *
+ * TRAINER STYLES (assigned at game start, stored on player.trainerStyle):
+ *   prize_hunter    — targets highest prize races each horse is suited to
+ *   grade_chaser    — hammers class 1/2 even with unproven horses
+ *   conditioner     — never runs unfit horses, builds slowly
+ *   experimenter    — varies distances aggressively for young/unraced horses
+ *   opportunist     — enters races where the field looks weakest
+ *   volume_trainer  — always fills all 3 slots, maximise coverage
+ *   improver        — focuses on young horses in lower classes
+ *   veteran_handler — trusts older proven horses, protects their form
+ */
+
 import {
-    getNearDistances,
-    raceEntries,
-    playerData,
-    horseData,
-    raceData,
-    setRaceEntries,
-    setHorseData,
-    setPlayerData,
-    setRaceData,
-    sortPlayerData
+    getNearDistances, raceEntries, playerData, horseData,
+    raceData, setRaceEntries
 } from './gameState.js';
+import { shuffleArray } from './initialise.js';
 
-import {
-    shuffleArray
-} from './initialise.js';
+// ── PUBLIC TRAINER STYLES LIST ────────────────────────────────────────────────
+export const TRAINER_STYLES = [
+    'prize_hunter', 'grade_chaser', 'conditioner', 'experimenter',
+    'opportunist', 'volume_trainer', 'improver', 'veteran_handler'
+];
 
-export let allEntries = {
-    "Player 1": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-    "Player 2": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-    "Player 3": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-    "Player 4": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-    "Player 5": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-    "Player 6": { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-  };
-
+// ── ENTRY HELPERS ─────────────────────────────────────────────────────────────
 export function canEnterRace(playerName, horseName, raceIndex) {
-    // Check if horse is already entered
-    console.log("Can it Enter?")
-    for (let entries of Object.values(raceEntries)) {
+    for (const entries of Object.values(raceEntries)) {
         if (entries.some(e => e.horseName === horseName)) return false;
     }
-
-    // Check player hasn't used 3 entries in this race
-    console.log("RaceEntries in canEnterRace", raceEntries)
-    console.log("raceEntries:", raceEntries);
-    console.log("raceIndex:", raceIndex);
-    const entriesInRace = raceEntries[raceIndex].length
-    return entriesInRace < 3;
+    return (raceEntries[raceIndex]?.length || 0) < 3;
 }
 
 export function enterHorse(playerName, horseName, raceIndex) {
     if (canEnterRace(playerName, horseName, raceIndex)) {
         raceEntries[raceIndex].push({ playerName, horseName });
-        console.log("Horse Is Entered")
         return true;
     }
     return false;
 }
 
+export function allRacesHaveEntries() {
+    for (let i = 0; i < 6; i++) {
+        if (!raceEntries[i] || raceEntries[i].length === 0) return false;
+    }
+    return true;
+}
+
 export function displayRaceEntries(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-
     let html = "";
     for (let i = 0; i < 6; i++) {
         html += `<h4>Race ${i + 1}</h4><ul>`;
-        for (let entry of raceEntries[i]) {
+        for (const entry of raceEntries[i]) {
             html += `<li>${entry.horseName} (${entry.playerName})</li>`;
         }
         html += `</ul>`;
@@ -63,291 +67,515 @@ export function displayRaceEntries(containerId) {
     container.innerHTML = html;
 }
 
-export function allRacesHaveEntries() {
-    console.log("All Races have entries")
-    for (let i = 0; i < 6; i++) {
-        if (!raceEntries[i] || raceEntries[i].length === 0) {
-            console.log("Nope")
-            return false; // At least one race is empty
-        }
-    }
-    console.log("Yes")
-    return true; // Every race has at least one entry
+// ── DISTANCE UTILITIES ────────────────────────────────────────────────────────
+function distanceToFurlongs(s) {
+    if (!s) return 0;
+    if (/^\d+f$/.test(s)) return parseInt(s);
+    const m = s.match(/^(\d+)m(?:(\d+)f)?$/);
+    if (!m) return 0;
+    return parseInt(m[1]) * 8 + (m[2] ? parseInt(m[2]) : 0);
 }
 
-export function computerAutoSelect(playerName, meeting) {
-    let selectedHorses = [];
-        
-    let playerHorses = horseData.filter(horse => horse.owner === playerName);
-    console.log("playerHorses: comp select", playerHorses)
-    console.log("meeting: comp select", meeting)
-
-    if (meeting === 0) {
-        selectedHorses = playerHorses.slice(0, 8);
-    } else if (meeting === 1) {
-        selectedHorses = playerHorses.slice(8, 16);
-    } else if (meeting === 2) {
-        selectedHorses = playerHorses.slice(16, 24);
-    }
-
-    console.log("selectedHorses: comp select", selectedHorses)
-
-    // Initialize race entries
-    for (let i = 0; i < 6; i++) {
-        raceEntries[i] = raceEntries[i] || [];
-    }
-
-    // Assign 1 horse to each of the 6 races
-    for (let i = 0; i < 6; i++) {
-        raceEntries[i].push({
-            playerName,
-            horseName: selectedHorses[i].name
-        });
-    }
-
-    // Randomly assign 2 extra horses to different races
-    const extraRaces = shuffleArray([0, 1, 2, 3, 4, 5]).slice(0, 2);
-    raceEntries[extraRaces[0]].push({
-        playerName,
-        horseName: selectedHorses[6].name
-    });
-    raceEntries[extraRaces[1]].push({
-        playerName,
-        horseName: selectedHorses[7].name
-    });
+// ── RACE QUALITY WEIGHT ───────────────────────────────────────────────────────
+// Higher prize money = more competitive field = result is more informative.
+// Normalised so class 1 (~£20,000+ first prize) = 1.0, cheap sellers = 0.15.
+function raceQualityWeight(racePrize) {
+    if (!racePrize || racePrize <= 0) return 0.3; // unknown — moderate weight
+    return Math.min(1.0, Math.max(0.15, racePrize / 20000));
 }
 
+// Infer race class from prize money (AI doesn't read raceclass directly,
+// but can reason about it from the prize)
+function inferClass(racePrize) {
+    if (!racePrize) return 5;
+    if (racePrize >= 20000) return 1;
+    if (racePrize >= 15000) return 2;
+    if (racePrize >= 10000) return 3;
+    if (racePrize >= 5000) return 4;
+    return 5;
+}
 
-export function computerSelect(playerName, meetingNumber) {
-    const playerHorses = horseData.filter(h => h.owner === playerName);
-    const startIndex = (meetingNumber) * 6;
-    const endIndex = startIndex + 6;
-    const grade1RaceIndexes = [];
+// ── INFERRED DISTANCE SCORE ───────────────────────────────────────────────────
+// AI derives distance suitability purely from race history.
+// bestDist and spread are NEVER used here.
+//
+// Each run contributes:
+//   - A position score (1st=10 → unplaced=1)
+//   - Weighted by race quality (prize money)
+//   - Decayed by distance gap between that run and the target race
+//
+// Returns a score in roughly [0, 10] — higher = better suited.
+function inferredDistanceScore(horse, raceDistStr) {
+    const history = horse.history || [];
+    const raceFurlongs = distanceToFurlongs(raceDistStr);
 
-    const availableRaces = [];
-    for (let i = startIndex; i < endIndex; i++) {
-        availableRaces.push({
-            distance: raceData.distances[i],
-            raceClass: raceData.raceclass[i],
-            index: i - startIndex
-        });
-        // check grade1s
-        if (raceData.raceclass[i] < 3) {
-            grade1RaceIndexes.push(i - startIndex); // Relative index in this meeting
-            console.log("Grade 1 or 2", grade1RaceIndexes)
+    if (history.length === 0) {
+        // No data — unraced horse. Very mild preference for middle distances
+        // as a neutral starting assumption (not using bestDist).
+        const mid = 10; // ~1m2f
+        return Math.max(0, 5 - Math.abs(raceFurlongs - mid) * 0.3);
+    }
+
+    // Position → raw score
+    function posScore(pos) {
+        if (pos === 1) return 10;
+        if (pos === 2) return 7;
+        if (pos === 3) return 5;
+        if (pos === 4) return 3;
+        if (pos === 5) return 2;
+        if (pos === 0) return 0;   // last / unplaced
+        return 1;
+    }
+
+    // Decay weight by distance gap: 0 furlongs away = 1.0, 8f away = 0.0
+    function distDecay(runDistStr) {
+        const diff = Math.abs(distanceToFurlongs(runDistStr) - raceFurlongs);
+        return Math.max(0, 1 - diff / 8);
+    }
+
+    let weightedScore = 0;
+    let totalWeight = 0;
+
+    for (const run of history) {
+        const qw = raceQualityWeight(run.racePrize);
+        const dw = distDecay(run.distance);
+        const ps = posScore(run.position);
+        const weight = qw * dw;
+
+        // Recent runs count more — decay older results slightly
+        // (index 0 = oldest, last index = most recent)
+        const recencyBonus = 1.0; // could weight by run index if desired
+
+        weightedScore += ps * weight * recencyBonus;
+        totalWeight += weight;
+    }
+
+    return totalWeight > 0 ? weightedScore / totalWeight : 3;
+}
+
+// ── INFERRED GOING SCORE ──────────────────────────────────────────────────────
+// AI observes position in different going conditions and infers preference.
+// goingPref is NEVER used here.
+//
+// With few runs this is noisy — confidence grows with sample size.
+// Returns a modifier in [-4, 0]: 0 = likely suits, -4 = likely doesn't suit.
+function inferredGoingScore(horse, raceGoing) {
+    const history = horse.history || [];
+    if (history.length < 2) return 0; // not enough data to form a view
+
+    const GOINGS = ["Heavy", "Soft", "Good-Soft", "Good", "Good-Firm"];
+
+    // Average position score per going condition, weighted by race quality
+    const goingTotals = {};
+    const goingWeights = {};
+
+    for (const run of history) {
+        if (!GOINGS.includes(run.going)) continue;
+        const qw = raceQualityWeight(run.racePrize);
+        const ps = run.position === 1 ? 10
+            : run.position === 2 ? 7
+                : run.position === 3 ? 5
+                    : run.position === 4 ? 3
+                        : run.position === 0 ? 0 : 1;
+        goingTotals[run.going] = (goingTotals[run.going] || 0) + ps * qw;
+        goingWeights[run.going] = (goingWeights[run.going] || 0) + qw;
+    }
+
+    const averages = {};
+    for (const g of GOINGS) {
+        if (goingWeights[g]) averages[g] = goingTotals[g] / goingWeights[g];
+    }
+
+    // If we have no data for this going, interpolate from adjacent conditions
+    if (!averages[raceGoing]) {
+        const idx = GOINGS.indexOf(raceGoing);
+        const neighbours = [GOINGS[idx - 1], GOINGS[idx + 1]].filter(Boolean);
+        const neighbourAvgs = neighbours.map(g => averages[g]).filter(v => v !== undefined);
+        if (!neighbourAvgs.length) return 0;
+        const interp = neighbourAvgs.reduce((a, b) => a + b, 0) / neighbourAvgs.length;
+        // Slight penalty for uncertainty
+        return Math.min(0, (interp - 5) * 0.3);
+    }
+
+    // Compare performance on this going vs overall average
+    const allAvgs = Object.values(averages);
+    const overallAvg = allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length;
+    const diff = averages[raceGoing] - overallAvg;
+
+    // Only penalise if clearly worse than average; reward if clearly better
+    // Cap the modifier to avoid overconfidence with small samples
+    const confidence = Math.min(1, history.length / 6);
+    return Math.max(-4, Math.min(2, diff * 0.4 * confidence));
+}
+
+// ── FITNESS SCORE ─────────────────────────────────────────────────────────────
+function fitnessScore(rest) {
+    // Optimal is rest=2. Penalise extremes.
+    if (rest <= -1) return -6;  // just ran
+    if (rest === 0) return -4;
+    if (rest === 1) return -1;
+    if (rest === 2) return 4;  // optimal
+    if (rest === 3) return 2;
+    if (rest === 4) return 0;
+    if (rest === 5) return -1;
+    return -3; // very long layoff
+}
+
+// ── RACE QUALITY SCORE ────────────────────────────────────────────────────────
+// How appropriate is this race class for this horse?
+// AI uses prize money to infer class.
+function classAffinityScore(horse, racePrize, style) {
+    const inferredCls = inferClass(racePrize);
+    const rating = horse.rating || 100;
+    const wins = horse.wins || 0;
+    const runs = horse.runs || 0;
+
+    let score = 0;
+
+    // High-rated, proven horses are wasted in cheap races
+    if (rating > 120 && inferredCls >= 4) score -= 8;
+    if (rating > 110 && inferredCls >= 5) score -= 6;
+
+    // Unproven horses shouldn't be thrown into the deep end
+    if (wins === 0 && runs < 4 && inferredCls <= 2) score -= 10;
+    if (wins === 0 && runs < 2 && inferredCls <= 3) score -= 5;
+
+    // Style modifiers
+    if (style === 'grade_chaser' && inferredCls <= 2) score += 6;
+    if (style === 'grade_chaser' && inferredCls >= 4) score -= 4;
+    if (style === 'prize_hunter') score += (5 - inferredCls) * 1.5; // prefer lower class numbers
+    if (style === 'improver' && inferredCls >= 3) score += 3;  // build form in easier races
+    if (style === 'improver' && inferredCls <= 2) score -= 4;
+    if (style === 'conditioner' && inferredCls <= 2 && runs < 6) score -= 8; // don't rush young ones
+
+    // Prize money bonus — prize_hunter directly maximises this
+    if (style === 'prize_hunter') score += Math.log10(Math.max(1, racePrize || 0)) * 2;
+
+    return score;
+}
+
+// ── AGE / DEVELOPMENT SCORE ───────────────────────────────────────────────────
+function ageStyleScore(horse, style) {
+    const age = horse.age || 5;
+    let score = 0;
+    if (style === 'improver') {
+        score += age <= 6 ? 4 : age <= 8 ? 1 : -3;
+    }
+    if (style === 'veteran_handler') {
+        score += age >= 7 ? 4 : age >= 5 ? 1 : -3;
+    }
+    return score;
+}
+
+// ── MASTER SCORING FUNCTION ───────────────────────────────────────────────────
+// Scores a single horse against a single race using only observable data.
+// Higher score = better match.
+function scoreHorseForRace(horse, race, style, currentGoing) {
+    let score = 0;
+
+    // 1. Inferred distance suitability (from history, no bestDist)
+    score += inferredDistanceScore(horse, race.distance) * 3.0;
+
+    // 2. Inferred going preference (from history, no goingPref)
+    score += inferredGoingScore(horse, currentGoing) * 1.5;
+
+    // 3. Fitness
+    score += fitnessScore(horse.rest) * 1.5;
+
+    // 4. Class/prize affinity
+    score += classAffinityScore(horse, race.racePrize, style);
+
+    // 5. Age/style fit
+    score += ageStyleScore(horse, style);
+
+    // 6. Base rating — better horses should generally run in better races
+    score += (horse.rating || 100) * 0.05;
+
+    // 7. Experimenter style: actively explore unrun distances for young horses
+    if (style === 'experimenter' && horse.age <= 6) {
+        const runDists = new Set((horse.history || []).map(r => r.distance));
+        if (!runDists.has(race.distance)) score += 4; // reward novelty
+    }
+
+    // 8. Veteran handler: strongly favour proven distances
+    if (style === 'veteran_handler') {
+        const winsHere = (horse.history || [])
+            .filter(r => r.distance === race.distance && r.position === 1).length;
+        score += winsHere * 5;
+    }
+
+    // 9. Volume trainer: slight bonus for any valid entry (fill all slots)
+    if (style === 'volume_trainer') score += 1;
+
+    return score;
+}
+
+// ── OPTIMAL ASSIGNMENT ────────────────────────────────────────────────────────
+// Three-pass greedy assignment guaranteeing at least one horse per race.
+//
+// Pass 1: assign the single best horse to each race (highest prize first).
+//         No rest filter — every horse is considered. Fitness penalty is
+//         already in the score via fitnessScore(), so tired horses just
+//         rank lower naturally.
+// Pass 2: fill 2nd/3rd slots where style permits.
+// Pass 3: GUARANTEED fallback — any race still empty gets the best remaining
+//         horse, with no score threshold and no rest restriction.
+//         A player owns 24 horses so there are always enough for 6 races.
+function assignHorsesToRaces(playerHorses, availableRaces, style, currentGoing, slotsPerRace) {
+    // Highest prize first — protect best horses for most valuable races
+    const racesByPriority = [...availableRaces].sort((a, b) => b.racePrize - a.racePrize);
+
+    const assignment = {}; // raceIndex → [horseName, ...]
+    const usedHorses = new Set();
+    for (const race of availableRaces) assignment[race.index] = [];
+
+    // ── Pass 1: one best horse per race ──────────────────────────────────────
+    for (const race of racesByPriority) {
+        const eligible = playerHorses
+            .filter(h => !usedHorses.has(h.name))
+            // No rest filter here — fitnessScore() handles the penalty
+            .map(h => ({ horse: h, score: scoreHorseForRace(h, race, style, currentGoing) }))
+            .sort((a, b) => b.score - a.score);
+
+        if (eligible.length > 0) {
+            assignment[race.index].push(eligible[0].horse.name);
+            usedHorses.add(eligible[0].horse.name);
         }
     }
-    console.log("TIme to pick Horses!")
-    console.log("Races Available", availableRaces)
 
-    // Initialize race entries
-    for (let i = 0; i < 6; i++) {
-        raceEntries[i] = raceEntries[i] || [];
-    }
+    // ── Pass 2: optional extra entries (2nd/3rd slots) ───────────────────────
+    const maxSlots = style === 'volume_trainer' ? 3
+        : style === 'grade_chaser' ? 3
+            : style === 'conditioner' ? 1  // conditioner is conservative
+                : 2;
 
-    console.log("raceEntries", raceEntries)
+    for (const race of racesByPriority) {
+        if (assignment[race.index].length >= Math.min(slotsPerRace, maxSlots)) continue;
 
-    const entriesPerRace = Array.from({ length: 6 }, (_, i) => (raceEntries[i] || []).length); // ✅ safe
-    const selectedHorses = new Set();
+        const eligible = playerHorses
+            .filter(h => !usedHorses.has(h.name))
+            .map(h => ({ horse: h, score: scoreHorseForRace(h, race, style, currentGoing) }))
+            .sort((a, b) => b.score - a.score);
 
-    // 🔶 Step 1: Pick best horses for Grade 1 + 2 races based on total money won at the race's distance
-    for (let g1Index of grade1RaceIndexes) {
-        const g1Dist = raceData.distances[startIndex + g1Index];
- 
-        const nearDist = getNearDistances (g1Dist)
-
-    // 🔄 Sort all eligible horses by money at or near distance
-    const gradedEligible = playerHorses
-        .filter(h => !selectedHorses.has(h.name))
-        .map(horse => {
-            const moneyAtDist = (horse.history || []).reduce((sum, h) => {
-                if (h.distance === g1Dist) {
-                    return sum + (h.winnings || 0);
-                } else if (nearDist.includes(h.distance)) {
-                return sum + (h.winnings || 0) / 2;
-                }
-                return sum;
-            }, 0);
-            return { ...horse, moneyAtDist };
-        })
-        .sort((a, b) => b.moneyAtDist - a.moneyAtDist);
-
-    if (gradedEligible.length === 0) continue;
-
-    const topHorse = gradedEligible[0];
-    raceEntries[g1Index].push({ playerName, horseName: topHorse.name });
-    entriesPerRace[g1Index]++;
-    selectedHorses.add(topHorse.name);
-
-    // 🧠 Conditional logic to add 2nd and 3rd horses
-    for (let i = 1; i < gradedEligible.length && entriesPerRace[g1Index] < 3; i++) {
-        const challenger = gradedEligible[i];
-        const diff = topHorse.moneyAtDist - challenger.moneyAtDist;
-
-        const threshold = topHorse.moneyAtDist * 0.25; // ≤25% below top horse
-        const randomPass = Math.random() < 0.5; // 50% random chance
-
-        if (diff <= threshold && randomPass) {
-            raceEntries[g1Index].push({ playerName, horseName: challenger.name });
-            entriesPerRace[g1Index]++;
-            selectedHorses.add(challenger.name);
+        for (const { horse, score } of eligible) {
+            if (assignment[race.index].length >= Math.min(slotsPerRace, maxSlots)) break;
+            // Conditioner skips horses that just ran in Pass 2 (not Pass 3)
+            if (style === 'conditioner' && horse.rest <= 1) continue;
+            // Only add extras with a reasonable score — no point entering a hopeless match
+            if (score < -8) continue;
+            assignment[race.index].push(horse.name);
+            usedHorses.add(horse.name);
         }
     }
-    }
 
-    const restPriority = [2, 3, 4, 5, 6, 1, 0]; // preferred order of rest values
+    // ── Pass 3: GUARANTEED — every empty race must get exactly one horse ─────
+    // This pass has no restrictions: no score threshold, no rest filter,
+    // no style override. It simply picks the best remaining horse.
+    // Since each player owns 24 horses and only needs 6, this always succeeds.
+    for (const race of availableRaces) {
+        if (assignment[race.index].length > 0) continue; // already filled
 
-    const prioritizedHorses = [];
-    for (let restValue of restPriority) {
-        const filtered = playerHorses.filter(h => h.rest === restValue && !selectedHorses.has(h.name));
-        prioritizedHorses.push(...filtered);
-    }
+        const fallback = playerHorses
+            .filter(h => !usedHorses.has(h.name))
+            .map(h => ({ horse: h, score: scoreHorseForRace(h, race, style, currentGoing) }))
+            .sort((a, b) => b.score - a.score)[0];
 
-    console.log("Prioritised Horses", prioritizedHorses)
-
-    for (let horse of prioritizedHorses) {
-        if (horse.rest <= 1) continue;
-
-        const runDistances = (horse.history || []).map(h => h.distance);
-        const winDistances = (horse.history || [])
-            .filter(h => h.position === 1)
-            .map(h => h.distance);
-
-        let entered = false;
-
-        console.log("Run / Win DIstances for", horse.name, runDistances, winDistances)
-
-        // 1. Prioritize winning distances
-        for (let race of availableRaces) {
-            if (winDistances.includes(race.distance) && entriesPerRace[race.index] < 3) {
-                console.log("THERE WAS A WINNING MATCH! For" , horse.name)
-                raceEntries[race.index].push({
-                    playerName,
-                    horseName: horse.name
-                });
-                entriesPerRace[race.index]++;
-                selectedHorses.add(horse.name);
-                entered = true;
-                break;
+        if (fallback) {
+            assignment[race.index].push(fallback.horse.name);
+            usedHorses.add(fallback.horse.name);
+        } else {
+            // Absolute last resort: all horses already used — should never happen
+            // with 24 horses and 6 races, but guard against edge cases
+            const anyHorse = playerHorses.find(h =>
+                !Object.values(assignment).flat().includes(h.name)
+                || assignment[race.index].length === 0
+            );
+            if (anyHorse) {
+                assignment[race.index].push(anyHorse.name);
+                console.warn(`Forced entry for race ${race.index}: ${anyHorse.name}`);
             }
         }
-        console.log("Entered Winning Match?", entered)
-        if (entered) continue;
+    }
 
-        // 2. Otherwise, use suitability and prefer empty races
-        const sortedRaces = availableRaces
-            .map(race => ({
-                ...race,
-                hasRunDistance: runDistances.includes(race.distance)
-            }))
-            .sort((a, b) => {
-                if (entriesPerRace[a.index] === 0 && entriesPerRace[b.index] > 0) return -1;
-                if (entriesPerRace[a.index] > 0 && entriesPerRace[b.index] === 0) return 1;
-                return a.raceClass - b.raceClass;
-            });
-
-        for (let race of sortedRaces) {
-            if (entriesPerRace[race.index] >= 3) continue;
-            if (race.raceClass === 1 && !race.hasRunDistance) continue;
-            if (race.raceClass === 2 && horse.rest < 3 && !race.hasRunDistance) continue;
-            if (race.raceClass === 4 && race.hasRunDistance) continue;
-
-            raceEntries[race.index].push({
-                playerName,
-                horseName: horse.name
-            });
-            entriesPerRace[race.index]++;
-            selectedHorses.add(horse.name);
-            break;
+    // ── Verification: log any races still empty (should never happen) ────────
+    for (const race of availableRaces) {
+        if (assignment[race.index].length === 0) {
+            console.error(`Race ${race.index} still empty after all passes for player`);
         }
     }
+
+    return assignment;
 }
 
-export function fillEmptyRacesWithTiredHorses(playerName, meetingNumber) {
+// ── OPPORTUNIST ADJUSTMENT ────────────────────────────────────────────────────
+// After the initial assignment, the opportunist checks if the field in each
+// race looks beatable (few strong opponents) and swaps horses accordingly.
+function opportunistAdjust(assignment, playerHorses, availableRaces, currentGoing) {
+    // Score each race's competitiveness from others' entries
+    const raceStrength = {};
+    for (const race of availableRaces) {
+        const others = (raceEntries[race.index] || [])
+            .map(e => horseData.find(h => h.name === e.horseName))
+            .filter(Boolean);
+        const avgRating = others.length
+            ? others.reduce((s, h) => s + (h.rating || 100), 0) / others.length
+            : 80; // empty = weak field
+        raceStrength[race.index] = avgRating;
+    }
+
+    // If assigned horse's inferred score for a weaker race is acceptable, prefer it
+    const usedHorses = new Set(Object.values(assignment).flat());
+    for (const race of availableRaces) {
+        if (assignment[race.index].length === 0) continue;
+        // If this race has a stronger field than average, consider swapping for a weaker race
+        const avgStrength = Object.values(raceStrength).reduce((a, b) => a + b, 0) / availableRaces.length;
+        if (raceStrength[race.index] > avgStrength * 1.2) {
+            // Field is notably tough — if there's a weaker race our horse would suit, swap
+            const weakerRace = availableRaces
+                .filter(r => r.index !== race.index && raceStrength[r.index] < raceStrength[race.index])
+                .sort((a, b) => raceStrength[a.index] - raceStrength[b.index])[0];
+            if (weakerRace && assignment[weakerRace.index].length < 3) {
+                const horseName = assignment[race.index][0];
+                assignment[race.index].splice(0, 1);
+                assignment[weakerRace.index].push(horseName);
+            }
+        }
+    }
+    return assignment;
+}
+
+// ── MAIN COMPUTER SELECT ──────────────────────────────────────────────────────
+export function computerSelect(playerName, meetingNumber) {
+    const player = playerData.find(p => p.name === playerName);
+    const style = player?.trainerStyle || 'prize_hunter';
     const playerHorses = horseData.filter(h => h.owner === playerName);
     const startIndex = meetingNumber * 6;
-    const allEntries = Object.values(raceEntries).flat();
+    const currentGoing = raceData.goings?.[meetingNumber] || 'Good';
 
-    // 🔐 Build a set of horse names already used
-    const usedHorseNames = new Set(allEntries.map(e => e.horseName));
+    // Build race descriptors the AI can legitimately see
+    const availableRaces = [];
+    for (let i = 0; i < 6; i++) {
+        const idx = startIndex + i;
+        availableRaces.push({
+            index: i,
+            distance: raceData.distances[idx],
+            racePrize: Number(raceData.prizemoney[idx]) || 0,
+            raceClass: raceData.raceclass[idx],  // AI can read the card
+            name: raceData.racenames[idx]
+        });
+    }
 
-    for (let localIndex = 0; localIndex < 6; localIndex++) {
-        if ((raceEntries[localIndex] || []).some(e => e.playerName === playerName)) continue;
+    // Initialise race entries
+    for (let i = 0; i < 6; i++) raceEntries[i] = raceEntries[i] || [];
 
-        let backupHorse = playerHorses.find(h =>
-            h.rest === 1 && !usedHorseNames.has(h.name)
-        );
+    // Run assignment
+    let assignment = assignHorsesToRaces(
+        playerHorses, availableRaces, style, currentGoing, 3
+    );
 
-        if (!backupHorse) {
-            backupHorse = playerHorses.find(h =>
-                h.rest === 0 && !usedHorseNames.has(h.name)
-            );
+    // Opportunist post-process
+    if (style === 'opportunist') {
+        assignment = opportunistAdjust(assignment, playerHorses, availableRaces, currentGoing);
+    }
+
+    // Write to raceEntries
+    for (const race of availableRaces) {
+        for (const horseName of assignment[race.index]) {
+            if (!raceEntries[race.index].some(e => e.horseName === horseName)) {
+                raceEntries[race.index].push({ playerName, horseName });
+            }
         }
+    }
+}
 
-        if (backupHorse) {
-            raceEntries[localIndex] = raceEntries[localIndex] || [];
-            raceEntries[localIndex].push({
-                playerName,
-                horseName: backupHorse.name
-            });
-            usedHorseNames.add(backupHorse.name); // ✅ Mark as used
-            console.log(`Fallback entry: ${backupHorse.name} added to race ${localIndex} for ${playerName}`);
+// ── FALLBACK AUTO-SELECT (season 1 early meetings) ────────────────────────────
+// Still used for meetings 0-2 of season 1 before any history exists.
+// Now uses the scoring system even without history rather than pure index-slicing.
+export function computerAutoSelect(playerName, meetingNumber) {
+    // Just delegate to computerSelect — the scoring handles the no-history case
+    computerSelect(playerName, meetingNumber);
+}
+
+// ── FILL EMPTY RACES — final safety net ──────────────────────────────────────
+// Called after computerSelect as a final guarantee. Fills any race where this
+// player has no entry. No score threshold, no style restriction — just finds
+// the best available horse that hasn't been used yet this meeting.
+export function fillEmptyRacesWithTiredHorses(playerName, meetingNumber) {
+    const player = playerData.find(p => p.name === playerName);
+    const style = player?.trainerStyle || 'prize_hunter';
+    const playerHorses = horseData.filter(h => h.owner === playerName);
+    const currentGoing = raceData.goings?.[meetingNumber] || 'Good';
+
+    // Build set of horses already entered in ANY race this meeting by this player
+    const usedByPlayer = new Set(
+        Object.values(raceEntries).flat()
+            .filter(e => e.playerName === playerName)
+            .map(e => e.horseName)
+    );
+
+    for (let i = 0; i < 6; i++) {
+        const alreadyIn = raceEntries[i].some(e => e.playerName === playerName);
+        if (alreadyIn) continue;
+
+        const idx = meetingNumber * 6 + i;
+        const race = {
+            index: i,
+            distance: raceData.distances[idx],
+            racePrize: Number(raceData.prizemoney[idx]) || 0
+        };
+
+        // Best unused horse by score — no threshold, any horse will do
+        const candidate = playerHorses
+            .filter(h => !usedByPlayer.has(h.name))
+            .map(h => ({ horse: h, score: scoreHorseForRace(h, race, style, currentGoing) }))
+            .sort((a, b) => b.score - a.score)[0];
+
+        if (candidate) {
+            raceEntries[i].push({ playerName, horseName: candidate.horse.name });
+            usedByPlayer.add(candidate.horse.name);
         } else {
-            console.warn(`No tired horses available to fill empty race ${localIndex} for ${playerName}`);
+            // Absolute fallback: reuse the least-recently-used horse if stable is exhausted
+            // (edge case — player has fewer than 6 horses, shouldn't happen)
+            const anyHorse = playerHorses.find(h =>
+                !raceEntries[i].some(e => e.horseName === h.name)
+            );
+            if (anyHorse) {
+                raceEntries[i].push({ playerName, horseName: anyHorse.name });
+                console.warn(`Last resort entry: ${anyHorse.name} in race ${i} for ${playerName}`);
+            } else {
+                console.error(`Cannot fill race ${i} for ${playerName} — stable exhausted`);
+            }
         }
     }
 }
 
-
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
 export function getRestIndicator(rest) {
-
-    let color;
-    let displayRest = rest;
-
-    switch (rest) {
-        case 0: color = "red"; break;
-        case 1: color = "orange"; break;
-        case 2: color = "forestgreen"; break;
-        case 3: color = "lightgreen"; break;
-        case 4: color = "turquoise"; break;
-        default: color = "tan"; displayRest = "="; break;
-    }
-
-    return `<span style="
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        border-radius: 50%;
-        background-color: ${color};
-        color: white;
-        text-align: center;
-        font-weight: bold;
-        font-size: 12px;
-    ">${displayRest}</span>`;
+    const color = rest <= -1 ? 'red'
+        : rest === 0 ? 'orange'
+            : rest === 1 ? '#e6b800'
+                : rest === 2 ? 'forestgreen'
+                    : rest === 3 ? 'lightgreen'
+                        : rest === 4 ? 'turquoise'
+                            : 'tan';
+    const label = rest <= -1 ? '!' : rest > 4 ? '=' : rest;
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;
+        width:20px;height:20px;border-radius:50%;background:${color};color:white;
+        font-weight:bold;font-size:11px">${label}</span>`;
 }
 
-// Returns the appropriate symbol based on text like "1st", "2nd", etc. 🏆 🥇 🟤 🔵 🔘🞅
 export function getBestFinishSymbol(text) {
-    //    console.log("getting Best Finish Symbol for", text)
-    if (typeof text !== 'string') return '';  // Guard against non-string values 
+    if (typeof text !== 'string') return '';
     if (text.includes("1")) return "🏆";
     if (text.includes("2")) return "🥈";
     if (text.includes("3")) return "🥉";
-    if (["4th", "5th", "6th"].some(pos => text.includes(pos))) return "🞅";
-    if (text.includes("th")) return "❌";
-    if (text.includes("8")) return "❌";
-    if (text.includes("9")) return "❌";
-    if (text.includes("0")) return "❌";
+    if (["4th", "5th", "6th"].some(p => text.includes(p))) return "🞅";
+    if (text.includes("th") || text.includes("0")) return "❌";
     return "";
 }
 
-// Loops through all horse-distance-form cells and replaces their content with a symbol
 export function addDistanceFormSymbols() {
-    const cells = document.querySelectorAll('.horse-distance-form');
-    cells.forEach(cell => {
-        const text = cell.textContent.trim();
-        const symbol = getBestFinishSymbol(text);
-        cell.innerHTML = symbol;
+    document.querySelectorAll('.horse-distance-form').forEach(cell => {
+        cell.innerHTML = getBestFinishSymbol(cell.textContent.trim());
     });
 }
