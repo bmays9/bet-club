@@ -102,15 +102,33 @@ function developBaseRating(base, newAge) {
 }
 
 // ── FITNESS MODIFIER ──────────────────────────────────────────────────────────
-export function fitnessModifier(rest) {
-    if (rest <= -1) return 0.85; // just ran
-    if (rest === 0) return 0.88;
-    if (rest === 1) return 0.93;
-    if (rest === 2) return 1.00; // optimal
-    if (rest === 3) return 0.97;
-    if (rest === 4) return 0.94;
-    if (rest === 5) return 0.91;
-    return 0.88; // very long layoff
+// Two components:
+//   1. Rest-based: how long since last run (optimal = 2 rests)
+//   2. Seasonal load: penalty for running too many times in a season
+export function fitnessModifier(rest, seasonRuns) {
+    // Component 1: rest between races
+    let mod;
+    if (rest <= -1) mod = 0.85; // just ran
+    else if (rest === 0) mod = 0.88;
+    else if (rest === 1) mod = 0.93;
+    else if (rest === 2) mod = 1.00; // optimal
+    else if (rest === 3) mod = 0.97;
+    else if (rest === 4) mod = 0.94;
+    else if (rest === 5) mod = 0.91;
+    else mod = 0.88; // very long layoff
+
+    // Component 2: seasonal overrunning penalty
+    // Horses running more than 7 times in a season suffer cumulative fatigue.
+    // This is separate from rest — even a well-rested horse can be "race-weary".
+    const runs = seasonRuns || 0;
+    if (runs > 7) {
+        const excess = runs - 7;
+        // Each run over 7 costs ~1.5% performance, capped at 15% total loss
+        const overrunPenalty = Math.min(0.15, excess * 0.015);
+        mod = mod * (1 - overrunPenalty);
+    }
+
+    return mod;
 }
 
 // ── DISTANCE HELPERS ──────────────────────────────────────────────────────────

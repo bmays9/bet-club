@@ -3,7 +3,7 @@ import { showRacecard } from "./race.js";
 import {
     allRacesHaveEntries, canEnterRace, computerAutoSelect, computerSelect,
     enterHorse, displayRaceEntries, fillEmptyRacesWithTiredHorses,
-    getBestFinishSymbol, getRestIndicator, TRAINER_STYLES
+    getBestFinishSymbol, getRestIndicator, TRAINER_STYLES, distanceFormCell
 } from './entry.js';
 import {
     shuffleArray, buildHorseData, resetPlayerData
@@ -107,6 +107,7 @@ export function displayGameState() {
     document.getElementById('season-number').innerHTML = `Season ${currentSeason} | `;
     document.getElementById('clear-game-state').style.display = 'block';
     document.getElementById('page-info').style.display = 'block';
+    document.getElementById('page-info').innerHTML = '';  // clear Finish/Auto buttons
     document.getElementById('race-screen').style.display = 'none';
     document.getElementById('race-selections').style.display = 'none';
     document.getElementById('player-selections').style.display = 'none';
@@ -264,7 +265,45 @@ function displayRaceSelections() {
         row.addEventListener('click', function () {
             selectedRaceIndex = parseInt(this.getAttribute('data-index'));
             displayRaceSelections();
+            highlightSelectedDistance();
         });
+    });
+    highlightSelectedDistance();
+}
+
+// Highlight the distance column in the stable table that matches the selected race
+function highlightSelectedDistance() {
+    const DIST_KEYS = ["5f", "1m", "1m2f", "1m4f", "2m", "2m4f", "3m", "4m"];
+
+    // Get the distance of the currently selected race
+    const raceDistStr = selectedRaceIndex !== null
+        ? raceData.distances[meeting_number * 6 + selectedRaceIndex]
+        : null;
+
+    // The stable table's distance columns start at column index 9
+    // (Sel=0, Fit=1, Name=2, Age=3, Form=4, Runs=5, £=6, W=7, dist cols=8..15)
+    const DIST_COL_START = 8;
+
+    const stableTable = document.getElementById('st-horses');
+    if (!stableTable) return;
+
+    // Remove existing highlight from all distance header and body cells
+    stableTable.querySelectorAll('.dist-col-highlight').forEach(el => {
+        el.classList.remove('dist-col-highlight');
+    });
+
+    if (!raceDistStr) return;
+
+    const distIdx = DIST_KEYS.indexOf(raceDistStr);
+    if (distIdx === -1) return;
+
+    const colIdx = DIST_COL_START + distIdx; // 0-based column index
+
+    // Highlight header cell
+    const rows = stableTable.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('th, td');
+        if (cells[colIdx]) cells[colIdx].classList.add('dist-col-highlight');
     });
 }
 
@@ -328,23 +367,17 @@ function displayStable(currentPlayerIndex) {
     for (let i = 0; i < playerHorses.length; i++) {
         const horse = playerHorses[i];
         const restIndicator = getRestIndicator(horse.rest);
+        const seasonRuns = (horse.history || []).filter(r => r.season === currentSeason).length;
+        const overrunNote = seasonRuns > 7 ? `⚠️ ${seasonRuns} runs this season` : `${seasonRuns} runs this season`;
         const fitColour = horse.rest <= -1 ? '#c0392b' : horse.rest === 0 ? '#e67e22'
             : horse.rest === 1 ? '#f1c40f' : horse.rest === 2 ? '#27ae60'
                 : horse.rest === 3 ? '#1abc9c' : '#7f8c8d';
-        const fitDot = `<span class="fitness-dot" style="background:${fitColour}" title="Rest:${horse.rest}"></span>`;
+        const fitDot = `<span class="fitness-dot" style="background:${fitColour}"
+            title="Rest: ${horse.rest} | ${overrunNote}"></span>`;
 
-        const distanceResults = distanceKeys.map(dk => {
-            const hist = horse.history.filter(e => e.distance === dk);
-            let bestPos = null;
-            hist.forEach(e => { if (!bestPos || e.position < bestPos) bestPos = e.position; });
-            let label = "";
-            if (bestPos === 1) label = "1st";
-            else if (bestPos === 2) label = "2nd";
-            else if (bestPos === 3) label = "3rd";
-            else if ([4, 5, 6].includes(bestPos)) label = bestPos + "th";
-            else if (bestPos > 6 || bestPos === 0) label = "0";
-            return `<td>${getBestFinishSymbol(label)}</td>`;
-        }).join('');
+        const distanceResults = distanceKeys.map(dk =>
+            distanceFormCell(horse.history || [], dk)
+        ).join('');
 
         let enteredRaceIndex = null;
         for (let j = 0; j < 6; j++) {
@@ -360,15 +393,20 @@ function displayStable(currentPlayerIndex) {
             return `<span class="form-badge ${cls}">${ch}</span>`;
         }).join('');
 
-        stableHtml += `<tr class="${rowClass}">
-            <td>${entryOrder[currentPlayerIndex].human ? `
+        stableHtml += `<tr class="stable-row ${rowClass}" data-horse-name="${horse.name}"
+                style="cursor:${entryOrder[currentPlayerIndex].human ? 'pointer' : 'default'}">
+            <td class="text-center" style="width:44px;padding:3px">
+                ${entryOrder[currentPlayerIndex].human ? `
                 <input type="radio" class="btn-check horse-select" name="btnradio"
                     id="btnradio${i}" autocomplete="off">
-                <label class="btn btn-sm btn-outline-primary rounded-pill px-0 py-0 horse-entry-btn"
-                    data-horse-name="${horse.name}" for="btnradio${i}">${entrySymbol}</label>
-            ` : ''}</td>
+                <label class="horse-entry-btn ${enteredRaceIndex !== null ? 'entered' : ''}"
+                    data-horse-name="${horse.name}" for="btnradio${i}">
+                    ${enteredRaceIndex !== null ? `<span class="entry-num">${enteredRaceIndex + 1}</span>` : `<span class="entry-plus">+</span>`}
+                </label>
+                ` : ''}
+            </td>
             <td class="text-center">${fitDot}${restIndicator}</td>
-            <td>${horse.name}</td>
+            <td class="horse-name-cell">${horse.name}</td>
             <td>${horse.age}</td>
             <td><a href="#" class="form-link" data-horse-name="${horse.name}">${formBadges}</a></td>
             <td>${horse.runs || 0}</td>
@@ -380,6 +418,9 @@ function displayStable(currentPlayerIndex) {
 
     document.getElementById('st-horses').innerHTML = stableHtml;
 
+    // Re-apply distance column highlight after table rebuild
+    highlightSelectedDistance();
+
     document.querySelectorAll('.form-link').forEach(link => {
         link.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
@@ -387,8 +428,13 @@ function displayStable(currentPlayerIndex) {
         });
     });
 
-    document.querySelectorAll('.horse-entry-btn').forEach(button => {
-        button.addEventListener('click', function () {
+    // Make the whole row tappable (not just the small button)
+    document.querySelectorAll('.stable-row').forEach(row => {
+        row.addEventListener('click', function (e) {
+            // Don't intercept form link clicks
+            if (e.target.classList.contains('form-link') ||
+                e.target.closest('.form-link')) return;
+            if (!entryOrder[currentPlayerIndex].human) return;
             if (selectedRaceIndex === null) { alert("Select a race first."); return; }
             const horseName = this.getAttribute('data-horse-name');
             const pName = entryOrder[currentPlayerIndex].name;

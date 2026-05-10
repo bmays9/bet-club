@@ -20,7 +20,7 @@
 
 import {
     getNearDistances, raceEntries, playerData, horseData,
-    raceData, setRaceEntries
+    raceData, setRaceEntries, currentSeason
 } from './gameState.js';
 import { shuffleArray } from './initialise.js';
 
@@ -209,16 +209,33 @@ function inferredGoingScore(horse, raceGoing) {
 }
 
 // ── FITNESS SCORE ─────────────────────────────────────────────────────────────
-function fitnessScore(rest) {
-    // Optimal is rest=2. Penalise extremes.
-    if (rest <= -1) return -6;  // just ran
-    if (rest === 0) return -4;
-    if (rest === 1) return -1;
-    if (rest === 2) return 4;  // optimal
-    if (rest === 3) return 2;
-    if (rest === 4) return 0;
-    if (rest === 5) return -1;
-    return -3; // very long layoff
+// Used by AI to score horse suitability for a race.
+// Mirrors the two-component logic in gameState.fitnessModifier.
+function fitnessScore(horse) {
+    const rest = horse.rest;
+
+    // Component 1: rest between races
+    let score;
+    if (rest <= -1) score = -6;  // just ran
+    else if (rest === 0) score = -4;
+    else if (rest === 1) score = -1;
+    else if (rest === 2) score = 4;  // optimal
+    else if (rest === 3) score = 2;
+    else if (rest === 4) score = 0;
+    else if (rest === 5) score = -1;
+    else score = -3; // very long layoff
+
+    // Component 2: seasonal overrunning
+    // AI is aware a horse run too many times will underperform —
+    // so it should be reluctant to enter horses past 7 seasonal runs.
+    const seasonRuns = (horse.history || []).filter(r => r.season === currentSeason).length;
+    if (seasonRuns > 7) {
+        const excess = seasonRuns - 7;
+        score -= excess * 1.5; // escalating reluctance to enter further
+    }
+
+    // Conditioner is especially sensitive to overrunning
+    return score;
 }
 
 // ── RACE QUALITY SCORE ────────────────────────────────────────────────────────
@@ -279,8 +296,8 @@ function scoreHorseForRace(horse, race, style, currentGoing) {
     // 2. Inferred going preference (from history, no goingPref)
     score += inferredGoingScore(horse, currentGoing) * 1.5;
 
-    // 3. Fitness
-    score += fitnessScore(horse.rest) * 1.5;
+    // 3. Fitness (rest + seasonal load)
+    score += fitnessScore(horse) * 1.5;
 
     // 4. Class/prize affinity
     score += classAffinityScore(horse, race.racePrize, style);
@@ -346,7 +363,7 @@ function assignHorsesToRaces(playerHorses, availableRaces, style, currentGoing, 
     // ── Pass 2: optional extra entries (2nd/3rd slots) ───────────────────────
     const maxSlots = style === 'volume_trainer' ? 3
         : style === 'grade_chaser' ? 3
-            : style === 'conditioner' ? 1  // conditioner is conservative
+            : style === 'conditioner' ? 2  // ~8 horses: 2 per race where suitable
                 : 2;
 
     for (const race of racesByPriority) {
@@ -452,7 +469,12 @@ export function computerSelect(playerName, meetingNumber) {
     const startIndex = meetingNumber * 6;
     const currentGoing = raceData.goings?.[meetingNumber] || 'Good';
 
-    // Build race descriptors the AI can legitimately see
+    // Guard: if player has no horses, skip silently
+    if (playerHorses.length === 0) {
+        console.warn(`computerSelect: no horses found for ${playerName}`);
+        return;
+    }
+
     const availableRaces = [];
     for (let i = 0; i < 6; i++) {
         const idx = startIndex + i;
@@ -460,29 +482,52 @@ export function computerSelect(playerName, meetingNumber) {
             index: i,
             distance: raceData.distances[idx],
             racePrize: Number(raceData.prizemoney[idx]) || 0,
-            raceClass: raceData.raceclass[idx],  // AI can read the card
+            raceClass: raceData.raceclass[idx],
             name: raceData.racenames[idx]
         });
     }
 
-    // Initialise race entries
     for (let i = 0; i < 6; i++) raceEntries[i] = raceEntries[i] || [];
 
-    // Run assignment
     let assignment = assignHorsesToRaces(
         playerHorses, availableRaces, style, currentGoing, 3
     );
 
-    // Opportunist post-process
     if (style === 'opportunist') {
         assignment = opportunistAdjust(assignment, playerHorses, availableRaces, currentGoing);
     }
 
-    // Write to raceEntries
+    // Write assignment to raceEntries
     for (const race of availableRaces) {
         for (const horseName of assignment[race.index]) {
             if (!raceEntries[race.index].some(e => e.horseName === horseName)) {
                 raceEntries[race.index].push({ playerName, horseName });
+            }
+        }
+    }
+
+    // ── Hard guarantee: every race must have at least one entry from this player ──
+    // This catches any edge case where assignment failed for a race.
+    // Use a simple rotation through available horses as final fallback.
+    const usedByPlayer = new Set(
+        Object.values(raceEntries).flat()
+            .filter(e => e.playerName === playerName)
+            .map(e => e.horseName)
+    );
+    const unusedHorses = playerHorses.filter(h => !usedByPlayer.has(h.name));
+    let fallbackIdx = 0;
+
+    for (let i = 0; i < 6; i++) {
+        const hasEntry = raceEntries[i].some(e => e.playerName === playerName);
+        if (!hasEntry) {
+            // Pick the next unused horse, or cycle through all if exhausted
+            const horse = unusedHorses[fallbackIdx]
+                || playerHorses[fallbackIdx % playerHorses.length];
+            if (horse) {
+                raceEntries[i].push({ playerName, horseName: horse.name });
+                usedByPlayer.add(horse.name);
+                fallbackIdx++;
+                console.warn(`Fallback entry: ${horse.name} → race ${i} for ${playerName}`);
             }
         }
     }
@@ -565,13 +610,49 @@ export function getRestIndicator(rest) {
 }
 
 export function getBestFinishSymbol(text) {
+    // Legacy fallback — kept for compatibility
     if (typeof text !== 'string') return '';
-    if (text.includes("1")) return "🏆";
-    if (text.includes("2")) return "🥈";
-    if (text.includes("3")) return "🥉";
-    if (["4th", "5th", "6th"].some(p => text.includes(p))) return "🞅";
-    if (text.includes("th") || text.includes("0")) return "❌";
-    return "";
+    if (text.includes("1")) return "1";
+    if (text.includes("2")) return "2";
+    if (text.includes("3")) return "3";
+    return text;
+}
+
+// Main distance grid cell renderer — used by displayStable
+// Shows best position (number) with colour-coded background + run count superscript
+export function distanceFormCell(history, distKey) {
+    const runs = history.filter(r => r.distance === distKey);
+
+    if (runs.length === 0) {
+        // Never run at this distance
+        return `<td class="dist-cell dist-none" title="Never run at ${distKey}"></td>`;
+    }
+
+    // Best finishing position (1 = best; 0 = unplaced/last)
+    const positions = runs.map(r => r.position);
+    const nonZero = positions.filter(p => p > 0);
+    const bestPos = nonZero.length > 0 ? Math.min(...nonZero) : 0;
+    const runCount = runs.length;
+
+    // Colour tier
+    const tier = bestPos === 0 ? 'dist-unplaced'
+        : bestPos === 1 ? 'dist-win'
+            : bestPos === 2 ? 'dist-second'
+                : bestPos === 3 ? 'dist-third'
+                    : bestPos <= 6 ? 'dist-placed'
+                        : 'dist-ran';
+
+    const label = bestPos === 0 ? '—' : bestPos;
+
+    // Superscript run count — only show if > 1 run (1 run is implied by the cell existing)
+    const sup = runCount > 1 ? `<sup style="font-size:0.55rem;opacity:0.75">${runCount}</sup>` : '';
+
+    // Tooltip with full details
+    const wins = positions.filter(p => p === 1).length;
+    const placed = positions.filter(p => p > 0 && p <= 3).length;
+    const tip = `${distKey}: ${runCount} run${runCount > 1 ? 's' : ''}, best ${bestPos === 0 ? 'unplaced' : bestPos + 'th'}, ${wins} win${wins !== 1 ? 's' : ''}, ${placed} place${placed !== 1 ? 's' : ''}`;
+
+    return `<td class="dist-cell ${tier}" title="${tip}">${label}${sup}</td>`;
 }
 
 export function addDistanceFormSymbols() {

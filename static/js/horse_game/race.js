@@ -810,7 +810,9 @@ function getHorseRatings(raceHorses) {
         let r = h.rating;
         r += distanceRatingModifier(h.bestDist, raceDist, h.spread);
         r += getGoingModifier(h.goingPref, rGoing);
-        r = r * fitnessModifier(h.rest);
+        // Season runs: count how many times this horse has run THIS season
+        const seasonRuns = (h.history || []).filter(e => e.season === currentSeason).length;
+        r = r * fitnessModifier(h.rest, seasonRuns);
         r += h.wins * 3;
         return { ...h, raceRating: Math.max(1, Math.round(r * 10) / 10) };
     });
