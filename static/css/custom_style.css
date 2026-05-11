@@ -434,23 +434,174 @@ main {
             background: #f0f7f2;
         }
 
-        .stable-table-wrap tbody tr.table-active {
-            background: #d0e8d8 !important;
-        }
-
 /* Distance header cells — colour-coded by trip type */
 .dist-sprint {
     background: #1a5276 !important;
 }
-/* blue  — sprint */
+
 .dist-mid {
     background: #1e8449 !important;
 }
-/* green — middle */
+
 .dist-stay {
     background: #6e2f1a !important;
 }
-/* brown — staying */
+
+/* ── DISTANCE FORM GRID CELLS ── */
+.dist-cell {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    width: 36px;
+    min-width: 36px;
+    padding: 3px 2px !important;
+    border-radius: 3px;
+    cursor: default;
+}
+
+/* No data — empty, light grey */
+.dist-none {
+    background: #f0f0f0;
+    color: transparent;
+}
+
+/* Win — gold */
+.dist-win {
+    background: #d4a017;
+    color: #000;
+}
+
+/* 2nd — silver */
+.dist-second {
+    background: #a8a9ad;
+    color: #000;
+}
+
+/* 3rd — bronze */
+.dist-third {
+    background: #cd7f32;
+    color: #fff;
+}
+
+/* 4th–6th — green, competitive */
+.dist-placed {
+    background: #27ae60;
+    color: #fff;
+}
+
+/* 7th–9th — amber, ran but struggling */
+.dist-ran {
+    background: #e67e22;
+    color: #fff;
+}
+
+/* Unplaced — muted red */
+.dist-unplaced {
+    background: #e8c5c5;
+    color: #922;
+}
+
+/* ── DISTANCE COLUMN HIGHLIGHT — selected race ── */
+.dist-col-highlight {
+    outline: 2px solid #d4a017;
+    outline-offset: -2px;
+    position: relative;
+}
+
+/* Header highlight — stronger gold */
+thead .dist-col-highlight {
+    background: #b8860b !important;
+    box-shadow: 0 2px 0 #d4a017;
+}
+
+/* Body cells — subtle gold tint over the existing dist-cell colour */
+tbody .dist-col-highlight {
+    box-shadow: inset 0 0 0 2px #d4a017;
+}
+
+.horse-entry-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--turf-mid, #2a5c3f);
+    background: #fff;
+    color: var(--turf-dark, #1a3d2b);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    /* Remove default label styling */
+    padding: 0;
+    line-height: 1;
+}
+
+.stable-row:hover .horse-entry-btn {
+    background: var(--turf-mid, #2a5c3f);
+    color: #fff;
+    transform: scale(1.08);
+}
+
+/* Entered state — dark filled circle showing race number */
+.horse-entry-btn.entered {
+    background: var(--turf-dark, #1a3d2b);
+    border-color: var(--turf-dark, #1a3d2b);
+    color: #fff;
+}
+
+/* Tap/hover on entered row — show remove intent with red */
+.stable-row:hover .horse-entry-btn.entered {
+    background: #c0392b;
+    border-color: #c0392b;
+}
+
+.entry-num {
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.entry-plus {
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-top: -2px;
+}
+
+/* Larger on mobile */
+@media (max-width: 768px) {
+    .horse-entry-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .entry-num {
+        font-size: 1rem;
+    }
+
+    .entry-plus {
+        font-size: 1.6rem;
+    }
+}
+
+/* Highlight entire row on hover to reinforce it's tappable */
+.stable-row {
+    cursor: pointer;
+}
+
+.stable-table-wrap tbody tr.stable-row:hover {
+    background: #edf7f0;
+}
+
+.stable-table-wrap tbody tr.table-active {
+    background: #d0e8d8 !important;
+}
+
+    .stable-table-wrap tbody tr.table-active td:nth-child(3) {
+        background: #d0e8d8 !important;
+    }
 
 /* ── 3. FORM BADGES ── */
 .form-badge {
