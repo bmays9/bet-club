@@ -1,110 +1,119 @@
-{% extends "base.html" %} 
-{% load static %} 
+{% extends "base.html" %}
+{% load static %}
 {% block content %}
-<!-- content starts here -->
+
 <div class="container mx-auto p-4">
-  <div class="row">
-    <div class="col">
-      <h4>{{ game.group.name }}</h4>
-    </div>
-    <div class="col">
-      <p class="small-font">{{ game }}</p>
-    </div>
-  </div>
-  <p>
-    <strong>Entries:</strong> {{ game.players.count }}
-  </p> 
-  {% for entry in entries %}
-  <div class="accordion mb-3 border shadow-sm">
-    <div class="accordion-header bg-light p-3 fw-bold d-flex align-items-center"
-         data-bs-toggle="collapse"
-         data-bs-target="#player-{{ forloop.counter }}">
 
-      <!-- Fixed-width username column -->
-      <div class="username_sp">
-        {{ forloop.counter }}. {{ entry.player.username }}
-      </div>
-
-      <!-- Center: Total score -->
-      <div class="flex-grow-1 text-center">
-        {{ entry.total_score }} pts
-      </div>
-
-      <!-- Right: Alternate score -->
-      <div class="text-end small text-muted" style="width: 50px;">Tie:
-        {{ entry.alt_score }}
-      </div>
-    </div>
-
-    <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
-      <div class="accordion-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle small-font">
-            <thead>
-              <tr>
-                <th>League</th>
-                <th>Home Team</th>
-                <th></th>
-                <th></th>
-                <th>Away Team</th>
-                <th>Pred Res</th>
-                <th>Pred Score</th>
-                <th>Pts</th>
-                <th>Tie Pts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for prediction in entry.predictions %}
-                <tr>
-                  <td>{{ prediction.fixture.league_short_name }}</td>
-                  <td>{{ prediction.fixture.home_team }}</td>
-                  <td>{{ prediction.fixture.home_score|default_if_none:"–" }}</td>
-                  <td>{{ prediction.fixture.away_score|default_if_none:"–" }}</td>
-                  <td>{{ prediction.fixture.away_team }}</td>
-                  <td>
-                    {% with h=prediction.predicted_home_score a=prediction.predicted_away_score %}
-                      {% if h > a %}H{% elif a > h %}A{% else %}D{% endif %}
-                    {% endwith %}
-                  </td>
-                  <td>{{ prediction.predicted_home_score }}–{{ prediction.predicted_away_score }}</td>
-                  <td>
-  <span class="score-circle
-    {% if prediction.score == 10 %}
-      score-green
-    {% elif prediction.score == 5 %}
-      score-orange
-    {% else %}
-      score-grey
-    {% endif %}
-  ">
-    {{ prediction.score }}
-    {% if prediction.score == 10 %}
-      <i class="bi bi-star-fill ms-1"></i>
-    {% elif prediction.score == 5 %}
-      <i class="bi bi-exclamation-circle-fill ms-1"></i>
-    {% else %}
-      <i class="bi bi-dash-circle-fill ms-1"></i>
-    {% endif %}
-  </span>
-</td>
-                  <td>{{ prediction.alternate_score }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4>{{ game.group.name }} &middot; {{ game.template.game_type|capfirst }}</h4>
+            <p class="text-muted mb-0 small">
+                {{ game.template.start_date|date:"M d" }} - {{ game.template.end_date|date:"M d, Y" }}
+                &middot; {{ game.players.count }} players
+                &middot; Pot: <strong>&pound;{{ game.players.count }} x &pound;{{ game.entry_fee }}</strong>
+            </p>
         </div>
-      </div>
+        <div>
+            {% if is_complete %}
+            <span class="badge bg-success fs-6">Complete</span>
+            {% else %}
+            <span class="badge bg-primary fs-6">{{ finished_count }}/{{ total_fixtures }} fixtures done</span>
+            {% endif %}
+            <a href="{% url 'game_history' %}" class="btn btn-outline-secondary btn-sm ms-2">History</a>
+            <a href="{% url 'sp_scoring' %}" class="btn btn-outline-info btn-sm ms-1">Scoring</a>
+        </div>
     </div>
-  </div>
-{% endfor %}
+
+    <!-- Leaderboard -->
+    {% for entry in entries %}
+    <div class="accordion mb-2 border shadow-sm rounded">
+
+        <!-- Player header -->
+        <div class="accordion-header px-3 py-2 d-flex align-items-center"
+             style="cursor:pointer; background:#f8f9fa;"
+             data-bs-toggle="collapse"
+             data-bs-target="#player-{{ forloop.counter }}">
+
+            <div style="width:28px;" class="text-muted small fw-bold">{{ forloop.counter }}</div>
+
+            <div style="min-width:130px;" class="fw-bold">
+                {{ entry.player.username }}
+            </div>
+
+            <div class="flex-grow-1 text-center">
+                <span class="badge bg-primary fs-6">{{ entry.total_score }} pts</span>
+            </div>
+
+            <div class="text-muted small" style="width:80px; text-align:right;">
+                Tie: {{ entry.alt_score }}
+            </div>
+        </div>
+
+        <div id="player-{{ forloop.counter }}" class="accordion-collapse collapse">
+            <div class="accordion-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle small-font mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>League</th>
+                                <th>Home</th>
+                                <th class="text-center">Score</th>
+                                <th>Away</th>
+                                <th class="text-center">Pred</th>
+                                <th class="text-center">Pts</th>
+                                <th class="text-center">Tie</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prediction in entry.predictions %}
+                            {% if prediction.score == 10 %}
+                            <tr class="table-success">
+                                {% elif prediction.score == 5 %}
+                            <tr class="table-warning">
+                                {% elif prediction.fixture.status_code == 100 %}
+                            <tr class="table-light">
+                                {% else %}
+                            <tr>
+                                {% endif %}
+                                <td>{{ prediction.fixture.league_short_name }}</td>
+                                <td>{{ prediction.fixture.home_team }}</td>
+                                <td class="text-center fw-bold">
+                                    {% if prediction.fixture.home_score is not None %}
+                                    {{ prediction.fixture.home_score }}-{{ prediction.fixture.away_score }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ prediction.fixture.away_team }}</td>
+                                <td class="text-center">
+                                    {{ prediction.predicted_home_score }}-{{ prediction.predicted_away_score }}
+                                </td>
+                                <td class="text-center">
+                                    {% if prediction.score == 10 %}
+                                    <span class="badge bg-success">10</span>
+                                    {% elif prediction.score == 5 %}
+                                    <span class="badge bg-warning text-dark">5</span>
+                                    {% elif prediction.fixture.status_code == 100 %}
+                                    <span class="badge bg-secondary">0</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center text-muted small">{{ prediction.alternate_score }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% empty %}
+    <p class="text-muted">No entries yet.</p>
+    {% endfor %}
+
 </div>
 
-<div>
- <ul class="nav nav-pills">
-  <li class="nav-item">
-     <a class="nav-link" href="{% url 'sp_scoring' %}">Scoring Explained</a>
-  </li>
-</ul>
-</div>
-<!-- content ends here --> 
- {% endblock content %} 
+{% endblock %}

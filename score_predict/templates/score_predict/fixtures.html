@@ -1,155 +1,176 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<!-- content starts here -->
-<div class="container mx-auto mt-0 pl-4 pr-4">
-    <div class="row justify-content-md-center mb-2 pt-0">
-        <div class="col-6">
-            <ul class="nav nav-pills">
-                <li class="nav-item">
-                    <a class="btn btn-primary" {% if request.resolver_match.url_name == 'game_history' %}active{% endif %}"
-                       href="{% url 'game_history' %}">Game History</a>
-                </li>
-            </ul>
-        </div>
 
-        <!-- Group select and submit button -->
-        {% if user.is_authenticated %}
-        {% if group_entries %}
-        
-            <div class="col-6">
-                <input type="hidden" id="game-template-slug" class="form-label mt-4 group-drop"
-                       value="{{ game_template.slug }}">
-                <label for="sp-group-select"></label>
-                <select id="sp-group-select" name="group_id" class="form-select">
-                    {% for entry in group_entries %}
-                    <option value="{{ entry.group.id }}">
-                        {{ entry.group.name }} - {{ entry.num_players }} entries
-                        {% if entry.has_entered %}(Entered){% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-        
+<div class="container mt-3">
 
-        {% else %}
-        <p>You have not joined any groups.</p>
-        {% endif %}
-        {% else %}
-        <p>You are not logged in.</p>
-        {% endif %}
-    </div>
-
-<!-- Game Entry card -->
-    {% if group_entries %}
-    {% with selected_entry=group_entries.0 %}
-<div id="game-summary" class="container mt-3">
-    <div class="card p-3 shadow-sm border rounded">
-        <h5 class="card-title">{{ selected_entry.group.name }}</h5>
-
-        {% if selected_entry.game_instance %}
-        {% with prize_pot=selected_entry.game_instance.entry_fee|floatformat:2|floatformat:"g" %}
-        <p class="card-text">
-            Players Entered: {{ selected_entry.num_players }}<br>
-            Entry Fee: £{{ selected_entry.game_instance.entry_fee|floatformat:2 }}<br>
-            Prize Pot: £{{ selected_entry.game_instance.entry_fee|floatformat:2 }} × {{ selected_entry.num_players }} = £{{ selected_entry.game_instance.entry_fee|floatformat:2|add:""|floatformat:2 }}
-        </p>
-        {% endwith %}
-
-        <!-- Conditional button -->
-        <div class="row justify-content-md-center mt-2">
-            <div class="col-auto">
-                {% if selected_entry.has_entered %}
-                <a href="{% url 'score_predict:game_detail' selected_entry.game_instance.id %}" class="btn btn-primary">
-                    View Game Page
-                </a>
-                {% else %}
-                <button id="submit-scores" class="btn btn-primary">Submit</button>
-                {% endif %}
-            </div>
-        </div>
-
-        <p class="mt-2">
-            {% if selected_entry.has_entered %}
-            ✅ You have entered this game.
-            {% else %}
-            ❌ You have not entered this game yet.
+    <!-- Header row -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">
+            Score Predict
+            {% if game_template %}
+            <span class="text-muted small ms-2">
+                {{ game_template.game_type|capfirst }} &middot;
+                {{ game_template.start_date|date:"M d" }}-{{ game_template.end_date|date:"M d" }}
+            </span>
             {% endif %}
-        </p>
-        {% else %}
-        <p class="text-muted">No game available for this group yet.</p>
-        {% endif %}
+        </h4>
+        <a href="{% url 'game_history' %}" class="btn btn-outline-secondary btn-sm">History</a>
     </div>
-</div>
-    {% endwith %}
-    {% endif %}
-<div>
-    <p>
-        <button id="submit-scores" class="btn btn-primary">Submit</button>
-    </p>
-</div>
-<!-- Fixture accordion -->
-<div id="fixture-container" class="container mx-auto mt-4" data-template-id="{{ game_template.id }}">
-    <div class="accordion small-font" id="accordionExample">
-        {% for league_name, fixtures in fixture_list.items %}
-        <div class="accordion-item border-0">
-            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
-                <div class="accordion-button d-grid" style="grid-template-columns: 1fr 40px 40px 40px;"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#collapse{{ forloop.counter }}"
-                     aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
-                     aria-controls="collapse{{ forloop.counter }}">
-                    <span class="fw-bold">{{ league_name }}</span>
-                    <span class="text-center prediction-cell" data-result="H">H</span>
-                    <span class="text-center prediction-cell" data-result="D">D</span>
-                    <span class="text-center prediction-cell" data-result="A">A</span>
-                </div>
-            </h2>
-            <div id="collapse{{ forloop.counter }}"
-                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
-                 aria-labelledby="heading{{ forloop.counter }}"
-                 data-bs-parent="#accordionExample">
-                <div class="accordion-body py-2 px-3 small-font">
-                    {% if fixtures %}
-                    <ul class="list-group list-group-flush">
-                        {% for fixture in fixtures %}
-                        <li class="list-group-item d-flex flex-row py-1 px-2">
-                            <div class="flex-grow-1 date-font">
-                                <div class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</div>
-                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <div class="fixture">{{ fixture.home_team }}</div>
-                                    <input type="number" min="0" placeholder="H"
-                                           class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                                           data-fixture-id="{{ fixture.id }}" data-team="home">
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="fixture">{{ fixture.away_team }}</div>
-                                    <input type="number" min="0" placeholder="A"
-                                           class="form-control form-control-sm text-center ms-2 score-pred-cell score-input"
-                                           data-fixture-id="{{ fixture.id }}" data-team="away">
+
+    {% if user.is_authenticated %}
+
+    <!-- Group entry cards -->
+    {% if group_entries %}
+    <div class="row g-2 mb-3">
+        {% for entry in group_entries %}
+        <div class="col-md-6 col-lg-4">
+            {% if entry.has_entered %}
+            <div class="card h-100 border-success">
+                {% else %}
+                <div class="card h-100">
+                    {% endif %}
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold">{{ entry.group.name }}</div>
+                                <div class="small text-muted">
+                                    {{ entry.num_players }} player{{ entry.num_players|pluralize }}
+                                    &middot; Pot: &pound;{{ entry.prize_pot|floatformat:2 }}
                                 </div>
                             </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="mb-0">No fixtures available for this league.</p>
-                    {% endif %}
+                            <div class="text-end">
+                                {% if entry.has_entered %}
+                                <span class="badge bg-success mb-1">Entered</span><br>
+                                <a href="{% url 'game_detail' entry.game_instance.id %}" class="btn btn-xs btn-outline-success btn-sm">View</a>
+                                {% elif entry.game_instance %}
+                                <button id="submit-scores-{{ entry.group.id }}"
+                                        class="btn btn-sm btn-primary submit-scores-btn"
+                                        data-group-id="{{ entry.group.id }}"
+                                        data-template-id="{{ game_template.id }}">
+                                    Submit Picks
+                                </button>
+                                {% else %}
+                                <button id="submit-scores-{{ entry.group.id }}"
+                                        class="btn btn-sm btn-primary submit-scores-btn"
+                                        data-group-id="{{ entry.group.id }}"
+                                        data-template-id="{{ game_template.id }}">
+                                    Enter &amp; Submit
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</div>
+        {% else %}
+        <p class="text-muted small">You have not joined any groups.</p>
+        {% endif %}
 
-<script>
-    function toggleCollapse(id) {
-        document.getElementById(id).classList.toggle("hidden");
-    }
-</script>
-<!-- content ends here -->
-    {% endblock content %}
+        <!-- Fixtures accordion -->
+        {% if game_template %}
+        <div id="fixture-container" data-template-id="{{ game_template.id }}">
 
-    {% block additional %}
-<script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
-    {% endblock additional %}
+            {% if not fixture_list %}
+            <p class="text-muted">No fixtures available for this period.</p>
+            {% endif %}
+
+            {% for league_name, fixtures in fixture_list.items %}
+            <div class="card mb-2">
+                <div class="card-header py-2 d-flex align-items-center"
+                     style="cursor:pointer;"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#league-{{ forloop.counter }}">
+                    <span class="fw-bold flex-grow-1">{{ league_name }}</span>
+                    <span class="text-muted small me-3">{{ fixtures|length }} fixtures</span>
+                    <span class="text-center small" style="width:30px;">H</span>
+                    <span class="text-center small" style="width:30px;">A</span>
+                </div>
+                <div id="league-{{ forloop.counter }}"
+                     class="collapse show">
+                    <div class="card-body p-0">
+                        {% for fixture in fixtures %}
+                        {% if fixture.status_code == 100 %}
+                        <div class="d-flex align-items-center px-3 py-2 border-bottom small-font bg-light">
+                            {% else %}
+                            <div class="d-flex align-items-center px-3 py-2 border-bottom small-font">
+                                {% endif %}
+
+                                <!-- Date + teams -->
+                                <div class="flex-grow-1">
+                                    <div class="text-muted" style="font-size:0.75rem;">
+                                        {{ fixture.date|date:"D d M H:i" }}
+                                        {% if fixture.status_code == 100 %}
+                                        <span class="badge bg-secondary ms-1">FT</span>
+                                        {% elif fixture.status_code and fixture.status_code < 100 and fixture.status_code > 0 %}
+                                        <span class="badge bg-success ms-1">Live</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="fixture-team">{{ fixture.home_team }}</span>
+                                        {% if fixture.home_score is not None %}
+                                        <span class="fw-bold mx-2">{{ fixture.home_score }} - {{ fixture.away_score }}</span>
+                                        {% else %}
+                                        <span class="text-muted mx-2">vs</span>
+                                        {% endif %}
+                                        <span class="fixture-team text-end">{{ fixture.away_team }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Score inputs -->
+                                {% if fixture.status_code == 100 or fixture.date <= now %}
+                                <div class="d-flex align-items-center ms-3" style="gap:6px;">
+                                    <input type="number" min="0" max="20" placeholder="-"
+                                           class="form-control form-control-sm text-center score-input"
+                                           style="width:44px;"
+                                           data-fixture-id="{{ fixture.id }}"
+                                           data-team="home"
+                                           disabled>
+                                    <input type="number" min="0" max="20" placeholder="-"
+                                           class="form-control form-control-sm text-center score-input"
+                                           style="width:44px;"
+                                           data-fixture-id="{{ fixture.id }}"
+                                           data-team="away"
+                                           disabled>
+                                </div>
+                                {% else %}
+                                <div class="d-flex align-items-center ms-3" style="gap:6px;">
+                                    <input type="number" min="0" max="20" placeholder="-"
+                                           class="form-control form-control-sm text-center score-input"
+                                           style="width:44px;"
+                                           data-fixture-id="{{ fixture.id }}"
+                                           data-team="home">
+                                    <input type="number" min="0" max="20" placeholder="-"
+                                           class="form-control form-control-sm text-center score-input"
+                                           style="width:44px;"
+                                           data-fixture-id="{{ fixture.id }}"
+                                           data-team="away">
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <div class="alert alert-info mt-3">No upcoming game template found.</div>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info mt-3">
+                <a href="{% url 'account_login' %}">Log in</a> to submit predictions.
+            </div>
+            {% endif %}
+
+        </div>
+
+        {% endblock content %}
+
+        {% block additional %}
+        <script type="module" src="{% static 'js/score_predict/script.js' %}"></script>
+        {% endblock additional %}
