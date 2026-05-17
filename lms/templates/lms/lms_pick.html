@@ -44,30 +44,52 @@
                 <tbody>
                     {% for fixture in fixtures %}
                     <tr>
-                        <td class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</td>
-                        <td>
+                        <td class="text-muted small" style="white-space:nowrap;">{{ fixture.date|date:"D d M H:i" }}</td>
+                        <td style="width:40%;">
                             {% if fixture.home_team in used_teams %}
-                            <span class="text-muted">{{ fixture.home_team }} <span class="badge bg-secondary">Used</span></span>
+                            <span class="text-muted d-flex align-items-center gap-1">
+                                {% if fixture.home_colour %}
+                                <span class="team-swatch" style="background:{{ fixture.home_colour }};border:1px solid rgba(0,0,0,0.15);"></span>
+                                {% endif %}
+                                {{ fixture.home_team }} <span class="badge bg-secondary">Used</span>
+                            </span>
                             {% elif fixture.date <= now %}
-                            <span class="text-muted">{{ fixture.home_team }} <span class="badge bg-dark">Started</span></span>
+                            <span class="text-muted d-flex align-items-center gap-1">
+                                {% if fixture.home_colour %}
+                                <span class="team-swatch" style="background:{{ fixture.home_colour }};border:1px solid rgba(0,0,0,0.15);"></span>
+                                {% endif %}
+                                {{ fixture.home_team }} <span class="badge bg-dark">Started</span>
+                            </span>
                             {% else %}
                             <button type="button"
                                     class="btn btn-outline-primary btn-sm team-btn"
-                                    data-team="{{ fixture.home_team }}">
+                                    data-team="{{ fixture.home_team }}"
+                                    style="border-left: 4px solid {{ fixture.home_colour|default:'#dee2e6' }};">
                                 {{ fixture.home_team }}
                             </button>
                             {% endif %}
                         </td>
-                        <td class="text-center text-muted">v</td>
-                        <td>
+                        <td class="text-center text-muted fixture-score-col">vs</td>
+                        <td style="width:40%;">
                             {% if fixture.away_team in used_teams %}
-                            <span class="text-muted">{{ fixture.away_team }} <span class="badge bg-secondary">Used</span></span>
+                            <span class="text-muted d-flex align-items-center gap-1">
+                                {% if fixture.away_colour %}
+                                <span class="team-swatch" style="background:{{ fixture.away_colour }};border:1px solid rgba(0,0,0,0.15);"></span>
+                                {% endif %}
+                                {{ fixture.away_team }} <span class="badge bg-secondary">Used</span>
+                            </span>
                             {% elif fixture.date <= now %}
-                            <span class="text-muted">{{ fixture.away_team }} <span class="badge bg-dark">Started</span></span>
+                            <span class="text-muted d-flex align-items-center gap-1">
+                                {% if fixture.away_colour %}
+                                <span class="team-swatch" style="background:{{ fixture.away_colour }};border:1px solid rgba(0,0,0,0.15);"></span>
+                                {% endif %}
+                                {{ fixture.away_team }} <span class="badge bg-dark">Started</span>
+                            </span>
                             {% else %}
                             <button type="button"
                                     class="btn btn-outline-primary btn-sm team-btn"
-                                    data-team="{{ fixture.away_team }}">
+                                    data-team="{{ fixture.away_team }}"
+                                    style="border-left: 4px solid {{ fixture.away_colour|default:'#dee2e6' }};">
                                 {{ fixture.away_team }}
                             </button>
                             {% endif %}
@@ -117,5 +139,22 @@
         });
     });
 </script>
+
+
+<style>
+    .team-swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+        vertical-align: middle;
+    }
+
+    .fixture-score-col {
+        width: 40px;
+        white-space: nowrap;
+    }
+</style>
 
 {% endblock %}

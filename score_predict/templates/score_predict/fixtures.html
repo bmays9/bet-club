@@ -108,14 +108,33 @@
                                         <span class="badge bg-success ms-1">Live</span>
                                         {% endif %}
                                     </div>
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <span class="fixture-team">{{ fixture.home_team }}</span>
-                                        {% if fixture.home_score is not None %}
-                                        <span class="fw-bold mx-2">{{ fixture.home_score }} - {{ fixture.away_score }}</span>
-                                        {% else %}
-                                        <span class="text-muted mx-2">vs</span>
-                                        {% endif %}
-                                        <span class="fixture-team text-end">{{ fixture.away_team }}</span>
+                                    <div class="fixture-row">
+                                        <!-- Home team -->
+                                        <div class="fixture-home">
+                                            {% if fixture.home_colour %}
+                                            <span class="team-swatch"
+                                                  style="background:{{ fixture.home_colour }};border:1px solid rgba(0,0,0,0.15);"
+                                                  title="{{ fixture.home_team }}"></span>
+                                            {% endif %}
+                                            <span>{{ fixture.home_team }}</span>
+                                        </div>
+                                        <!-- Score or vs - fixed centre column -->
+                                        <div class="fixture-score">
+                                            {% if fixture.home_score is not None %}
+                                            <span class="fw-bold">{{ fixture.home_score }}-{{ fixture.away_score }}</span>
+                                            {% else %}
+                                            <span class="text-muted">vs</span>
+                                            {% endif %}
+                                        </div>
+                                        <!-- Away team -->
+                                        <div class="fixture-away">
+                                            <span>{{ fixture.away_team }}</span>
+                                            {% if fixture.away_colour %}
+                                            <span class="team-swatch"
+                                                  style="background:{{ fixture.away_colour }};border:1px solid rgba(0,0,0,0.15);"
+                                                  title="{{ fixture.away_team }}"></span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -168,6 +187,51 @@
             {% endif %}
 
         </div>
+
+
+        <style>
+            .team-swatch {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+                flex-shrink: 0;
+                vertical-align: middle;
+            }
+            /* 3-column grid: home | score | away */
+            .fixture-row {
+                display: grid;
+                grid-template-columns: 1fr 52px 1fr;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .fixture-home {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                justify-content: flex-start;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            .fixture-away {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                justify-content: flex-end;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                text-align: right;
+            }
+
+            .fixture-score {
+                text-align: center;
+                flex-shrink: 0;
+            }
+        </style>
 
         {% endblock content %}
 
