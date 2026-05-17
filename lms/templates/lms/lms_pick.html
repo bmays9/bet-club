@@ -1,73 +1,121 @@
-
 {% extends "base.html" %}
 {% load static %}
-
 {% block content %}
-    
-<form method="post" novalidate>
-    {% csrf_token %}
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Fixture Date</th>
-                <th>Home Team</th>
-                <th>v</th>
-                <th>Away Team</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for fixture in fixtures %}
-            <tr>
-                <td>{{ fixture.date|date:"M d, H:i" }}</td>
 
-                <td>
-                    {% if fixture.home_team in used_teams %}
-                        <span class="text-muted">{{ fixture.home_team }} (Picked)</span>
-                    {% else %}
-                        <a href="#" class="select-team btn btn-outline-primary btn-sm select-team team-selectable" 
-                           data-team="{{ fixture.home_team }}">
-                            {{ fixture.home_team }}
-                        </a>
-                    {% endif %}
-                </td>
-                <td>v</td>
-                <td>
-                    {% if fixture.away_team in used_teams %}
-                        <span class="text-muted">{{ fixture.away_team }} (Picked)</span>
-                    {% else %}
-                        <a href="#" class="select-team btn btn-outline-primary btn-sm select-team team-selectable" 
-                           data-team="{{ fixture.away_team }}">
-                            {{ fixture.away_team }}
-                        </a>
-                    {% endif %}
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="container mt-4">
 
-    <div class="mb-3">
-        <label class="form-label">Selected Team:</label>
-        <span id="selected-team-label" class="fw-bold text-primary">None</span>
-        <input type="hidden" id="id_team_name" name="team_name">
-        <div class="form-text">Click a team name above to select.</div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3>{{ game.get_league_display }} &mdash; Round {{ round.round_number }}</h3>
+            <p class="text-muted mb-0 small">{{ game.group.name }} &middot; Pick one team to win</p>
+        </div>
+        <a href="{% url 'lms_game_detail' game.id %}" class="btn btn-outline-secondary btn-sm">Back</a>
     </div>
-    
-    <button type="submit" class="btn btn-success" id="submit-btn" disabled>Submit Pick</button>
 
-</form>
-
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
-  <div id="pickToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="d-flex">
-      <div class="toast-body">
-        Pick submitted successfully!
-      </div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-  </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if round.auto_pick_team %}
+    <div class="alert alert-info small">
+        <strong>Auto-pick if you don't select:</strong> {{ round.auto_pick_team }}
+    </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="team_name" id="selected-team-input">
+
+        <div class="table-responsive">
+            <table class="table table-hover small-font align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Home</th>
+                        <th class="text-center">v</th>
+                        <th>Away</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fixture in fixtures %}
+                    <tr>
+                        <td class="text-muted small">{{ fixture.date|date:"D d M H:i" }}</td>
+                        <td>
+                            {% if fixture.home_team in used_teams %}
+                            <span class="text-muted">{{ fixture.home_team }} <span class="badge bg-secondary">Used</span></span>
+                            {% elif fixture.date <= now %}
+                            <span class="text-muted">{{ fixture.home_team }} <span class="badge bg-dark">Started</span></span>
+                            {% else %}
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm team-btn"
+                                    data-team="{{ fixture.home_team }}">
+                                {{ fixture.home_team }}
+                            </button>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-muted">v</td>
+                        <td>
+                            {% if fixture.away_team in used_teams %}
+                            <span class="text-muted">{{ fixture.away_team }} <span class="badge bg-secondary">Used</span></span>
+                            {% elif fixture.date <= now %}
+                            <span class="text-muted">{{ fixture.away_team }} <span class="badge bg-dark">Started</span></span>
+                            {% else %}
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm team-btn"
+                                    data-team="{{ fixture.away_team }}">
+                                {{ fixture.away_team }}
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card mt-3 p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <span class="text-muted">Selected:</span>
+                    <strong id="selected-label" class="text-primary ms-1">None</strong>
+                </div>
+                <button type="submit" id="submit-btn" class="btn btn-success" disabled>
+                    Confirm Pick
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="mt-3 small text-muted">
+        <strong>Teams you have already used this game:</strong>
+        {% if used_teams %}
+        {{ used_teams|join:", " }}
+        {% else %}
+        None yet.
+        {% endif %}
+    </div>
+
 </div>
 
-{# Load external script #}
-<script src="{% static 'js/lms/script.js' %}"></script>
+<script>
+    document.querySelectorAll('.team-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const team = this.dataset.team;
+            document.getElementById('selected-team-input').value = team;
+            document.getElementById('selected-label').textContent = team;
+            document.getElementById('submit-btn').disabled = false;
+
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.add('btn-outline-primary'));
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-primary', 'active');
+        });
+    });
+</script>
+
 {% endblock %}

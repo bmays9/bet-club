@@ -2,24 +2,20 @@ from bank.services import apply_batch
 from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db.models import Max, Min
-from django.urls import reverse
 from django.utils import timezone
-from django.utils.timezone import now
 from datetime import timedelta, datetime, time
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
-from lms.services.missing_picks import handle_missing_picks
-from lms.services.pick_resolution import (assign_missing_picks, handle_unresolved_postponed_picks, round_deadline_passed)
+from lms.services.pick_resolution import (
+    assign_missing_picks, handle_unresolved_postponed_picks
+)
 from lms.utils import get_auto_pick_teams_for_round
 from player_messages.utils import create_message
 from score_predict.models import Fixture
 
-from player_messages.utils import create_message
-from score_predict.models import Fixture
-
-
 FINAL_STATUS_CODES = (100,)
 CANCELLED_CODE = 90
 POSTPONED_CODE = 60
+MIN_FIXTURES_PER_ROUND = 7
 
 
 class Command(BaseCommand):
@@ -28,9 +24,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Updating LMS pick results...")
 
-        # ----------------------------------------------------
-        # 1️ Find earliest incomplete round per active game
-        # ----------------------------------------------------
+        # 1. Find earliest incomplete round per active game
         earliest_rounds = (
             LMSRound.objects
             .filter(game__active=True, completed=False)
@@ -38,62 +32,40 @@ class Command(BaseCommand):
             .annotate(earliest_round=Min("round_number"))
         )
 
-        print("Earliest Rounds:", earliest_rounds)
-
         rounds = LMSRound.objects.filter(
             game__active=True,
             completed=False,
             round_number__in=[r["earliest_round"] for r in earliest_rounds],
         ).select_related("game").order_by("game_id", "round_number")
 
-        print("Rounds:", rounds)
-
         for round_obj in rounds:
             game = round_obj.game
             now_ts = timezone.now()
 
-            self.stdout.write(f"\n➡️ Processing {round_obj}")
+            self.stdout.write(f"\nProcessing {round_obj}")
 
-            # ----------------------------------------------------
-            # Skip rounds that haven't started yet
-            # ----------------------------------------------------
             if round_obj.start_date and now_ts < round_obj.start_date:
-                self.stdout.write(
-                    f"Skipping Round {round_obj.round_number} (starts {round_obj.start_date})"
-                )
+                self.stdout.write(f"  Skipping (starts {round_obj.start_date})")
                 continue
 
-            # ----------------------------------------------------
-            # 2️ Determine pick deadline
-            # ----------------------------------------------------
             first_fixture = round_obj.fixtures.order_by("date").first()
 
             if game.deadline_mode == "first_game":
                 deadline_passed = first_fixture and now_ts >= first_fixture.date
-            else:  # extended
+            else:
                 deadline_passed = now_ts >= round_obj.end_date
 
-            print("Deadline Passesd?:", deadline_passed)
-
-            # ----------------------------------------------------
-            # 3️ Assign missing picks AFTER deadline
-            # ----------------------------------------------------
+            # 2. Assign missing picks after deadline
             if deadline_passed:
                 assign_missing_picks(game, round_obj)
 
-            # ----------------------------------------------------
-            # 4️ Handle postponed fixtures AFTER round ends
-            # ----------------------------------------------------
+            # 3. Handle postponed fixtures after round ends
             if now_ts >= round_obj.end_date:
                 handle_unresolved_postponed_picks(game, round_obj)
 
-            # ----------------------------------------------------
-            # 5️ Compute results for pending picks
-            # ----------------------------------------------------
+            # 4. Compute results for pending picks
             for pick in round_obj.picks.filter(result="PENDING"):
                 fixture = pick.fixture
-                print("Handling this pick now:", pick)
-                print("which is this fixture", fixture)
                 if not fixture or fixture.date > now_ts:
                     continue
 
@@ -108,345 +80,263 @@ class Command(BaseCommand):
                     else:
                         result = "DRAW"
 
-                elif fixture.status_code == CANCELLED_CODE:
-                    continue   # unresolved
+                    pick.result = result
+                    pick.save(update_fields=["result"])
+                    self.stdout.write(f"  {pick}: {result}")
 
-                elif fixture.status_code == POSTPONED_CODE:
-                    continue  # still unresolved
-
-                else:
-                    continue
-
-                pick.result = result
-                pick.save()
-                
-                self.stdout.write(f"Pick result computed: {result}")
-
-            # ----------------------------------------------------
-            # 6️ Eliminate entries that lost or drew
-            # ----------------------------------------------------
-            for entry in round_obj.game.entries.filter(alive=True):
+            # 5. Eliminate entries that lost or drew
+            for entry in game.entries.filter(alive=True):
                 picks = round_obj.picks.filter(entry=entry)
 
                 if not picks.exists():
-                    if game.deadline_mode != "first_game":
-                        continue
-
-                    entry.alive = False
-                    entry.eliminated_round = 0 if round_obj.round_number == 1 else round_obj.round_number
-                    entry.save()
-                    self.stdout.write(f"Entry {entry.user} eliminated for not picking in round {round_obj.round_number}")
-
-                    # Update messages with the losers
-                    create_message(
-                        code="LM-UKO",
-                        context={"User": entry.user, "league": entry.game.get_league_display()},
-                        group=entry.game.group,
-                        receiver=entry.user,
-                        actor=entry.user,
-                        link=f"lms_game_detail:{entry.game.id}"
-                       # link= reverse ("lms_game_detail", args=[entry.game.id])
-                    )
+                    if deadline_passed and game.no_pick_rule == "elimination":
+                        entry.alive = False
+                        entry.eliminated_round = (
+                            0 if round_obj.round_number == 1 else round_obj.round_number
+                        )
+                        entry.save(update_fields=["alive", "eliminated_round"])
+                        create_message(
+                            code="LM-UKO",
+                            context={"User": entry.user, "league": game.get_league_display()},
+                            group=game.group,
+                            receiver=entry.user,
+                            actor=entry.user,
+                            link=f"lms_game_detail:{game.id}",
+                        )
                     continue
 
                 if picks.filter(result__in=["LOSE", "DRAW"]).exists():
                     entry.alive = False
                     entry.eliminated_round = round_obj.round_number
-                    entry.save()
-                    self.stdout.write(f"Entry {entry.user} eliminated for incorrect pick(s) in round {round_obj.round_number}")
-
-                    # Update messages with the losers
+                    entry.save(update_fields=["alive", "eliminated_round"])
                     create_message(
                         code="LM-UKO",
-                        context={"User": entry.user, "league": entry.game.get_league_display()},
-                        group=entry.game.group,
+                        context={"User": entry.user, "league": game.get_league_display()},
+                        group=game.group,
                         receiver=entry.user,
                         actor=entry.user,
-                        link=f"lms_game_detail:{entry.game.id}"
-                        # link=reverse ("lms_game_detail", args=[entry.game.id])
+                        link=f"lms_game_detail:{game.id}",
                     )
 
-            # ----------------------------------------------------
-            # 7️ Complete round
-            # ----------------------------------------------------
-            if not round_obj.picks.filter(result="PENDING").exists():
+            # 6. Complete round if no pending picks remain
+            all_resolved = not round_obj.picks.filter(result="PENDING").exists()
+            if all_resolved:
                 round_obj.completed = True
-                round_obj.save()
-                self.stdout.write(f"Round {round_obj.round_number} marked as completed.")
+                round_obj.save(update_fields=["completed"])
+                self.stdout.write(f"  Round {round_obj.round_number} completed.")
 
-            # ----------------------------------------------------
-            # 8️ Check for winner
-            # ----------------------------------------------------
+            # 7. Check for winner/no winner
             alive = game.entries.filter(alive=True)
             alive_count = alive.count()
-            entry_fee = round_obj.game.entry_fee  # stored in LMSGame
-            entrants = game.entries.count()
-            prize_pool = Decimal(entry_fee) * entrants
+            entrant_users = [e.user for e in game.entries.all()]
+            prize_pool = Decimal(str(game.entry_fee)) * game.entries.count()
 
             if alive_count == 1:
                 winner_entry = alive.first()
                 game.winner = winner_entry.user
                 game.active = False
-                game.save()
-                self.stdout.write(f" Game over! Winner: {winner_entry.user} ({round_obj.game})")
+                game.save(update_fields=["winner", "active"])
+                self.stdout.write(f"  Winner: {winner_entry.user}")
 
-                # Update messages with the LMS Winner!
                 create_message(
                     code="LM-WIN",
-                    context={"User": winner_entry.user, "league": round_obj.game.get_league_display(), "prize": prize_pool},
-                    group=entry.game.group,
+                    context={
+                        "User": winner_entry.user,
+                        "league": game.get_league_display(),
+                        "prize": prize_pool,
+                    },
+                    group=game.group,
                     actor=winner_entry.user,
                     receiver=winner_entry.user,
-                    link=f"lms_game_detail:{entry.game.id}"
-                    # link = reverse ("lms_game_detail", args=[entry.game.id])
-                    )
-
-                 # --- Settle Money in Bank app ---
-                entrants = [e.user for e in round_obj.game.entries.all()]  # all users who joined this game
-                winners = [winner_entry.user]                              # the single winner
-                
+                    link=f"lms_game_detail:{game.id}",
+                )
                 apply_batch(
-                    group=round_obj.game.group, 
-                    entrants=entrants,
-                    winners=winners,
-                    entry_fee=Decimal(entry_fee),
+                    group=game.group,
+                    entrants=entrant_users,
+                    winners=[winner_entry.user],
+                    entry_fee=Decimal(str(game.entry_fee)),
                     prize_pool=prize_pool,
-                    description=f"Settlement for LMS {round_obj.game.get_league_display()}"
-                    )
-
-            elif alive_count == 0:
-                round_obj.game.active = False
-                round_obj.game.save()
-                self.stdout.write(f"Game over with no winner: {round_obj.game}")
-
-                # Update messages with no LMS Winner - rollover!
-                create_message(
-                    code="LM-OOO",
-                    context={"league": round_obj.game.league, "prize": prize_pool},
-                    link=f"lms_game_detail:{entry.game.id}",
-                    group=round_obj.game.group
+                    description=f"LMS Settlement - {game.get_league_display()} (#{game.id})",
                 )
 
+            elif alive_count == 0:
+                game.active = False
+                game.save(update_fields=["active"])
+                self.stdout.write(f"  No winner for {game}")
+                create_message(
+                    code="LM-OOO",
+                    context={"league": game.get_league_display(), "prize": prize_pool},
+                    group=game.group,
+                    link=f"lms_game_detail:{game.id}",
+                )
 
-            # ---------------------------------------------------
-            # 9️ Create next round
-            # ----------------------------------------------------
-            latest_round = LMSRound.objects.filter(game=game).aggregate(
-                Max("round_number")
+            # 8. Create next round if this one just completed
+            if round_obj.completed:
+                latest_round_num = LMSRound.objects.filter(game=game).aggregate(
+                    Max("round_number")
                 )["round_number__max"]
 
-            if round_obj.completed and round_obj.round_number == latest_round:
-                next_round_num = round_obj.round_number + 1
-                created_round = self.create_next_round(
-                    game=game,
-                    previous_round=round_obj
-                    )
-                if created_round:
-                    self.stdout.write(f"Created Round {created_round.round_number} for {round_obj.game}")
-                else:
-                    self.stdout.write(f" Not enough fixtures to create Round {next_round_num} for {round_obj.game}")
-        
-                    
-        # --- Final check: active games missing a next round ---
+                if round_obj.round_number == latest_round_num:
+                    created = self.create_next_round(game=game, previous_round=round_obj)
+                    if created:
+                        self.stdout.write(f"  Created Round {created.round_number}")
+                    else:
+                        self.stdout.write(f"  No fixtures available for next round")
+
+        # Final pass: ensure active games have a next round ready
         self.stdout.write("\nChecking active games for missing next rounds...")
         for game in LMSGame.objects.filter(active=True):
             rounds = LMSRound.objects.filter(game=game).order_by("-round_number")
 
-            # ------------------------------------------------
-            # 1️ No rounds at all → create Round 1
-            # ------------------------------------------------
             if not rounds.exists():
-                self.stdout.write(f"No rounds found for {game}. Attempting to create Round 1...")
-                created_round = self.create_next_round(
-                    game=game,
-                    previous_round=None
-                )
-
-                if created_round:
-                    self.stdout.write(f"Created Round {created_round.round_number} for {game}")
-                else:
-                    self.stdout.write(f"No suitable fixtures found to create Round 1 for {game}")
+                created = self.create_next_round(game=game, previous_round=None)
+                if created:
+                    self.stdout.write(f"Created Round 1 for {game}")
                 continue
 
-            latest_round = rounds.first()
-
-            # ------------------------------------------------
-            # 2️ Latest round exists but not completed
-            # ------------------------------------------------
-            if not latest_round.completed:
-                self.stdout.write(
-                    f"Latest round {latest_round.round_number} of {game} not yet completed. Skipping."
-                )
+            latest = rounds.first()
+            if not latest.completed:
                 continue
 
-            # ------------------------------------------------
-            # 3️ Latest round completed → ensure next round exists
-            # ------------------------------------------------
-            next_round_num = latest_round.round_number + 1
-
-            if LMSRound.objects.filter(game=game, round_number=next_round_num).exists():
+            next_num = latest.round_number + 1
+            if LMSRound.objects.filter(game=game, round_number=next_num).exists():
                 continue
 
-            created_round = self.create_next_round(
-               game=game,
-               previous_round=latest_round
-            )
+            created = self.create_next_round(game=game, previous_round=latest)
+            if created:
+                self.stdout.write(f"Created Round {created.round_number} for {game}")
 
-            if created_round:
-                self.stdout.write(f"Created Round {created_round.round_number} for {game}")
-            else:
-                self.stdout.write(f"No suitable fixtures found for next round of {game}")
+        self.stdout.write("LMS update complete.")
 
-        self.stdout.write("LMS pick results update complete.")
-
-    # --------------------------------------------------------
-    # Helper: create next round
-    # --------------------------------------------------------
-    
     def create_next_round(self, *, game, previous_round=None):
         """
-        Create the next LMS round for a game by scanning forward block-by-block
-        until a block with enough fixtures is found.
-        """
+        Find the next valid fixture block for the game's league.
 
-    # --------------------------------------------------
-    # 1️⃣ Establish search start (never in the past)
-    # --------------------------------------------------
+        Improved logic:
+        - Scans forward from after the previous round ended
+        - Groups fixtures by calendar date
+        - Finds the next cluster of dates where each TEAM appears only once
+        - Accepts any block of dates with >= MIN_FIXTURES_PER_ROUND unique-team fixtures
+        - Works around holidays (Christmas etc.) by not enforcing Fri-Mon/Tue-Thu windows
+        """
         search_after = max(
             previous_round.end_date if previous_round else timezone.now(),
-            timezone.now()
+            timezone.now(),
         )
-
         lookahead_limit = timezone.now() + timedelta(days=60)
 
-        self.stdout.write(
-            f"Searching for next round for {game} starting after {search_after}"
+        self.stdout.write(f"Searching for next round for {game} after {search_after.date()}")
+
+        # Get all upcoming fixtures for this league
+        upcoming = (
+            Fixture.objects
+            .filter(
+                league_short_name=game.league,
+                date__gt=search_after,
+                date__lt=timezone.make_aware(
+                    datetime.combine(lookahead_limit.date(), time.max)
+                ),
+            )
+            .exclude(status_code__in=[CANCELLED_CODE, POSTPONED_CODE])
+            .order_by("date")
         )
 
-        # --------------------------------------------------
-        # 2️⃣ Scan blocks until a valid one is found
-        # --------------------------------------------------
-        while search_after < lookahead_limit:
-
-            next_fixture = (
-                Fixture.objects
-                .filter(
-                    league_short_name=game.league,
-                    date__gt=search_after
-                )
-                .order_by("date")
-                .first()
-            )
-
-            if not next_fixture:
-                self.stdout.write(f"No future fixtures found for {game}")
-                return None
-    
-            kickoff_date = next_fixture.date.date()
-            weekday = kickoff_date.weekday()
-    
-            # --------------------------------------------------
-            # 3️⃣ Determine block window
-            # --------------------------------------------------
-            if weekday in (4, 5, 6, 0):  # Fri–Mon
-                block_start = kickoff_date - timedelta(days=(weekday - 4) % 7)
-                block_end = block_start + timedelta(days=3)
-    
-            elif weekday in (1, 2, 3):  # Tue–Thu
-                block_start = kickoff_date
-                block_end = kickoff_date + timedelta(days=2)
-
-            else:
-                self.stdout.write(f"Invalid weekday for fixture {next_fixture}")
-                return None
-
-            block_start_dt = timezone.make_aware(
-                datetime.combine(block_start, time.min)
-            )
-
-            block_end_dt = timezone.make_aware(
-                datetime.combine(block_end, time.max)
-            )
-
-            # --------------------------------------------------
-            # Skip blocks that already started
-            # --------------------------------------------------
-            if block_start_dt.date() < timezone.now().date():
-                self.stdout.write(
-                    f"Skipping block {block_start} → {block_end} (already started)"
-                )
-                search_after = block_end_dt
-                continue
-
-        # --------------------------------------------------
-        # 4️⃣ Fetch fixtures in this block
-        # --------------------------------------------------
-            fixtures = Fixture.objects.filter(
-                league_short_name=game.league,
-                date__range=(block_start_dt, block_end_dt),
-            ).order_by("date")
-
-            self.stdout.write(
-                f"Checking block {block_start} → {block_end} "
-                f"({fixtures.count()} fixtures)"
-            )
-
-        # --------------------------------------------------
-        # 5️⃣ Valid block found ✅
-        # --------------------------------------------------
-            if fixtures.count() >= 7:
-                break
-
-        # --------------------------------------------------
-        # 6️⃣ Not enough fixtures → advance to next block
-        # --------------------------------------------------
-            self.stdout.write(
-                f"Block {block_start} → {block_end} rejected "
-                f"({fixtures.count()} fixtures)"
-            )
-
-            search_after = block_end_dt
-
-        else:
-            self.stdout.write(
-                f"Aborting round creation for {game} — "
-                f"no valid block within 60 days"
-            )
+        if not upcoming.exists():
+            self.stdout.write(f"  No upcoming fixtures for {game.league}")
             return None
 
-    # --------------------------------------------------
-    # 7️⃣ Create round
-    # --------------------------------------------------
-        round_number = (
-            previous_round.round_number + 1 if previous_round else 1
-        )
+        # Group fixtures by date
+        from collections import defaultdict
+        by_date = defaultdict(list)
+        for fx in upcoming:
+            by_date[fx.date.date()].append(fx)
 
-        new_round = LMSRound.objects.create(
-            game=game,
-            round_number=round_number,
-            start_date=fixtures.first().date,
-            end_date=fixtures.last().date,
-        )   
+        sorted_dates = sorted(by_date.keys())
 
-        new_round.fixtures.set(fixtures)
+        # Find natural fixture clusters:
+        # A cluster is a group of consecutive dates where no more than 1 day
+        # gap exists between them. This handles Fri-Mon AND holiday schedules.
+        clusters = []
+        current_cluster_dates = []
 
-    # --------------------------------------------------
-    # 8️⃣ Assign auto-picks
-    # --------------------------------------------------
-        auto_picks = get_auto_pick_teams_for_round(
-            game, new_round, fixtures, count=4
-        )
+        for i, d in enumerate(sorted_dates):
+            if not current_cluster_dates:
+                current_cluster_dates = [d]
+            else:
+                gap = (d - current_cluster_dates[-1]).days
+                if gap <= 2:  # allow up to 2-day gap within a cluster
+                    current_cluster_dates.append(d)
+                else:
+                    clusters.append(current_cluster_dates)
+                    current_cluster_dates = [d]
 
-        if auto_picks:
-            new_round.auto_pick_team1 = auto_picks[0]
-            new_round.auto_pick_team2 = auto_picks[1]
-            new_round.auto_pick_team3 = auto_picks[2]
-            new_round.auto_pick_team = auto_picks[3]
-            new_round.save()
+        if current_cluster_dates:
+            clusters.append(current_cluster_dates)
 
-        self.stdout.write(
-            f"Created Round {new_round.round_number} "
-            f"({block_start} → {block_end}) for {game}"
-        )
+        # Find first cluster with enough unique-team fixtures
+        for cluster_dates in clusters:
+            cluster_fixtures = []
+            seen_teams = set()
+            valid = True
 
-        return new_round
+            for d in cluster_dates:
+                for fx in by_date[d]:
+                    # Each team can only appear once in a round
+                    if fx.home_team in seen_teams or fx.away_team in seen_teams:
+                        continue  # skip duplicate team fixture
+                    seen_teams.add(fx.home_team)
+                    seen_teams.add(fx.away_team)
+                    cluster_fixtures.append(fx)
+
+            if len(cluster_fixtures) < MIN_FIXTURES_PER_ROUND:
+                self.stdout.write(
+                    f"  Cluster {cluster_dates[0]} - {cluster_dates[-1]}: "
+                    f"{len(cluster_fixtures)} usable fixtures (need {MIN_FIXTURES_PER_ROUND}) -- skipping"
+                )
+                continue
+
+            # Valid cluster found
+            self.stdout.write(
+                f"  Using cluster {cluster_dates[0]} - {cluster_dates[-1]} "
+                f"({len(cluster_fixtures)} fixtures)"
+            )
+
+            # Sort fixtures by date
+            cluster_fixtures.sort(key=lambda f: f.date)
+
+            round_number = (previous_round.round_number + 1) if previous_round else 1
+
+            from django.utils.timezone import make_aware
+            block_start_dt = make_aware(
+                datetime.combine(cluster_dates[0], time.min)
+            )
+            block_end_dt = make_aware(
+                datetime.combine(cluster_dates[-1], time.max)
+            )
+
+            new_round = LMSRound.objects.create(
+                game=game,
+                round_number=round_number,
+                start_date=cluster_fixtures[0].date,
+                end_date=cluster_fixtures[-1].date + timedelta(hours=4),
+            )
+            new_round.fixtures.set(cluster_fixtures)
+
+            # Auto-picks
+            auto_picks = get_auto_pick_teams_for_round(
+                game, new_round, cluster_fixtures, count=4
+            )
+            if auto_picks:
+                new_round.auto_pick_team1 = auto_picks[0]
+                new_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
+                new_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
+                new_round.auto_pick_team = auto_picks[3] if len(auto_picks) > 3 else None
+                new_round.save(update_fields=[
+                    "auto_pick_team1", "auto_pick_team2",
+                    "auto_pick_team3", "auto_pick_team",
+                ])
+
+            return new_round
+
+        self.stdout.write(f"  No valid cluster found within 60 days for {game}")
+        return None

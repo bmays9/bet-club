@@ -1,78 +1,168 @@
 {% extends "base.html" %}
-
 {% block content %}
-<h1>LMS History</h1>
 
-<!-- Group selector -->
-<form method="get" action="{% url 'lms_history' %}">
-    <select name="group" onchange="this.form.submit()">
-        {% for group in groups %}
-            <option value="{{ group.id }}" {% if group == selected_group %}selected{% endif %}>
-                {{ group.name }}
-            </option>
-        {% endfor %}
-    </select>
-</form>
+<div class="container mt-4">
 
-<hr>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>LMS History</h2>
+        <a href="{% url 'lms_dashboard' %}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+    </div>
 
-{% if games %}
-    <table border="1" cellpadding="5" class="table table-hover">
-        <thead>
-            <tr class="table-primary">
-                <th scope="col">Started</th>
-                <th scope="col">League</th>
-                <th scope="col">Players</th>
-                <th scope="col">Entry Fee</th>
-                <th scope="col">Winner</th>
-                <th scope="col">Prize</th>
-                <th scope="col">View</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for game in games %}
-                <tr scope="row">
-                    <!-- created_at from LMSGame -->
-                    <td>{{ game.game.created_at|date:"M d, Y" }}</td>
+    <!-- Filters -->
+    <form method="get" class="mb-3 d-flex align-items-center gap-3 flex-wrap">
+        <div>
+            <label for="group" class="form-label mb-0 me-1 small text-muted">Group:</label>
+            <select name="group" id="group"
+                    class="form-select form-select-sm w-auto d-inline-block"
+                    onchange="this.form.submit()">
+                {% for group in groups %}
+                {% if group == selected_group %}
+                <option value="{{ group.id }}" selected>{{ group.name }}</option>
+                {% else %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        {% if available_seasons %}
+        <div>
+            <label for="season" class="form-label mb-0 me-1 small text-muted">Season:</label>
+            <select name="season" id="season"
+                    class="form-select form-select-sm w-auto d-inline-block"
+                    onchange="this.form.submit()">
+                {% if selected_season == "all" %}
+                <option value="all" selected>All seasons</option>
+                {% else %}
+                <option value="all">All seasons</option>
+                {% endif %}
+                {% for year in available_seasons %}
+                {% if selected_season == year|stringformat:"s" %}
+                <option value="{{ year }}" selected>{{ year }}/{{ year|add:1 }}</option>
+                {% else %}
+                <option value="{{ year }}">{{ year }}/{{ year|add:1 }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </form>
 
-                    <!-- league with display name -->
-                    <td>{{ game.game.get_league_display }}</td>
+    <!-- Overall P&L -->
+    {% if overall_pnl is not None %}
+    {% if overall_pnl >= 0 %}
+    <div class="card mb-3 border-success">
+        {% else %}
+        <div class="card mb-3 border-danger">
+            {% endif %}
+            <div class="card-body py-2">
+                <div class="row align-items-center">
+                    <div class="col text-center">
+                        <div class="text-muted small">Overall P&amp;L</div>
+                        {% if overall_pnl >= 0 %}
+                        <div class="fs-4 fw-bold text-success">
+                            {% else %}
+                            <div class="fs-4 fw-bold text-danger">
+                                {% endif %}
+                                {% if overall_pnl >= 0 %}+{% endif %}&pound;{{ overall_pnl|floatformat:2 }}
+                            </div>
+                        </div>
+                        {% for league, pnl in league_pnl.items %}
+                        <div class="col text-center border-start">
+                            <div class="text-muted small">{{ league }}</div>
+                            {% if pnl >= 0 %}
+                            <div class="fw-bold text-success">+&pound;{{ pnl|floatformat:2 }}</div>
+                            {% else %}
+                            <div class="fw-bold text-danger">-&pound;{{ pnl|floatformat:2|slice:"1:" }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
-                    <!-- annotated player_count -->
-                    <td>{{ game.player_count }}</td>
+            <!-- Games list -->
+            {% if not games %}
+            <p class="text-muted">No completed games found.</p>
+            {% endif %}
 
-                    <!-- entry fee -->
-                    <td>£{{ game.game.entry_fee }}</td>
+            {% for item in games %}
+            {% with game=item.game %}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-primary me-1">{{ game.get_league_display }}</span>
+                        <span class="badge bg-secondary me-1">{{ game.group.name }}</span>
+                        <span class="text-muted small">{{ game.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <a href="{% url 'lms_game_detail' game.id %}" class="btn btn-sm btn-outline-primary">View Game</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
 
-                    <!-- single winner -->
-                    <td>
-                        {% if game.game.winner %}
-                            {{ game.game.winner.username }}
-                        {% else %}
-                            No winner
-                        {% endif %}
-                    </td>
+                        <div class="col-md-4">
+                            <table class="table table-sm small-font mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted">Players</td>
+                                        <td><strong>{{ item.player_count }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Entry fee</td>
+                                        <td>&pound;{{ game.entry_fee }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Prize pot</td>
+                                        <td><strong>&pound;{{ item.prize_pot }}</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <!-- prize pot (calculated in view) -->
-                    <td>£{{ game.prize_pot }}</td>
+                        <div class="col-md-4">
+                            <div class="small-font">
+                                <div class="text-muted mb-1">Winner:</div>
+                                {% if game.winner %}
+                                <span class="badge bg-success fs-6">{{ game.winner.username }}</span>
+                                {% else %}
+                                <span class="text-muted">No winner</span>
+                                {% endif %}
+                            </div>
+                        </div>
 
-                    <!-- link to detail page (only if game has id) -->
-                    <td>
-                        {% if game.game.id %}
-                            <a href="{% url 'lms_game_detail' game.game.id %}" class="btn btn-sm btn-primary">
-                                View Game
-                            </a>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                </tr>
+                        <div class="col-md-4 text-center">
+                            {% if item.user_entry %}
+                            <div class="text-muted small">Your result</div>
+                            {% if game.winner == request.user %}
+                            <div class="fs-5 fw-bold text-success">Winner!</div>
+                            {% elif item.user_round_eliminated == 0 %}
+                            <div class="fs-6 text-danger">No pick (Round 1)</div>
+                            {% elif item.user_round_eliminated %}
+                            <div class="fs-6 text-muted">Out: Round {{ item.user_round_eliminated }}</div>
+                            {% else %}
+                            <div class="fs-6 text-muted">Survived</div>
+                            {% endif %}
+                            {% if item.pnl is not None %}
+                            <div class="mt-1">
+                                {% if item.pnl >= 0 %}
+                                <span class="badge fs-6 bg-success">+&pound;{{ item.pnl|floatformat:2 }}</span>
+                                {% else %}
+                                <span class="badge fs-6 bg-danger">-&pound;{{ item.pnl|floatformat:2|slice:"1:" }}</span>
+                                {% endif %}
+                                <div class="text-muted small">P&amp;L</div>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted small">Did not enter</span>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
             {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>No completed LMS games for this group.</p>
-{% endif %}
 
+        </div>
 
-{% endblock %}
+        {% endblock %}
