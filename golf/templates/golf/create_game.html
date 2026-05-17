@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <h2> Create Golf Game</h2>
+    <h5 class="text-muted">{{ event.name }}</h5>
+    <p class="text-muted">{{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}</p>
+
+    <div class="alert alert-info small">
+        The draft opens at <strong>09:00 GMT the day before the tournament starts</strong>.
+        Players have 1 hour per pick slot.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+            <div class="form-text text-muted">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">Create Game</button>
+        <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </form>
+</div>
+{% endblock %}

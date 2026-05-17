@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Golf History</h2>
+        <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm">Back to Events</a>
+    </div>
+
+    <!-- Overall P&L summary -->
+    <div class="card mb-4 border-{% if total_pnl >= 0 %}success{% else %}danger{% endif %}">
+        <div class="card-body text-center py-2">
+            <span class="text-muted small">Your overall golf P&amp;L</span>
+            <div class="fs-4 fw-bold {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if total_pnl >= 0 %}+{% endif %}&pound;{{ total_pnl|floatformat:2 }}
+            </div>
+            <span class="text-muted small">across {{ history|length }} completed game(s)</span>
+        </div>
+    </div>
+
+    {% if not history %}
+    <p class="text-muted">No completed golf games found for your groups yet.</p>
+    {% endif %}
+
+    {% for item in history %}
+    {% with game=item.game %}
+    <div class="card mb-4 shadow-sm">
+
+        <!-- Card header -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-secondary me-1">{{ game.event.tour.tour_name }}</span>
+                <span class="badge bg-primary me-1">{{ game.group.name }}</span>
+                <strong>{{ game.event.name }}</strong>
+                <span class="text-muted ms-2 small">
+                    {{ game.event.start_date|date:"M d" }} - {{ game.event.end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-sm btn-outline-primary">
+                View Full Game
+            </a>
+        </div>
+
+        <div class="card-body">
+            <div class="row">
+
+                <!-- Players & pots -->
+                <div class="col-md-4">
+                    <table class="table table-sm small-font mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted">Players</td>
+                                <td><strong>{{ item.player_count }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Entry fee</td>
+                                <td>&pound;{{ game.entry_fee }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Main pot</td>
+                                <td>&pound;{{ game.total_main_pot }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Fine per missed cut</td>
+                                <td>&pound;{{ game.missed_cut_fine }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Winners -->
+                <div class="col-md-4">
+                    <div class="small-font">
+                        <div class="mb-2">
+                            <span class="text-muted">Main pot winner(s):</span><br>
+                            {% for entry in item.main_winners %}
+                            <span class="badge bg-success me-1">
+                                {{ entry.user.username }}
+                                ({{ entry.final_score }} strokes)
+                            </span>
+                            {% empty %}
+                            <span class="text-muted">None</span>
+                            {% endfor %}
+                        </div>
+                        <div>
+                            <span class="text-muted">Secondary pot winner:</span><br>
+                            {% if item.secondary_winner %}
+                            <span class="badge bg-warning text-dark">
+                                {{ item.secondary_winner.username }}
+                                (picked the winner)
+                            </span>
+                            {% else %}
+                            <span class="text-muted">Rolled over</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User's result -->
+                <div class="col-md-4">
+                    {% if item.user_result %}
+                    <div class="text-center py-2">
+                        <div class="text-muted small">Your finish</div>
+                        <div class="fs-3 fw-bold">
+                            {% if item.user_result.final_rank == 1 %}
+                            1st
+                            {% elif item.user_result.final_rank == 2 %}
+                            2nd
+                            {% elif item.user_result.final_rank == 3 %}
+                            3rd
+                            {% else %}
+                            {{ item.user_result.final_rank }}th
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">
+                            {{ item.user_result.final_score|default:"-" }} strokes
+                        </div>
+                        {% if item.pnl is not None %}
+                        <div class="mt-2">
+                            <span class="badge fs-6 bg-{% if item.pnl >= 0 %}success{% else %}danger{% endif %}">
+                                {% if item.pnl >= 0 %}+{% endif %}&pound;{{ item.pnl|floatformat:2 }}
+                            </span>
+                            <div class="text-muted small">P&amp;L this game</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small text-center mt-3">You did not enter this game.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Final standings table -->
+            <hr class="my-2">
+            <h6 class="small text-muted mb-1">Final Standings</h6>
+            <div class="table-responsive">
+                <table class="table table-sm small-font mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Score</th>
+                            <th>Fines</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in item.game.game_entries.all %}
+                        <tr>
+                            <td>{{ entry.final_rank|default:"-" }}</td>
+                            <td>
+                                {{ entry.user.username }}
+                                {% if entry.user == request.user %}
+                                <span class="badge bg-primary ms-1">You</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.final_score|default:"-" }}</td>
+                            <td>
+                                {% if entry.total_fines > 0 %}
+                                <span class="text-danger">&pound;{{ entry.total_fines }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+
+</div>
+
+{% endblock %}

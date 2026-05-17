@@ -1,44 +1,89 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<!-- content starts here -->
 
-<h2>Recent and Upcoming Golf Events</h2>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Event</th>
-            <th>Dates</th>
-            <th>Entries</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for event in events %}
-        <tr>
-            <td>{{ event.name }}</td>
-            <td>{{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}</td>
-            <td>
-                {% if event.has_entries %}
-                <span class="badge bg-success">✅ Available</span>
-                {% else %}
-                <span class="badge bg-warning text-dark">Pending</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if event.has_entries %}
-                <a href="{% url 'event_entries' event.tourn_id %}" class="btn btn-primary btn-sm">
-                    Make Your Picks
-                </a>
-                {% else %}
-                <button class="btn btn-secondary btn-sm" disabled>Entries Not Yet Available</button>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2>Golf Events</h2>
+        <a href="{% url 'golf_history' %}" class="btn btn-outline-secondary btn-sm">Game History</a>
+    </div>
 
 
-{% endblock content %}
+    {% if not live_events and not upcoming_events and not finished_events %}
+    <div class="alert alert-info mt-3">
+        No events found in the current window (last 7 days to next 10 days).
+    </div>
+    {% endif %}
+
+    {% if live_events %}
+    <h4 class="mt-4 text-success">Live Now</h4>
+    {% for item in live_events %}
+    {% with event=item.event %}
+    <div class="card mb-3 border-success shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-success bg-opacity-10">
+            <div>
+                <span class="badge bg-secondary me-2">{{ event.tour.tour_name }}</span>
+                <strong>{{ event.name }}</strong>
+                <span class="text-muted ms-2 small">
+                    {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            <span class="badge bg-success">Live</span>
+        </div>
+        <div class="card-body">
+            {% include "golf/_game_actions.html" with item=item %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% endif %}
+
+    {% if upcoming_events %}
+    <h4 class="mt-4 text-primary">Upcoming (next 10 days)</h4>
+    {% for item in upcoming_events %}
+    {% with event=item.event %}
+    <div class="card mb-3 border-primary shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-secondary me-2">{{ event.tour.tour_name }}</span>
+                <strong>{{ event.name }}</strong>
+                <span class="text-muted ms-2 small">
+                    {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            <span class="badge bg-primary">Upcoming</span>
+        </div>
+        <div class="card-body">
+            {% include "golf/_game_actions.html" with item=item %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% endif %}
+
+    {% if finished_events %}
+    <h4 class="mt-4 text-secondary">Recently Finished</h4>
+    {% for item in finished_events %}
+    {% with event=item.event %}
+    <div class="card mb-3 border-secondary shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-secondary bg-opacity-10">
+            <div>
+                <span class="badge bg-secondary me-2">{{ event.tour.tour_name }}</span>
+                <strong>{{ event.name }}</strong>
+                <span class="text-muted ms-2 small">
+                    {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
+                </span>
+            </div>
+            <span class="badge bg-secondary">Finished</span>
+        </div>
+        <div class="card-body">
+            {% include "golf/_game_actions.html" with item=item %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% endif %}
+
+</div>
+
+{% endblock %}

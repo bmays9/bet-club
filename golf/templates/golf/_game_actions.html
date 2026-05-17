@@ -1,0 +1,155 @@
+{% comment %}
+Partial: golf/_game_actions.html
+Expects: item = {event, group_games, joined_game_ids, user_groups, can_create,
+                 entries_open, draft_live, tournament_started}
+{% endcomment %}
+
+{% with event=item.event %}
+
+<!-- Event detail row -->
+<div class="row small text-muted mb-2">
+    <div class="col-auto"><strong>Tour:</strong> {{ event.tour.tour_name }}</div>
+    {% if event.purse %}
+    <div class="col-auto"><strong>Purse:</strong> ${{ event.purse|floatformat:0 }}</div>
+    {% endif %}
+    {% if event.current_round %}
+    <div class="col-auto"><strong>Round:</strong> {{ event.current_round }}</div>
+    {% endif %}
+    {% if event.playing_format %}
+    <div class="col-auto"><strong>Format:</strong> {{ event.playing_format }}</div>
+    {% endif %}
+</div>
+
+<!-- Status message when no game exists for any user group -->
+{% if not item.group_games %}
+
+    {% if item.tournament_started %}
+<p class="text-muted small mb-1">
+    Tournament in progress. Entry period has closed -- no game was created for your group(s).
+</p>
+
+    {% elif item.draft_live %}
+<p class="text-warning small mb-1 fw-bold">
+    Draft window is open ({{ event.draft_opens|date:"M d, H:i" }} GMT).
+    Create a game now and start the draft manually.
+</p>
+    {% if event.has_entries and item.can_create %}
+<a href="{% url 'golf_create_game' event.tourn_id %}" class="btn btn-sm btn-warning">
+    + Create game now
+</a>
+    {% endif %}
+
+    {% elif item.entries_open %}
+<p class="text-muted small mb-1">
+    No game created yet for your group(s). Entries open until
+    {{ event.draft_opens|date:"M d, H:i" }} GMT.
+</p>
+    {% if event.has_entries and item.can_create %}
+<a href="{% url 'golf_create_game' event.tourn_id %}" class="btn btn-sm btn-outline-success">
+    + Create game
+</a>
+    {% elif not event.has_entries %}
+<span class="text-muted small">Entry list not yet available.</span>
+    {% endif %}
+
+    {% else %}
+<p class="text-muted small">No game was created for this event.</p>
+    {% endif %}
+
+{% else %}
+<!-- Games exist for one or more groups -->
+{% if not item.tournament_started and event.has_entries %}
+<p class="small mb-2">
+    <a href="{% url 'event_entries' event.tourn_id %}">View entry list</a>
+    &nbsp;&middot;&nbsp;
+    <a href="{% url 'pick_order' event.tourn_id %}">Set my preferences</a>
+</p>
+{% endif %}
+
+<table class="table table-sm table-hover small-font mb-2">
+    <thead>
+        <tr class="table-secondary">
+            <th>Group</th>
+            <th>Entry</th>
+            <th>Fine</th>
+            <th>Info</th>
+            <th>Players</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for game in item.group_games %}
+        <tr>
+            <td>{{ game.group.name }}</td>
+            <td>&pound;{{ game.entry_fee }}</td>
+            <td>&pound;{{ game.missed_cut_fine }}</td>
+            <td class="small text-muted">
+                {% if game.status == 'open' %}
+                {% if item.tournament_started %}
+                <span class="text-danger">Tournament started -- draft not run</span>
+                {% elif item.draft_live %}
+                <span class="text-warning fw-bold">Draft window open</span>
+                {% else %}
+                Draft opens {{ event.draft_opens|date:"M d, H:i" }}
+                {% endif %}
+                {% elif game.status == 'drafting' %}
+                <span class="text-warning fw-bold">Draft live</span>
+                {% elif game.status == 'active' %}
+                In progress
+                {% else %}
+                Finished
+                {% endif %}
+            </td>
+            <td>{{ game.game_entries.count }}</td>
+            <td>
+                <span class="badge bg-{% if game.status == 'open' %}info{% elif game.status == 'drafting' %}warning text-dark{% elif game.status == 'active' %}success{% else %}secondary{% endif %}">
+                    {{ game.get_status_display }}
+                </span>
+            </td>
+            <td>
+                {% if game.id in item.joined_game_ids %}
+                <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-sm btn-primary">View</a>
+                {% if game.status == 'drafting' %}
+                <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-sm btn-warning ms-1">Pick!</a>
+                {% endif %}
+                {% if game.status == 'open' and request.user == game.created_by %}
+                {% if item.tournament_started %}
+                <a href="{% url 'golf_start_draft' game.id %}"
+                   class="btn btn-sm btn-danger ms-1"
+                   onclick="return confirm('The tournament has started. This game will be marked void. Continue?')">
+                    Void Game
+                </a>
+                {% else %}
+                <a href="{% url 'golf_start_draft' game.id %}"
+                   class="btn btn-sm btn-warning ms-1"
+                   onclick="return confirm('Close entries and start the draft now?')">
+                    Start Draft
+                </a>
+                {% endif %}
+                {% endif %}
+                {% elif game.status == 'open' %}
+                {% if not item.tournament_started %}
+                <a href="{% url 'golf_join_game' game.id %}" class="btn btn-sm btn-outline-primary">Join</a>
+                {% else %}
+                <span class="text-muted small">Closed</span>
+                {% endif %}
+                {% else %}
+                <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Create game button - only if entries open, not tournament day, and no game for a group yet -->
+{% if item.can_create %}
+<a href="{% url 'golf_create_game' event.tourn_id %}" class="btn btn-sm btn-outline-success">
+    + Create game for another group
+</a>
+{% endif %}
+
+{% endif %}{# end group_games check #}
+
+{% endwith %}

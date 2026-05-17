@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>{{ event.name }}</h2>
+            <p class="text-muted mb-0">
+                {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
+                {% if event.current_round %}
+                &middot; Round {{ event.current_round }}
+                {% endif %}
+                &middot; <span class="badge bg-{% if event.status == 'In Progress' %}success{% else %}secondary{% endif %}">
+                    {{ event.status|default:"Scheduled" }}
+                </span>
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'pick_order' event.tourn_id %}" class="btn btn-primary btn-sm">
+                {% if user_picks %}Edit Picks{% else %}Make Picks{% endif %}
+            </a>
+            <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm ms-2">All Events</a>
+        </div>
+    </div>
+
+    {% if user_picks %}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">Your Picks (in preference order)</div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Golfer</th>
+                        <th>Position</th>
+                        <th>Round</th>
+                        <th>Thru</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in user_picks %}
+                    {% for row in leaderboard %}
+                    {% if row.golfer.id == order.golfer.id %}
+                    <tr class="table-info">
+                        <td>{{ order.selection_rank }}</td>
+                        <td>{{ order.golfer.first_name }} {{ order.golfer.last_name }}</td>
+                        <td><strong>{{ row.position|default:"-" }}</strong></td>
+                        <td>R{{ row.current_round }}</td>
+                        <td>{{ row.thru|default:"-" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <h4>Full Leaderboard</h4>
+    {% if leaderboard %}
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover small-font">
+            <thead class="table-dark">
+                <tr>
+                    <th>Pos</th>
+                    <th>Golfer</th>
+                    <th>Country</th>
+                    <th>Round</th>
+                    <th>Thru</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in leaderboard %}
+                <tr {% if user_picks %}{% for order in user_picks %}{% if order.golfer.id= =row.golfer.id %}class="table-warning" {% endif %}{% endfor %}{% endif %}>
+                    <td>{{ row.position|default:"-" }}</td>
+                    <td>{{ row.golfer.first_name }} {{ row.golfer.last_name }}</td>
+                    <td>{{ row.golfer.country }}</td>
+                    <td>R{{ row.current_round }}</td>
+                    <td>{{ row.thru|default:"-" }}</td>
+                    <td>{{ row.total_score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No scores available yet. Check back once the tournament begins.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

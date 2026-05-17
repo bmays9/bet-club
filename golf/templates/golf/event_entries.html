@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>{{ event.name }}</h2>
+            <p class="text-muted mb-0">
+                {{ event.tour.tour_name }} &middot;
+                {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
+                {% if event.purse %}&middot; Purse: ${{ event.purse|floatformat:0 }}{% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'pick_order' event.tourn_id %}" class="btn btn-primary btn-sm">
+                Set My Preferences
+            </a>
+            <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm ms-2">
+                All Events
+            </a>
+        </div>
+    </div>
+
+    <p class="text-muted small">
+        {{ entries|length }} player{{ entries|length|pluralize }} in the field.
+        World rankings shown where available.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover small-font">
+            <thead class="table-dark">
+                <tr>
+                    <th>WR</th>
+                    <th>Player</th>
+                    <th>Country</th>
+                    <th>Amateur</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>
+                        {% if entry.golfer.world_ranking < 2999 %}
+                        {{ entry.golfer.world_ranking }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.golfer.first_name }} {{ entry.golfer.last_name }}</td>
+                    <td>{{ entry.golfer.country }}</td>
+                    <td>{% if entry.golfer.is_amateur %}Yes{% endif %}</td>
+                    <td>{{ entry.status|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">No entries available yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

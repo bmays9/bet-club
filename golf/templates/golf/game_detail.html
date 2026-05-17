@@ -1,0 +1,515 @@
+﻿{% extends "base.html" %}
+{% load static %}
+{% load golf_extras %}
+{% block content %}
+
+{% if game.status == 'drafting' %}
+<meta http-equiv="refresh" content="30">
+{% endif %}
+
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>{{ game.event.name }}</h2>
+            <p class="text-muted mb-0">
+                <span class="badge bg-secondary me-1">{{ game.event.tour.tour_name }}</span>
+                <span class="badge bg-primary me-1">{{ game.group.name }}</span>
+                {{ game.event.start_date|date:"M d" }} - {{ game.event.end_date|date:"M d, Y" }}
+            </p>
+        </div>
+        <div>
+            {% if game.status == 'active' or game.status == 'finished' %}
+            <a href="{% url 'golf_leaderboard' game.id %}" class="btn btn-primary btn-sm">Leaderboard</a>
+            {% endif %}
+            <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm ms-2">All Events</a>
+        </div>
+    </div>
+
+    <!-- Pot summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center border-success">
+                <div class="card-body py-2">
+                    <div class="text-muted small">Main Pot</div>
+                    <div class="fs-4 text-success fw-bold">&pound;{{ main_pot }}</div>
+                    <div class="text-muted small">{{ entries|length }} x &pound;{{ game.entry_fee }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-warning">
+                <div class="card-body py-2">
+                    <div class="text-muted small">Secondary Pot</div>
+                    <div class="fs-4 text-warning fw-bold">&pound;{{ secondary_pot }}</div>
+                    <div class="text-muted small">
+                        Missed cut fines (&pound;{{ game.missed_cut_fine }} each)
+                        {% if rollover_amount > 0 %}+ &pound;{{ rollover_amount }} rollover{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <div class="text-muted small">Game Info</div>
+                    {% if game.status == 'open' %}
+                    <span class="badge fs-6 bg-info">
+                        {% elif game.status == 'drafting' %}
+                        <span class="badge fs-6 bg-warning text-dark">
+                            {% elif game.status == 'active' %}
+                            <span class="badge fs-6 bg-success">
+                                {% else %}
+                                <span class="badge fs-6 bg-secondary">
+                                    {% endif %}
+                                    {{ game.get_status_display }}
+                                </span>
+                                <div class="text-muted small mt-1">
+                                    {{ game.get_pick_method_display }} &middot;
+                                    {{ game.picks_per_player }} picks &middot;
+                                    best {{ game.scoring_picks }} score
+                                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         OPEN: show entrants and draft info
+    ============================================================ -->
+    {% if game.status == 'open' %}
+    <div class="alert alert-info">
+        <strong>Draft opens:</strong> {{ game.event.draft_opens|date:"D M d, H:i" }} GMT
+        &nbsp;&middot;&nbsp;
+        <a href="{% url 'pick_order' game.event.tourn_id %}">Set your preference order</a> before then.
+    </div>
+    {% endif %}
+
+    <!-- ============================================================
+         DRAFTING: unified pick panel
+    ============================================================ -->
+    {% if game.status == 'drafting' %}
+
+    <div class="alert alert-secondary small mb-2">
+        Page auto-refreshes every 30 seconds.
+        {% if game.status == 'drafting' %}
+        <a href="" class="ms-2">Refresh now</a>
+        {% endif %}
+    </div>
+
+    <!-- My turn panel -->
+    {% if user_slot %}
+    <div class="card border-warning mb-4 shadow">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <strong>It is your turn to pick! Round {{ user_slot.round_number }}</strong>
+            <span>Slot closes: {{ user_slot.closes_at|date:"H:i" }} GMT</span>
+        </div>
+        <div class="card-body">
+
+            <div class="mb-3">
+                <div id="countdown" class="fs-5 fw-bold text-danger mb-2"></div>
+            </div>
+
+            <form method="POST" action="{% url 'golf_make_pick' game.id %}">
+                {% csrf_token %}
+
+                {% if my_preferences %}
+                <h6>Your Preference Order <small class="text-muted">(available golfers shown first)</small></h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-hover small-font">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Pref</th>
+                                <th>Select</th>
+                                <th>Golfer</th>
+                                <th>Country</th>
+                                <th>WR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in my_preferences %}
+                            {% if order.golfer_id not in already_picked_ids %}
+                            <tr class="table-light">
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td>
+                                    <input type="radio" name="golfer_id"
+                                           value="{{ order.golfer.id }}"
+                                           id="pref_{{ order.golfer.id }}"
+                                           class="form-check-input pick-radio">
+                                </td>
+                                <td>
+                                    <label for="pref_{{ order.golfer.id }}" class="fw-bold mb-0" style="cursor:pointer;">
+                                        {{ order.golfer.first_name }} {{ order.golfer.last_name }}
+                                    </label>
+                                </td>
+                                <td>{{ order.golfer.country }}</td>
+                                <td>{% if order.golfer.world_ranking < 2999 %}#{{ order.golfer.world_ranking }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% else %}
+                            <tr class="text-muted bg-light">
+                                <td>{{ forloop.counter }}</td>
+                                <td><i class="bi bi-lock-fill text-secondary"></i></td>
+                                <td>
+                                    {{ order.golfer.first_name }} {{ order.golfer.last_name }}
+                                    <span class="badge bg-secondary ms-1">
+                                        Taken by {{ picked_by|picked_by_name:order.golfer_id }}
+                                    </span>
+                                </td>
+                                <td>{{ order.golfer.country }}</td>
+                                <td>{% if order.golfer.world_ranking < 2999 %}#{{ order.golfer.world_ranking }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <h6>All Available Golfers</h6>
+                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm table-hover small-font">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Select</th>
+                                <th>Golfer</th>
+                                <th>Country</th>
+                                <th>WR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in available_golfers %}
+                            <tr class="pick-row" data-golfer="{{ entry.golfer.id }}">
+                                <td>
+                                    <input type="radio" name="golfer_id"
+                                           value="{{ entry.golfer.id }}"
+                                           id="avail_{{ entry.golfer.id }}"
+                                           class="form-check-input pick-radio">
+                                </td>
+                                <td>
+                                    <label for="avail_{{ entry.golfer.id }}" class="mb-0" style="cursor:pointer;">
+                                        {{ entry.golfer.first_name }} {{ entry.golfer.last_name }}
+                                    </label>
+                                </td>
+                                <td>{{ entry.golfer.country }}</td>
+                                <td>{% if entry.golfer.world_ranking < 2999 %}#{{ entry.golfer.world_ranking }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-muted text-center">No golfers available.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 d-flex align-items-center gap-3">
+                    <div>
+                        <strong>Selected:</strong>
+                        <span id="selected-name" class="text-primary ms-1">None</span>
+                    </div>
+                    <button type="submit" id="submit-btn" class="btn btn-success" disabled>
+                        Confirm Pick
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Waiting for someone else -->
+    {% elif active_slot %}
+    <div class="card border-secondary mb-4">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between">
+            <strong>Waiting for {{ active_slot.game_entry.user.username }} to pick</strong>
+            <span>Round {{ active_slot.round_number }} &middot; Slot closes {{ active_slot.closes_at|date:"H:i" }} GMT</span>
+        </div>
+        <div class="card-body small text-muted">
+            If {{ active_slot.game_entry.user.username }} does not pick in time, their
+            highest available preference will be auto-assigned.
+            {% if next_user_slot %}
+            <br>Your next pick slot opens at <strong>{{ next_user_slot.opens_at|date:"H:i" }} GMT</strong>
+            (Round {{ next_user_slot.round_number }}).
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- No active slot - between rounds or waiting to start -->
+    {% else %}
+    <div class="alert alert-info">
+        Draft is in progress. No slot is currently active.
+        {% if next_user_slot %}
+        Your next pick is Round {{ next_user_slot.round_number }}
+        at <strong>{{ next_user_slot.opens_at|date:"H:i" }} GMT</strong>.
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Draft progress: picks made so far -->
+    <h5 class="mt-3">Picks Made So Far</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered small-font">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Rd</th>
+                    <th>Player</th>
+                    <th>Golfer Picked</th>
+                    <th>WR</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in draft_slots %}
+                {% if slot.completed %}
+                {% if slot.game_entry.user == request.user %}
+                <tr class="table-info">
+                    {% else %}
+                <tr>
+                    {% endif %}
+                    <td>{{ slot.pick_number }}</td>
+                    <td>{{ slot.round_number }}</td>
+                    <td>{{ slot.game_entry.user.username }}</td>
+                    <td>
+                        {% if slot.pick %}
+                        {{ slot.pick.golfer.full_name }}
+                        {% if slot.pick.auto_assigned %}
+                        <span class="badge bg-secondary ms-1">auto</span>
+                        {% endif %}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>
+                        {% if slot.pick and slot.pick.golfer.world_ranking < 2999 %}
+                        #{{ slot.pick.golfer.world_ranking }}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="text-muted">{{ slot.pick.picked_at|date:"H:i" }}</td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">No picks yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Upcoming slots -->
+    <h5 class="mt-3">Upcoming Slots</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered small-font">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Rd</th>
+                    <th>Player</th>
+                    <th>Window (GMT)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in draft_slots %}
+                {% if not slot.completed %}
+                {% if slot.is_active and slot.game_entry.user == request.user %}
+                <tr class="table-warning fw-bold">
+                    {% elif slot.is_active %}
+                <tr class="table-secondary">
+                    {% else %}
+                <tr>
+                    {% endif %}
+                    <td>{{ slot.pick_number }}</td>
+                    <td>{{ slot.round_number }}</td>
+                    <td>
+                        {{ slot.game_entry.user.username }}
+                        {% if slot.game_entry.user == request.user %}
+                        <span class="badge bg-primary ms-1">You</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if slot.opens_at %}
+                        {{ slot.opens_at|date:"d M H:i" }}-{{ slot.closes_at|date:"H:i" }}
+                        {% else %}
+                        <span class="text-muted">After previous pick</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if slot.is_active %}
+                        <span class="badge bg-warning text-dark">Active</span>
+                        {% elif slot.is_expired %}
+                        <span class="badge bg-danger">Expired</span>
+                        {% elif slot.is_pending %}
+                        <span class="badge bg-light text-dark border">Queued</span>
+                        {% else %}
+                        <span class="badge bg-light text-dark border">Upcoming</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% endif %}{# end drafting block #}
+
+    <!-- ============================================================
+         PLAYERS TABLE (all statuses)
+    ============================================================ -->
+    <div class="card mb-4 mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Players -- {{ game.group.name }}</strong>
+            {% if game.status == 'open' and not user_entry %}
+            <a href="{% url 'golf_join_game' game.id %}" class="btn btn-sm btn-success">Join Game</a>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Player</th>
+                        <th>Draft Pos</th>
+                        <th>Status</th>
+                        <th>Fines</th>
+                        {% if game.status == 'finished' %}
+                        <th>Rank</th>
+                        <th>Score</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                    {% if entry.user == request.user %}
+                    <tr class="table-info">
+                        {% else %}
+                    <tr>
+                        {% endif %}
+                        <td>
+                            {{ entry.user.username }}
+                            {% if entry.user == request.user %}
+                            <span class="badge bg-primary ms-1">You</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if entry.draft_position %}#{{ entry.draft_position }}{% else %}-{% endif %}</td>
+                        <td><span class="badge bg-success">Entered</span></td>
+                        <td>{% if entry.total_fines > 0 %}<span class="text-danger">&pound;{{ entry.total_fines }}</span>{% else %}-{% endif %}</td>
+                        {% if game.status == 'finished' %}
+                        <td>{{ entry.final_rank|default:"-" }}</td>
+                        <td>{{ entry.final_score|default:"-" }}</td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                    {% for member in non_entrants %}
+                    <tr class="text-muted">
+                        <td>{{ member.username }}</td>
+                        <td>-</td>
+                        <td>
+                            {% if game.status == 'open' %}
+                            <span class="badge bg-secondary">Not joined</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">Did not enter</span>
+                            {% endif %}
+                        </td>
+                        <td>-</td>
+                        {% if game.status == 'finished' %}
+                        <td>-</td>
+                        <td>-</td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         TEAMS (active/finished)
+    ============================================================ -->
+    {% if game.status == 'active' or game.status == 'finished' %}
+    <h5 class="mt-2">Teams</h5>
+    {% for player_data in player_teams %}
+    {% if player_data.entry.user == request.user %}
+    <div class="card mb-3 border-primary">
+        {% else %}
+        <div class="card mb-3">
+            {% endif %}
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    {% if player_data.entry.final_rank %}
+                    <span class="badge bg-secondary me-1">#{{ player_data.entry.final_rank }}</span>
+                    {% endif %}
+                    <strong>{{ player_data.entry.user.username }}</strong>
+                    {% if player_data.entry.user == request.user %}
+                    <span class="badge bg-primary ms-1">You</span>
+                    {% endif %}
+                </div>
+                <div class="text-end small">
+                    {% if player_data.entry.final_score %}Score: <strong>{{ player_data.entry.final_score }}</strong>&nbsp;{% endif %}
+                    {% if player_data.entry.total_fines > 0 %}<span class="text-danger">Fines: &pound;{{ player_data.entry.total_fines }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="card-body p-2">
+                <table class="table table-sm small-font mb-0">
+                    <thead>
+                        <tr><th>Rd</th><th>Golfer</th><th>Cut</th><th>Strokes</th><th>Win</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for pick in player_data.picks %}
+                        {% if pick.made_cut == False %}
+                        <tr class="table-danger">
+                            {% elif pick.is_tournament_winner %}
+                        <tr class="table-success">
+                            {% else %}
+                        <tr>
+                            {% endif %}
+                            <td>{{ pick.round_number }}</td>
+                            <td>
+                                {{ pick.golfer.full_name }}
+                                {% if pick.auto_assigned %}<span class="badge bg-secondary ms-1">auto</span>{% endif %}
+                            </td>
+                            <td>{% if pick.made_cut is None %}-{% elif pick.made_cut %}Yes{% else %}No{% endif %}</td>
+                            <td>{{ pick.total_strokes|default:"-" }}</td>
+                            <td>{% if pick.is_tournament_winner %}Yes{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-muted">No picks yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+    </div>{# end container #}
+
+    {% if game.status == 'drafting' %}
+    <script>
+// Countdown to slot close
+{% if user_slot %}
+const closesAt = new Date("{{ user_slot.closes_at|date:'c' }}");
+function updateCountdown() {
+    const diff = Math.max(0, Math.floor((closesAt - new Date()) / 1000));
+    const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+    const secs = (diff % 60).toString().padStart(2, '0');
+    const el = document.getElementById('countdown');
+    if (el) {
+        el.textContent = diff > 0
+            ? mins + ':' + secs + ' remaining'
+            : 'Time expired -- auto-pick will be assigned shortly.';
+    }
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+{% endif %}
+
+// Radio selection highlight and confirm button
+document.querySelectorAll('.pick-radio').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.pick-row').forEach(r => r.classList.remove('table-warning'));
+        const row = this.closest('tr');
+        if (row) row.classList.add('table-warning');
+        const label = this.closest('tr').querySelector('label');
+        const nameEl = document.getElementById('selected-name');
+        if (nameEl && label) nameEl.textContent = label.textContent.trim();
+        const btn = document.getElementById('submit-btn');
+        if (btn) btn.disabled = false;
+    });
+});
+    </script>
+    {% endif %}
+
+    {% endblock %}

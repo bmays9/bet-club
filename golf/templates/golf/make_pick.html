@@ -1,0 +1,98 @@
+﻿{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2> Make Your Pick -- Round {{ round_number }}</h2>
+    <p class="text-muted">{{ game.event.name }} &middot; {{ game.group.name }}</p>
+
+    <div class="alert alert-warning d-flex justify-content-between align-items-center">
+        <strong> Your slot closes at {{ closes_at|date:"H:i" }} GMT</strong>
+        <span id="countdown" class="fw-bold fs-5 text-danger"></span>
+    </div>
+
+    <div class="alert alert-info small">
+        If you don't pick in time, your highest available preference will be auto-assigned.
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="table-responsive">
+            <table class="table table-hover small-font">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Select</th>
+                        <th>Golfer</th>
+                        <th>Country</th>
+                        <th>World Ranking</th>
+                        <th>Your Preference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in available %}
+                    <tr class="pick-row" data-golfer-id="{{ entry.golfer.id }}">
+                        <td>
+                            <input type="radio" name="golfer_id" value="{{ entry.golfer.id }}"
+                                   id="golfer_{{ entry.golfer.id }}" required class="form-check-input">
+                        </td>
+                        <td>
+                            <label for="golfer_{{ entry.golfer.id }}" class="form-check-label fw-bold">
+                                {{ entry.golfer.first_name }} {{ entry.golfer.last_name }}
+                            </label>
+                        </td>
+                        <td>{{ entry.golfer.country }}</td>
+                        <td>
+                            {% if entry.golfer.world_ranking < 2999 %}
+                            #{{ entry.golfer.world_ranking }}
+                            {% else %}--{% endif %}
+                        </td>
+                        <td>
+                            {# Show user's preference rank if set #}
+                            {% with pref=entry.golfer.id %}
+                            <span class="text-muted small pref-label" data-golfer="{{ entry.golfer.id }}"></span>
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No golfers available -- all have been picked.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-lg" id="submit-btn" disabled>
+            Confirm Pick
+        </button>
+        <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </form>
+</div>
+
+<script>
+// Enable submit when a radio is selected
+document.querySelectorAll('input[name="golfer_id"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        document.getElementById('submit-btn').disabled = false;
+        // Highlight selected row
+        document.querySelectorAll('.pick-row').forEach(r => r.classList.remove('table-info'));
+        radio.closest('tr').classList.add('table-info');
+    });
+});
+
+// Countdown timer
+const closesAt = new Date("{{ closes_at|date:'c' }}");
+function updateCountdown() {
+    const now = new Date();
+    const diff = Math.max(0, Math.floor((closesAt - now) / 1000));
+    const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+    const secs = (diff % 60).toString().padStart(2, '0');
+    document.getElementById('countdown').textContent = `${mins}:${secs} remaining`;
+    if (diff === 0) {
+        document.getElementById('countdown').textContent = 'Time expired -- auto-pick will be assigned.';
+        document.getElementById('submit-btn').disabled = true;
+    }
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+
+{% endblock %}

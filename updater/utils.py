@@ -26,15 +26,11 @@ def maybe_update():
 
         # --- Results ---
         if tracker.should_update_results(fixtures, UPDATE_INTERVAL_MINUTES):
-            # Only fixtures that should have finished at least RESULTS_DELAY_HOURS ago
-            # and are not yet finalized
             pending_fixtures = fixtures.filter(
                 date__lte=timezone.now() - timedelta(hours=RESULTS_DELAY_HOURS)
-                ).exclude(
-                    status_code__in=[100, 90, 60]
-                    )
-
-            # Exclude future fixtures (just in case of incorrect timestamps)
+            ).exclude(
+                status_code__in=[100, 90, 60]
+            )
             pending_fixtures = pending_fixtures.exclude(date__gt=now())
 
             if pending_fixtures.exists():
@@ -42,7 +38,7 @@ def maybe_update():
                 call_command("update_results", league_code=league.code, verbosity=0)
                 tracker.last_results_check = timezone.now()
                 tracker.save()
-                results_updated = True  # mark that at least one update happened
+                results_updated = True
 
         # --- Fixtures ---
         if tracker.should_update_fixtures(UPDATE_INTERVAL_DAYS):
@@ -61,4 +57,7 @@ def maybe_update():
         call_command("update_scores", verbosity=0)
         call_command("update_lms_results", verbosity=0)
         call_command("update_season_scores", verbosity=0)
-            
+
+    # --- Golf rankings: once a month, independent of football results ---
+    from golf.utils import maybe_update_rankings
+    maybe_update_rankings()
