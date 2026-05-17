@@ -38,11 +38,10 @@ class GolfEvent(models.Model):
 
     @property
     def draft_opens(self):
-        """Draft opens at 09:00 GMT the day before the event starts."""
-        from django.utils.timezone import make_aware
-        from datetime import datetime, time, timedelta
+        """Draft opens at 09:00 UTC the day before the event starts."""
+        from datetime import datetime, time, timedelta, timezone as dt_timezone
         day_before = self.start_date.date() - timedelta(days=1)
-        return make_aware(datetime.combine(day_before, time(9, 0)))
+        return datetime.combine(day_before, time(9, 0), tzinfo=dt_timezone.utc)
 
 
 class Golfer(models.Model):

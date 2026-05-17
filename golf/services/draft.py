@@ -80,12 +80,15 @@ def build_pick_sequence(game, ordered_entries):
 # Slot generation - dynamic, not pre-timed
 # -------------------------------------------------------
 
-def generate_draft_slots(game):
+def generate_draft_slots(game, start_from=None):
     """
     Create DraftSlot rows for the full draft.
     Only the FIRST slot gets real opens_at/closes_at times.
     All subsequent slots have opens_at=None -- they get timed
     dynamically when the previous slot completes via advance_draft().
+
+    start_from: datetime to open the first slot. Defaults to now().
+                Pass game.draft_start_time for automatic scheduled starts.
     """
     ordered_entries = get_draft_order(game)
     if not ordered_entries:
@@ -97,7 +100,11 @@ def generate_draft_slots(game):
         entry.save(update_fields=["draft_position"])
 
     sequence = build_pick_sequence(game, ordered_entries)
-    first_start = max(game.draft_start_time, timezone.now())
+
+    # Default to now so manual/reset starts open immediately
+    first_start = start_from or timezone.now()
+
+    print(f"[draft] generating {len(sequence)} slots, first slot opens at {first_start}")
 
     slots = []
     for pick_number, (round_num, entry) in enumerate(sequence, start=1):
@@ -118,7 +125,15 @@ def generate_draft_slots(game):
             closes_at=closes_at,
         ))
 
-    DraftSlot.objects.bulk_create(slots)
+    created = DraftSlot.objects.bulk_create(slots)
+    print(f"[draft] created {len(created)} slots")
+
+    # Verify slot 1 has times
+    slot1 = DraftSlot.objects.filter(game=game, pick_number=1).first()
+    if slot1:
+        print(f"[draft] slot 1: opens={slot1.opens_at} closes={slot1.closes_at} active={slot1.is_active}")
+    else:
+        print("[draft] WARNING: slot 1 not found after bulk_create!")
 
 
 def advance_draft(game, completed_slot):
@@ -261,7 +276,8 @@ def maybe_start_draft(game):
 
     game.status = GolfGame.Status.DRAFTING
     game.save(update_fields=["status"])
-    generate_draft_slots(game)
+    # Pass scheduled time so auto-starts open at the right time
+    generate_draft_slots(game, start_from=game.draft_start_time)
     return True
 
 
