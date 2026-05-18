@@ -12,11 +12,9 @@
 
     <div class="alert alert-info">
         <strong>How preferences work:</strong>
-        Drag golfers into your preferred order. This list determines which golfer
-        you will be automatically assigned if your draft slot times out without a
-        manual selection -- your highest available player from this list will be picked
-        for you. Golfers already taken by another player in your group are shown
-        greyed out and will be skipped automatically.
+        Drag golfers into your preferred order. If your draft slot expires without
+        a manual pick, your highest available golfer from this list is auto-assigned.
+        Golfers already taken are greyed out and skipped automatically.
     </div>
 
     {% if existing_order %}
@@ -37,24 +35,22 @@
 
     <form method="POST" id="pick-form">
         {% csrf_token %}
-        <p class="text-muted small mb-1">
-            Golfers ordered by world ranking. Drag to reorder.
-        </p>
+        <!-- Hidden inputs are populated by JS on submit, not rendered per-row -->
+        <div id="hidden-inputs"></div>
+
+        <p class="text-muted small mb-1">Drag to reorder. Taken golfers cannot be moved.</p>
 
         <ul id="golferList" class="list-group mb-3">
             {% for entry in entries %}
             {% with golfer=entry.golfer %}
             {% if golfer.id in already_picked_ids %}
-            <!-- Already taken - show greyed out, not draggable -->
             <li class="list-group-item d-flex justify-content-between align-items-center text-muted bg-light"
                 data-golfer-id="{{ golfer.id }}"
                 data-taken="true">
                 <span>
                     <i class="bi bi-lock-fill text-secondary me-2"></i>
                     {{ golfer.first_name }} {{ golfer.last_name }}
-                    {% if golfer.country %}
-                    <small class="text-muted">({{ golfer.country }})</small>
-                    {% endif %}
+                    {% if golfer.country %}<small class="text-muted">({{ golfer.country }})</small>{% endif %}
                 </span>
                 <span>
                     {% if golfer.world_ranking < 2999 %}
@@ -62,25 +58,21 @@
                     {% endif %}
                     <span class="badge bg-secondary">Taken by {{ picked_by|picked_by_name:golfer.id }}</span>
                 </span>
-                <!-- Hidden input still included so form order is preserved, but value flagged -->
-                <input type="hidden" name="golfer_order" value="{{ golfer.id }}" disabled>
             </li>
             {% else %}
-            <!-- Available - draggable -->
             <li class="list-group-item d-flex justify-content-between align-items-center"
                 data-golfer-id="{{ golfer.id }}"
-                draggable="true">
+                data-taken="false"
+                draggable="true"
+                style="cursor:grab;">
                 <span>
-                    <i class="bi bi-grip-vertical text-muted me-2" style="cursor:grab;"></i>
+                    <i class="bi bi-grip-vertical text-muted me-2"></i>
                     {{ golfer.first_name }} {{ golfer.last_name }}
-                    {% if golfer.country %}
-                    <small class="text-muted">({{ golfer.country }})</small>
-                    {% endif %}
+                    {% if golfer.country %}<small class="text-muted">({{ golfer.country }})</small>{% endif %}
                 </span>
                 {% if golfer.world_ranking < 2999 %}
                 <span class="badge bg-secondary">WR #{{ golfer.world_ranking }}</span>
                 {% endif %}
-                <input type="hidden" name="golfer_order" value="{{ golfer.id }}">
             </li>
             {% endif %}
             {% endwith %}
@@ -94,13 +86,14 @@
 
 <script>
     const list = document.getElementById('golferList');
+    const hiddenContainer = document.getElementById('hidden-inputs');
     let dragging = null;
 
     list.addEventListener('dragstart', e => {
         const li = e.target.closest('li');
         if (li && li.dataset.taken !== 'true') {
             dragging = li;
-            li.style.opacity = '0.5';
+            setTimeout(() => li.classList.add('opacity-50'), 0);
         } else {
             e.preventDefault();
         }
@@ -108,9 +101,8 @@
 
     list.addEventListener('dragend', () => {
         if (dragging) {
-            dragging.style.opacity = '';
+            dragging.classList.remove('opacity-50');
             dragging = null;
-            updateHiddenInputs();
         }
     });
 
@@ -128,12 +120,24 @@
         }
     });
 
-    function updateHiddenInputs() {
-        list.querySelectorAll('li[data-taken!="true"] input[name="golfer_order"]').forEach((input, i) => {
-            const li = input.closest('li');
+    // On submit: walk the list in DOM order, build hidden inputs for available golfers only
+    document.getElementById('pick-form').addEventListener('submit', function (e) {
+        hiddenContainer.innerHTML = '';
+        const available = list.querySelectorAll('li[data-taken="false"]');
+        if (available.length === 0) {
+            // Safety check - if no available golfers found, don't wipe saved order
+            e.preventDefault();
+            alert('No golfers to save. Please try again.');
+            return;
+        }
+        available.forEach(li => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'golfer_order';
             input.value = li.dataset.golferId;
+            hiddenContainer.appendChild(input);
         });
-    }
+    });
 </script>
 
 {% endblock %}

@@ -203,6 +203,16 @@ def join_golf_game(request, game_id):
 @login_required
 def golf_game_detail(request, game_id):
     game = get_object_or_404(GolfGame, id=game_id)
+
+    # Process any expired draft slots before rendering --
+    # catches up on auto-picks missed while nobody was watching
+    if game.status == GolfGame.Status.DRAFTING:
+        from golf.services.draft import process_expired_slots, draft_is_complete
+        processed = process_expired_slots(game)
+        if processed and draft_is_complete(game):
+            game.status = GolfGame.Status.ACTIVE
+            game.save(update_fields=["status"])
+
     user_entry = GolfGameEntry.objects.filter(game=game, user=request.user).first()
 
     entries = game.game_entries.select_related("user").order_by("draft_position")
@@ -379,8 +389,12 @@ def pick_order_view(request, event_id):
                 golfer=golfer,
                 selection_rank=i,
             )
-        messages.success(request, "Your preference order has been saved.")
-        return redirect("event_entries", event_id=event.tourn_id)
+        count = request.POST.getlist("golfer_order")
+        messages.success(
+            request,
+            f"Preference order saved for {len(count)} golfer(s)."
+        )
+        return redirect("pick_order", event_id=event.tourn_id)
 
     # Find golfers already drafted in any game for this event in the user's groups
     user_groups = request.user.joined_groups.all()
@@ -410,9 +424,21 @@ def pick_order_view(request, event_id):
         e for e in entries if e.golfer_id not in ordered_set
     ]
 
+    # Build display list: saved order first, then remaining by world ranking
+    saved_ids = list(existing_order.values_list("golfer_id", flat=True))
+    saved_id_set = set(saved_ids)
+
+    # Ordered golfer entries: saved order first, then unsaved by world ranking
+    saved_entries = sorted(
+        [e for e in entries if e.golfer_id in saved_id_set],
+        key=lambda e: saved_ids.index(e.golfer_id)
+    )
+    unsaved_entries = [e for e in entries if e.golfer_id not in saved_id_set]
+    display_entries = saved_entries + unsaved_entries
+
     return render(request, "golf/pick_order.html", {
         "event": event,
-        "entries": entries,
+        "entries": display_entries,
         "existing_order": existing_order,
         "already_picked_ids": already_picked_ids,
         "picked_by": picked_by,

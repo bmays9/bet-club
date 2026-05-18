@@ -136,11 +136,13 @@ def generate_draft_slots(game, start_from=None):
         print("[draft] WARNING: slot 1 not found after bulk_create!")
 
 
-def advance_draft(game, completed_slot):
+def advance_draft(game, completed_slot, catchup=False):
     """
     Called after a slot completes (pick made or auto-assigned).
-    Sets the opens_at/closes_at on the next slot based on now().
-    This makes the draft dynamic -- fast pickers move it along immediately.
+    Sets opens_at/closes_at on the next slot.
+
+    catchup=True: chains from completed_slot.closes_at (historical mode).
+    catchup=False: opens from now() so fast pickers move draft along immediately.
     """
     next_slot = (
         DraftSlot.objects
@@ -150,13 +152,14 @@ def advance_draft(game, completed_slot):
     )
 
     if next_slot:
-        now = timezone.now()
-        next_slot.opens_at = now
-        next_slot.closes_at = now + timedelta(minutes=SLOT_DURATION_MINUTES)
+        if catchup and completed_slot.closes_at:
+            opens_at = completed_slot.closes_at
+        else:
+            opens_at = timezone.now()
+
+        next_slot.opens_at = opens_at
+        next_slot.closes_at = opens_at + timedelta(minutes=SLOT_DURATION_MINUTES)
         next_slot.save(update_fields=["opens_at", "closes_at"])
-    else:
-        # No more untimed slots -- check if draft is fully complete
-        pass
 
     return next_slot
 
@@ -200,9 +203,10 @@ def get_best_available_for_player(game, game_entry):
 # -------------------------------------------------------
 
 @transaction.atomic
-def submit_pick(game, game_entry, golfer, slot, auto=False):
+def submit_pick(game, game_entry, golfer, slot, auto=False, catchup=False):
     """
     Create a DraftPick, mark slot complete, and advance the draft.
+    catchup=True chains the next slot from slot.closes_at (historical mode).
     Returns (pick, error_message).
     """
     if DraftPick.objects.filter(game=game, golfer=golfer).exists():
@@ -224,8 +228,8 @@ def submit_pick(game, game_entry, golfer, slot, auto=False):
     slot.auto_assigned = auto
     slot.save(update_fields=["completed", "auto_assigned"])
 
-    # Immediately open the next slot
-    advance_draft(game, slot)
+    # Open next slot -- catchup chains from closes_at, normal from now()
+    advance_draft(game, slot, catchup=catchup)
 
     return pick, None
 

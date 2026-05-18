@@ -1,54 +1,296 @@
-﻿/* All pages */
+﻿/* ============================================================
+   BetClub custom styles -- loaded after Bootstrap Flatly
+   Sections: Base, Typography, Layout, Navigation, Tables,
+             Cards, Badges, Forms, Fixtures, Score Predict,
+             LMS, Golf, Horse Racing, Media Queries
+   ============================================================ */
 
-:root,
-[data-bs-theme=light] {
-    --bs-font-sans-serif: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+/* ============================================================
+   BASE -- viewport & font
+   ============================================================ */
+
+:root {
+    /* Stable colours shared across apps */
+    --gold: #c9a84c;
+    --silver: #a8a9ad;
+    --bronze: #cd7f32;
+    /* Horse racing turf palette */
+    --turf-dark: #1a3d2b;
+    --turf-mid: #2a5c3f;
+    --turf-light: #3a7d56;
+    /* Stable colours */
+    --stable-1: #1a6b3c;
+    --stable-2: #1a3a6b;
+    --stable-3: #7b1a1a;
+    --stable-4: #6b4e1a;
+    --stable-5: #3d1a6b;
+    --stable-6: #1a5f6b;
+}
+
+html {
+    box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
 }
 
 body {
+    /* Remove the conflicting max-width/display:flex from old file */
     margin: 0;
     padding: 0;
-    max-width: 1800px;
-    margin-left: auto;
-    margin-right: auto;
-    font-family: sans-serif;
-    box-sizing: border-box;
+    /* Font comes from Bootstrap Flatly (Lato) -- no need to override */
 }
 
 main {
-    margin: 0;
     padding: 0.7rem;
     max-width: 1400px;
     margin-left: auto;
     margin-right: auto;
     min-height: 100dvh;
-    font-family: sans-serif;
-    box-sizing: border-box;
 }
 
-.small-font {
-    font-size: 0.8rem;
-}
+/* Fix: old file had .container { display:flex } which broke Bootstrap's grid */
 
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+.small-font,
 .date-font {
     font-size: 0.8rem;
-}
-
-.fixture {
-    font-size: 0.9rem;
-    padding-left: 20px;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
 }
 
 .message-link {
     text-decoration: none;
 }
 
-/* Score Predict */
+
+
+
+/* ============================================================
+   LAYOUT -- containers & spacing
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+    /* Tighter card padding on mobile only */
+    .card-body {
+        padding: 0.6rem;
+    }
+
+    .card-header {
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+/* Tighter navbar on mobile */
+@media (max-width: 767.98px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .navbar .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+
+/* All tables scroll horizontally on small screens */
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 575.98px) {
+    /* Only shrink table text on very small screens */
+    .table.table-sm th,
+    .table.table-sm td {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.3rem;
+    }
+}
+
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.card {
+    border-radius: 0.4rem;
+}
+
+/* Card headers with action buttons on mobile */
+@media (max-width: 575.98px) {
+    .card-header.d-flex {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .card-header .btn-sm {
+        font-size: 0.75rem;
+    }
+}
+
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+
+/* Badges inside table cells shouldn't overflow on mobile */
+.badge {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+
+/* ============================================================
+   FORMS & BUTTONS
+   ============================================================ */
+
+/* Make sure inputs are usable on mobile */
+@media (max-width: 575.98px) {
+    .form-control,
+    .form-select {
+        font-size: 1rem; /* prevent iOS auto-zoom (needs >= 16px effective) */
+    }
+
+    /* Stack filter forms vertically */
+    .d-flex.gap-3.flex-wrap {
+        gap: 0.5rem !important;
+    }
+
+    /* Full-width buttons on mobile */
+    .btn-mobile-full {
+        width: 100%;
+        margin-bottom: 0.4rem;
+    }
+}
+
+/* Minimum tap target size */
+.btn {
+    min-height: 36px;
+}
+
+.btn-sm {
+    min-height: 30px;
+}
+
+/* Score predict score inputs */
+.score-input {
+    min-height: 36px;
+}
+
+
+/* ============================================================
+   ACCORDION
+   ============================================================ */
+
+.accordion-button {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .accordion-button {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+
+/* ============================================================
+   FIXTURE DISPLAY (Score Predict & LMS)
+   ============================================================ */
+
+/* 3-column grid: home | score/vs | away -- keeps vs aligned */
+.fixture-row {
+    display: grid;
+    grid-template-columns: 1fr 52px 1fr;
+    align-items: center;
+    gap: 4px;
+}
+
+.fixture-home {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-start;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.fixture-away {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: right;
+}
+
+.fixture-score {
+    text-align: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Legacy .fixture class */
+.fixture {
+    font-size: 0.9rem;
+    padding-left: 20px;
+}
+
+@media (max-width: 575.98px) {
+    .fixture {
+        font-size: 0.8rem;
+    }
+
+    .fixture-row {
+        grid-template-columns: 1fr 44px 1fr;
+        font-size: 0.78rem;
+    }
+}
+
+/* Team colour swatches */
+.team-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* Fixed vs column in LMS pick table */
+.fixture-score-col {
+    width: 40px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+
+/* ============================================================
+   SCORE PREDICT
+   ============================================================ */
+
 .prediction-cell {
     font-weight: 500;
     width: 40px;
@@ -62,21 +304,20 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px; /* <-- adds the rounded corners */
+    border-radius: 6px;
 }
 
-.accordion-button {
-    font-size: 0.95rem;
-    padding: 0.5rem 0.75rem;
-}
+    .prediction-cell.green {
+        background-color: #198754;
+        color: white;
+        font-weight: bold;
+    }
 
-.username_sp {
-    width: 200px; /* Desktop default width */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-}
+    .prediction-cell.red {
+        background-color: #dc3545;
+        color: white;
+        font-weight: bold;
+    }
 
 .score-circle {
     display: inline-flex;
@@ -94,15 +335,15 @@ main {
 }
 
 .score-green {
-    background-color: #28a745; /* Bootstrap green */
+    background-color: #28a745;
 }
 
 .score-orange {
-    background-color: #fd7e14; /* Bootstrap orange */
+    background-color: #fd7e14;
 }
 
 .score-grey {
-    background-color: #80848aff; /* Bootstrap dark */
+    background-color: #80848a;
 }
 
 .score-pred-cell {
@@ -116,77 +357,77 @@ main {
     border-radius: 4px;
 }
 
-.accordion-button .prediction-cell {
-    transition: background-color 0.3s, color 0.3s;
+/* Player username column in SP tables */
+.username_sp {
+    width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
 }
 
-.prediction-cell.green {
-    background-color: #198754; /* Bootstrap success */
-    color: white;
-    font-weight: bold;
+@media (max-width: 767.98px) {
+    .username_sp {
+        width: 120px;
+    }
+
+    .score-pred-cell {
+        width: 30px;
+        height: 24px;
+        font-size: 0.7rem;
+    }
 }
 
-.prediction-cell.red {
-    background-color: #dc3545; /* Bootstrap danger */
-    color: white;
-    font-weight: bold;
+@media (max-width: 480px) {
+    .username_sp {
+        width: 90px;
+    }
 }
 
-/******* LMS **********/
+
+/* ============================================================
+   LMS
+   ============================================================ */
+
 .team-selectable {
     cursor: pointer;
 }
 
 .team-selected {
-    background-color: #d4edda; /* light green */
+    background-color: #d4edda;
     font-weight: bold;
-    color: #155724; /* dark green text */
+    color: #155724;
+}
+
+/* LMS pick buttons -- larger tap target on mobile */
+@media (max-width: 575.98px) {
+    .team-btn {
+        width: 100%;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+    }
 }
 
 
+/* ============================================================
+   GOLF -- draft / event
+   ============================================================ */
 
-/*==================================================== Horse Racing */
-
-/* ── TRAINER PILL ── */
-.trainer-pill {
-    display: inline-block;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 10px;
-    white-space: nowrap;
-    letter-spacing: 0.3px;
+/* Draft slot schedule table */
+@media (max-width: 575.98px) {
+    .draft-schedule th,
+    .draft-schedule td {
+        font-size: 0.72rem;
+        padding: 0.25rem;
+    }
 }
 
-/* ── FITNESS DOT ── */
-.fitness-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 3px;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
 
-/* ── STABLE COLOURS — one per trainer slot ── */
-:root {
-    --stable-1: #1a6b3c; /* deep green   */
-    --stable-2: #1a3a6b; /* royal blue   */
-    --stable-3: #7b1a1a; /* burgundy     */
-    --stable-4: #6b4e1a; /* chestnut     */
-    --stable-5: #3d1a6b; /* purple       */
-    --stable-6: #1a5f6b; /* teal         */
-    --turf-dark: #1a3d2b;
-    --turf-mid: #2a5c3f;
-    --turf-light: #3a7d56;
-    --gold: #c9a84c;
-    --silver: #a8a9ad;
-    --bronze: #cd7f32;
-}
+/* ============================================================
+   HORSE RACING
+   ============================================================ */
 
-/* ── 1. GAME BANNER ── */
+/* Game banner */
 #game-banner {
     font-size: 1.1rem;
     font-weight: 700;
@@ -212,7 +453,7 @@ main {
             color: var(--turf-dark);
         }
 
-/* ── GAME STATE PANEL ── */
+/* Game state panel */
 .game-state {
     padding: 8px 4px;
 }
@@ -226,15 +467,16 @@ main {
     margin-bottom: 6px;
 }
 
-/* ── SEASON BANNER (champion / retirements) ── */
+/* Season banner */
 #season-banner .alert {
     font-size: 0.8rem;
     border-radius: 4px;
     margin-bottom: 4px;
 }
 
-/* ── GAME STATE TABLES ── */
-#gs-meeting-races, #gs-players {
+/* Game state tables */
+#gs-meeting-races,
+#gs-players {
     font-size: 0.78rem;
 }
 
@@ -255,12 +497,11 @@ main {
         color: var(--turf-dark);
     }
 
-    /* Leader row highlight */
     #gs-players tbody tr.fw-bold {
         background: #f0f7f2;
     }
 
-    /* ── 6. STABLE COLOUR ACCENT — left border per trainer ── */
+    /* Stable colour left-border accents */
     #gs-players tbody tr:nth-child(1) td:nth-child(2) {
         border-left: 4px solid var(--stable-1);
     }
@@ -285,7 +526,6 @@ main {
         border-left: 4px solid var(--stable-6);
     }
 
-/* Match stable colours in bets table and racecard trainer column */
 .stable-colour-1 {
     border-left: 3px solid var(--stable-1) !important;
 }
@@ -310,7 +550,7 @@ main {
     border-left: 3px solid var(--stable-6) !important;
 }
 
-/* ── CONTINUE BUTTON ── */
+/* Continue button */
 #clear-game-state {
     background: linear-gradient(135deg, var(--turf-mid), var(--turf-dark));
     border: none;
@@ -327,7 +567,7 @@ main {
         opacity: 0.88;
     }
 
-/* ── RACE SELECTIONS ── */
+/* Race selections */
 .player-entry {
     display: flex;
     align-items: center;
@@ -351,306 +591,7 @@ main {
     text-overflow: ellipsis;
 }
 
-#race-selection thead th {
-    background: var(--turf-dark);
-    color: #fff;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 5px 6px;
-    border: none;
-}
-
-#race-selection tbody tr {
-    transition: background-color 0.15s;
-    cursor: pointer;
-}
-
-    #race-selection tbody tr.table-primary {
-        background: #d0e8d8 !important;
-        font-weight: 600;
-    }
-
-/* ── 13. STABLE TABLE — always-visible distance grid, horizontal scroll ── */
-.stable-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-.stable-table-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 480px;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
-}
-
-    /* Freeze first 4 columns (Sel, Fit, Name, Age) while distance cols scroll */
-    .stable-table-wrap table {
-        min-width: 900px; /* forces horizontal scroll on narrow screens */
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 0.75rem;
-    }
-
-    .stable-table-wrap thead th {
-        position: sticky;
-        top: 0;
-        background: var(--turf-dark);
-        color: #fff;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        padding: 5px 5px;
-        border: none;
-        white-space: nowrap;
-        z-index: 3;
-    }
-
-    /* Sticky name column */
-    .stable-table-wrap th:nth-child(3),
-    .stable-table-wrap td:nth-child(3) {
-        position: sticky;
-        left: 0;
-        background: #fff;
-        z-index: 2;
-        border-right: 2px solid #dee2e6;
-        min-width: 110px;
-    }
-
-    .stable-table-wrap thead th:nth-child(3) {
-        background: var(--turf-dark);
-        z-index: 4;
-    }
-
-    .stable-table-wrap tbody tr {
-        transition: background-color 0.15s;
-    }
-
-        .stable-table-wrap tbody tr:hover {
-            background: #f0f7f2;
-        }
-
-/* Distance header cells — colour-coded by trip type */
-.dist-sprint {
-    background: #1a5276 !important;
-}
-
-.dist-mid {
-    background: #1e8449 !important;
-}
-
-.dist-stay {
-    background: #6e2f1a !important;
-}
-
-/* ── DISTANCE FORM GRID CELLS ── */
-.dist-cell {
-    text-align: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    width: 36px;
-    min-width: 36px;
-    padding: 3px 2px !important;
-    border-radius: 3px;
-    cursor: default;
-}
-
-/* No data — empty, light grey */
-.dist-none {
-    background: #f0f0f0;
-    color: transparent;
-}
-
-/* Win — gold */
-.dist-win {
-    background: #d4a017;
-    color: #000;
-}
-
-/* 2nd — silver */
-.dist-second {
-    background: #a8a9ad;
-    color: #000;
-}
-
-/* 3rd — bronze */
-.dist-third {
-    background: #cd7f32;
-    color: #fff;
-}
-
-/* 4th–6th — green, competitive */
-.dist-placed {
-    background: #27ae60;
-    color: #fff;
-}
-
-/* 7th–9th — amber, ran but struggling */
-.dist-ran {
-    background: #e67e22;
-    color: #fff;
-}
-
-/* Unplaced — muted red */
-.dist-unplaced {
-    background: #e8c5c5;
-    color: #922;
-}
-
-/* ── DISTANCE COLUMN HIGHLIGHT — selected race ── */
-.dist-col-highlight {
-    outline: 2px solid #d4a017;
-    outline-offset: -2px;
-    position: relative;
-}
-
-/* Header highlight — stronger gold */
-thead .dist-col-highlight {
-    background: #b8860b !important;
-    box-shadow: 0 2px 0 #d4a017;
-}
-
-/* Body cells — subtle gold tint over the existing dist-cell colour */
-tbody .dist-col-highlight {
-    box-shadow: inset 0 0 0 2px #d4a017;
-}
-
-.horse-entry-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 2px solid var(--turf-mid, #2a5c3f);
-    background: #fff;
-    color: var(--turf-dark, #1a3d2b);
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    margin: 0 auto;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    /* Remove default label styling */
-    padding: 0;
-    line-height: 1;
-}
-
-.stable-row:hover .horse-entry-btn {
-    background: var(--turf-mid, #2a5c3f);
-    color: #fff;
-    transform: scale(1.08);
-}
-
-/* Entered state — dark filled circle showing race number */
-.horse-entry-btn.entered {
-    background: var(--turf-dark, #1a3d2b);
-    border-color: var(--turf-dark, #1a3d2b);
-    color: #fff;
-}
-
-/* Tap/hover on entered row — show remove intent with red */
-.stable-row:hover .horse-entry-btn.entered {
-    background: #c0392b;
-    border-color: #c0392b;
-}
-
-.entry-num {
-    font-size: 0.9rem;
-    font-weight: 800;
-}
-
-.entry-plus {
-    font-size: 1.4rem;
-    font-weight: 300;
-    margin-top: -2px;
-}
-
-/* Larger on mobile */
-@media (max-width: 768px) {
-    .horse-entry-btn {
-        width: 44px;
-        height: 44px;
-    }
-
-    .entry-num {
-        font-size: 1rem;
-    }
-
-    .entry-plus {
-        font-size: 1.6rem;
-    }
-}
-
-/* Highlight entire row on hover to reinforce it's tappable */
-.stable-row {
-    cursor: pointer;
-}
-
-.stable-table-wrap tbody tr.stable-row:hover {
-    background: #edf7f0;
-}
-
-.stable-table-wrap tbody tr.table-active {
-    background: #d0e8d8 !important;
-}
-
-    .stable-table-wrap tbody tr.table-active td:nth-child(3) {
-        background: #d0e8d8 !important;
-    }
-
-/* ── 3. FORM BADGES ── */
-.form-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    margin: 0 1px;
-    color: #fff;
-}
-
-.form-1 {
-    background: var(--gold);
-    color: #000;
-}
-
-.form-2 {
-    background: var(--silver);
-    color: #000;
-}
-
-.form-3 {
-    background: var(--bronze);
-}
-
-.form-4, .form-5, .form-6 {
-    background: #6c757d;
-}
-
-.form-7, .form-8, .form-9 {
-    background: #adb5bd;
-}
-
-.form-0 {
-    background: #dee2e6;
-    color: #999;
-}
-
-.form-sep {
-    color: #aaa;
-    font-size: 0.65rem;
-    margin: 0 1px;
-}
-
-/* ── 1. RACE SCREEN HEADER ── */
+/* Racecard header */
 #race-screen {
     padding: 0;
 }
@@ -685,7 +626,7 @@ tbody .dist-col-highlight {
     margin-top: 2px;
 }
 
-/* ── 5. BETTING STATUS BAR ── */
+/* Betting status */
 #betting-status {
     background: var(--turf-mid);
     color: #fff;
@@ -703,7 +644,6 @@ tbody .dist-col-highlight {
         display: none;
     }
 
-/* Pulse glow on start-race when betting is active */
 .betting-active #start-race {
     animation: pulse-green 1.6s ease-in-out infinite;
     box-shadow: 0 0 0 0 rgba(40,167,69,0.7);
@@ -723,8 +663,9 @@ tbody .dist-col-highlight {
     }
 }
 
-/* ── BUTTONS ── */
-#start-race, #next-race {
+/* Race action buttons */
+#start-race,
+#next-race {
     font-weight: 600;
     letter-spacing: 0.5px;
     transition: all 0.2s;
@@ -749,7 +690,7 @@ tbody .dist-col-highlight {
         background: #0056b3;
     }
 
-/* ── 2. RACECARD ── */
+/* Racecard table */
 #racecard-header th {
     background: var(--turf-dark);
     color: #fff;
@@ -768,24 +709,22 @@ tbody .dist-col-highlight {
         background: #fffbe6;
     }
 
-/* Odds colouring — set by JS via data attribute */
 .odds-fav {
     color: #155724;
     font-weight: 700;
 }
-/* ≤2/1    — green  */
+
 .odds-mid {
     color: #856404;
     font-weight: 600;
 }
-/* up to 8/1 — amber */
+
 .odds-out {
     color: #842029;
     font-weight: 600;
 }
-/* 10/1+   — red    */
 
-/* ── 4. RESULTS — podium row colours ── */
+/* Results rows */
 .result-1st {
     background: #fff9e6 !important;
     font-weight: 700;
@@ -799,7 +738,7 @@ tbody .dist-col-highlight {
     background: #fff4ec !important;
 }
 
-/* ── 8. BET CELL badge in racecard ── */
+/* Bet placed badge */
 .bet-placed-badge {
     display: inline-block;
     background: var(--turf-dark);
@@ -811,7 +750,7 @@ tbody .dist-col-highlight {
     white-space: nowrap;
 }
 
-/* ── BETS TABLE ── */
+/* Bets panel */
 #bets-body tr {
     transition: background-color 0.15s;
 }
@@ -845,12 +784,12 @@ tbody .dist-col-highlight {
         border: none;
     }
 
-/* ── 10. SMOOTH TABLE ROW TRANSITIONS ── */
+/* Smooth table row transitions */
 .table tbody tr {
     transition: background-color 0.15s ease;
 }
 
-/* ── 11. DARK MODAL HEADERS ── */
+/* Dark modal headers */
 .modal-header-dark {
     background: linear-gradient(135deg, var(--turf-dark), var(--turf-mid));
     color: #fff;
@@ -866,7 +805,7 @@ tbody .dist-col-highlight {
         font-weight: 700;
     }
 
-/* ── 12. SEASON BANNER — collapsible ── */
+/* Season banner */
 #season-banner-toggle {
     font-size: 0.75rem;
     color: var(--turf-mid);
@@ -887,7 +826,7 @@ tbody .dist-col-highlight {
         font-size: 0.78rem;
     }
 
-/* ── PLAYER SELECTIONS (sticky header) ── */
+/* Player selections sticky header */
 #player-selections {
     background-color: #f8f9fa;
     position: sticky;
@@ -897,19 +836,12 @@ tbody .dist-col-highlight {
     border-bottom: 2px solid var(--turf-mid);
 }
 
-/* ── MISC ── */
-.small-font {
-    font-size: 0.8rem;
-}
-
-.date-font {
-    font-size: 0.8rem;
-}
-
+/* History modal */
 #historyModalContent {
     font-size: 0.78rem;
 }
 
+/* Race selection table -- sticky columns */
 #race-selection-table th,
 #race-selection-table td {
     white-space: nowrap;
@@ -937,45 +869,379 @@ tbody .dist-col-highlight {
     white-space: nowrap;
 }
 
-/* ── MEDIA ── */
-@media (max-width: 768px) {
-    .username_sp {
-        width: 120px;
+/* Stable table */
+.stable-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.stable-table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 480px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    -webkit-overflow-scrolling: touch;
+}
+
+    .stable-table-wrap table {
+        min-width: 900px;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.75rem;
+    }
+
+    .stable-table-wrap thead th {
+        position: sticky;
+        top: 0;
+        background: var(--turf-dark);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 5px 5px;
+        border: none;
+        white-space: nowrap;
+        z-index: 3;
+    }
+
+    .stable-table-wrap th:nth-child(3),
+    .stable-table-wrap td:nth-child(3) {
+        position: sticky;
+        left: 0;
+        background: #fff;
+        z-index: 2;
+        border-right: 2px solid #dee2e6;
+        min-width: 110px;
+    }
+
+    .stable-table-wrap thead th:nth-child(3) {
+        background: var(--turf-dark);
+        z-index: 4;
+    }
+
+    .stable-table-wrap tbody tr {
+        transition: background-color 0.15s;
+    }
+
+        .stable-table-wrap tbody tr:hover {
+            background: #f0f7f2;
+        }
+
+/* Distance column headers */
+.dist-sprint {
+    background: #1a5276 !important;
+}
+
+.dist-mid {
+    background: #1e8449 !important;
+}
+
+.dist-stay {
+    background: #6e2f1a !important;
+}
+
+/* Distance form cells */
+.dist-cell {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    width: 36px;
+    min-width: 36px;
+    padding: 3px 2px !important;
+    border-radius: 3px;
+    cursor: default;
+}
+
+.dist-none {
+    background: #f0f0f0;
+    color: transparent;
+}
+
+.dist-win {
+    background: #d4a017;
+    color: #000;
+}
+
+.dist-second {
+    background: #a8a9ad;
+    color: #000;
+}
+
+.dist-third {
+    background: #cd7f32;
+    color: #fff;
+}
+
+.dist-placed {
+    background: #27ae60;
+    color: #fff;
+}
+
+.dist-ran {
+    background: #e67e22;
+    color: #fff;
+}
+
+.dist-unplaced {
+    background: #e8c5c5;
+    color: #922;
+}
+
+.dist-col-highlight {
+    outline: 2px solid #d4a017;
+    outline-offset: -2px;
+    position: relative;
+}
+
+thead .dist-col-highlight {
+    background: #b8860b !important;
+    box-shadow: 0 2px 0 #d4a017;
+}
+
+tbody .dist-col-highlight {
+    box-shadow: inset 0 0 0 2px #d4a017;
+}
+
+/* Horse entry button */
+.horse-entry-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--turf-mid);
+    background: #fff;
+    color: var(--turf-dark);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    padding: 0;
+    line-height: 1;
+}
+
+.stable-row:hover .horse-entry-btn {
+    background: var(--turf-mid);
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.horse-entry-btn.entered {
+    background: var(--turf-dark);
+    border-color: var(--turf-dark);
+    color: #fff;
+}
+
+.stable-row:hover .horse-entry-btn.entered {
+    background: #c0392b;
+    border-color: #c0392b;
+}
+
+.entry-num {
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.entry-plus {
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-top: -2px;
+}
+
+/* Form badges */
+.form-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin: 0 1px;
+    color: #fff;
+}
+
+.form-1 {
+    background: var(--gold);
+    color: #000;
+}
+
+.form-2 {
+    background: var(--silver);
+    color: #000;
+}
+
+.form-3 {
+    background: var(--bronze);
+}
+
+.form-4,
+.form-5,
+.form-6 {
+    background: #6c757d;
+}
+
+.form-7,
+.form-8,
+.form-9 {
+    background: #adb5bd;
+}
+
+.form-0 {
+    background: #dee2e6;
+    color: #999;
+}
+
+.form-sep {
+    color: #aaa;
+    font-size: 0.65rem;
+    margin: 0 1px;
+}
+
+/* Race screen */
+#race-selection thead th {
+    background: var(--turf-dark);
+    color: #fff;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 5px 6px;
+    border: none;
+}
+
+#race-selection tbody tr {
+    transition: background-color 0.15s;
+    cursor: pointer;
+}
+
+    #race-selection tbody tr.table-primary {
+        background: #d0e8d8 !important;
+        font-weight: 600;
+    }
+
+.stable-row {
+    cursor: pointer;
+}
+
+.stable-table-wrap tbody tr.stable-row:hover {
+    background: #edf7f0;
+}
+
+.stable-table-wrap tbody tr.table-active {
+    background: #d0e8d8 !important;
+}
+
+    .stable-table-wrap tbody tr.table-active td:nth-child(3) {
+        background: #d0e8d8 !important;
+    }
+
+.trainer-pill {
+    display: inline-block;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+
+.fitness-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 3px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+
+/* ============================================================
+   MOBILE -- 768px and below
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+    /* Horse racing */
+    .horse-entry-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .entry-num {
+        font-size: 1rem;
+    }
+
+    .entry-plus {
+        font-size: 1.6rem;
     }
 
     .race-header-panel h4 {
         font-size: 0.9rem;
     }
-}
-
-@media (max-width: 576px) {
-    .score-pred-cell {
-        width: 30px;
-        height: 24px;
-        font-size: 0.7rem;
-    }
-
-    .fixture {
-        font-size: 0.8rem;
-    }
-
-    .d-flex {
-        display: block;
-        text-align: center;
-    }
-
-        .d-flex .fixture {
-            margin-bottom: 5px;
-        }
 
     #game-banner {
         font-size: 0.9rem;
         letter-spacing: 1px;
     }
+
+    /* Hide less important columns in tables */
+    .hide-mobile {
+        display: none !important;
+    }
+
+    /* P&L breakdown columns -- stack on mobile */
+    .pnl-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }
 
-@media (max-width: 480px) {
-    .username_sp {
-        width: 90px;
+
+/* ============================================================
+   MOBILE -- 576px and below
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+    /* Page headings with action buttons */
+    .page-header-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+        .page-header-flex .btn {
+            align-self: flex-start;
+        }
+
+    /* Filter rows */
+    .filter-row {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+        .filter-row select,
+        .filter-row .form-select {
+            width: 100% !important;
+        }
+
+    /* Card with 3-col row -- stack to single col */
+    .card-body .row > [class*="col-md-"] {
+        margin-bottom: 0.75rem;
+    }
+
+    /* Horse racing */
+    #game-banner {
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        padding: 8px 10px;
     }
 }
