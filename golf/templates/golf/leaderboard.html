@@ -1,96 +1,290 @@
 {% extends "base.html" %}
 {% load static %}
+{% load golf_extras %}
 {% block content %}
 
-<div class="container mt-4">
+<div class="container mt-3">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
         <div>
-            <h2>{{ event.name }}</h2>
-            <p class="text-muted mb-0">
+            <h3 class="mb-0">{{ event.name }}</h3>
+            <p class="text-muted small mb-0">
+                <span class="badge bg-secondary me-1">{{ event.tour.tour_name }}</span>
+                <span class="badge bg-primary me-1">{{ game.group.name }}</span>
                 {{ event.start_date|date:"M d" }} - {{ event.end_date|date:"M d, Y" }}
                 {% if event.current_round %}
-                &middot; Round {{ event.current_round }}
+                &middot; <strong>Round {{ event.current_round }}</strong>
                 {% endif %}
-                &middot; <span class="badge bg-{% if event.status == 'In Progress' %}success{% else %}secondary{% endif %}">
-                    {{ event.status|default:"Scheduled" }}
-                </span>
+                &middot;
+                {% if tournament_started %}
+                <span class="badge bg-success">{{ event.status|default:"In Progress" }}</span>
+                {% else %}
+                <span class="badge bg-info text-dark">Draft Complete</span>
+                {% endif %}
             </p>
         </div>
-        <div>
-            <a href="{% url 'pick_order' event.tourn_id %}" class="btn btn-primary btn-sm">
-                {% if user_picks %}Edit Picks{% else %}Make Picks{% endif %}
-            </a>
-            <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm ms-2">All Events</a>
+        <div class="d-flex gap-1 flex-wrap justify-content-end">
+            <a href="{% url 'golf_game_detail' game.id %}" class="btn btn-outline-secondary btn-sm">Draft</a>
+            <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm">Events</a>
         </div>
     </div>
 
-    {% if user_picks %}
-    <div class="card mb-4 border-primary">
-        <div class="card-header bg-primary text-white">Your Picks (in preference order)</div>
-        <div class="card-body p-0">
-            <table class="table table-sm mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Golfer</th>
-                        <th>Position</th>
-                        <th>Round</th>
-                        <th>Thru</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in user_picks %}
-                    {% for row in leaderboard %}
-                    {% if row.golfer.id == order.golfer.id %}
-                    <tr class="table-info">
-                        <td>{{ order.selection_rank }}</td>
-                        <td>{{ order.golfer.first_name }} {{ order.golfer.last_name }}</td>
-                        <td><strong>{{ row.position|default:"-" }}</strong></td>
-                        <td>R{{ row.current_round }}</td>
-                        <td>{{ row.thru|default:"-" }}</td>
-                    </tr>
+    <!-- Pot summary -->
+    <div class="row g-2 mb-3">
+        <div class="col-4">
+            <div class="card text-center border-success h-100">
+                <div class="card-body py-2 px-1">
+                    <div class="text-muted small">Main Pot</div>
+                    <div class="fs-5 text-success fw-bold">&pound;{{ main_pot }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card text-center border-warning h-100">
+                <div class="card-body py-2 px-1">
+                    <div class="text-muted small">Secondary Pot</div>
+                    <div class="fs-5 text-warning fw-bold">&pound;{{ secondary_pot }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card text-center h-100">
+                <div class="card-body py-2 px-1">
+                    <div class="text-muted small">Scoring</div>
+                    <div class="fs-5 fw-bold">Best {{ scoring_picks }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- ============================================================
+         PLAYER STANDINGS
+    ============================================================ -->
+    <h5>{% if tournament_started %}Player Standings{% else %}Teams{% endif %}</h5>
+
+    {% for row in player_rows %}
+    {% if row.is_user and not row.eliminated_from_main %}
+    <div class="card mb-2 border-primary shadow-sm">
+        {% elif row.eliminated_from_main %}
+        <div class="card mb-2 shadow-sm border-danger" style="opacity:0.75;">
+            {% else %}
+            <div class="card mb-2 shadow-sm">
+                {% endif %}
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if tournament_started %}
+                        <span class="badge bg-dark">{{ forloop.counter }}</span>
+                        {% endif %}
+                        <strong>{{ row.entry.user.username }}</strong>
+                        {% if row.is_user %}
+                        <span class="badge bg-primary">You</span>
+                        {% endif %}
+                    </div>
+                    {% if tournament_started %}
+                    <div class="text-end small">
+                        {% if row.eliminated_from_main %}
+                        <span class="badge bg-danger me-1">Eliminated</span>
+                        <span class="text-muted small">Tracking secondary pot only</span>
+                        {% elif row.total_score is not None %}
+                        {% if row.total_score > 0 %}
+                        <span class="text-danger fw-bold fs-6">+{{ row.total_score }}</span>
+                        {% elif row.total_score < 0 %}
+                        <span class="text-success fw-bold fs-6">{{ row.total_score }}</span>
+                        {% else %}
+                        <span class="fw-bold fs-6">E</span>
+                        {% endif %}
+                        <span class="text-muted ms-1">(best {{ scoring_picks }})</span>
+                        {% else %}
+                        <span class="text-muted fs-6">-</span>
+                        {% endif %}
+                        {% if row.missed_cuts > 0 %}
+                        <span class="text-danger ms-2 small">{{ row.missed_cuts }} MC &pound;{{ row.fines }}</span>
+                        {% endif %}
+                    </div>
                     {% endif %}
-                    {% endfor %}
-                    {% endfor %}
-                </tbody>
-            </table>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-font">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Rd</th>
+                                    <th>Golfer</th>
+                                    {% if tournament_started %}
+                                    <th class="text-center">Pos</th>
+                                    <th class="text-center">R1</th>
+                                    <th class="text-center">R2</th>
+                                    <th class="text-center">R3</th>
+                                    <th class="text-center">R4</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-center">Thru</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in row.team %}
+                                {% if t.missed_cut %}
+                                <tr class="table-danger text-muted">
+                                    {% elif t.counting %}
+                                <tr>
+                                    {% else %}
+                                <tr class="text-muted" style="opacity:0.55;">
+                                    {% endif %}
+                                    <td>
+                                        {% if t.counting and tournament_started %}
+                                        <span class="badge bg-success" title="Counting">{{ forloop.counter }}</span>
+                                        {% else %}
+                                        <span class="text-muted">{{ t.round_number }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ t.golfer.first_name }} {{ t.golfer.last_name }}
+                                        {% if t.pick.is_tournament_winner %}
+                                        <span class="badge bg-success ms-1">Win</span>
+                                        {% endif %}
+                                        {% if t.pick.auto_assigned %}
+                                        <span class="badge bg-secondary ms-1">Auto</span>
+                                        {% endif %}
+                                        {% if t.missed_cut %}
+                                        <span class="badge bg-danger ms-1">MC</span>
+                                        {% endif %}
+                                        {% if not t.counting and not t.missed_cut and tournament_started %}
+                                        <span class="badge bg-light text-muted border ms-1" title="Not counting">N/C</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if tournament_started %}
+                                    <td class="text-center fw-bold">
+                                        {{ t.score_obj.position|default:"-" }}
+                                    </td>
+                                    <td class="text-center">
+                                        {% with r1=t.rounds|get_item:1 %}
+                                        {% if r1 %}{{ r1.score|default:"-" }}{% else %}-{% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% with r2=t.rounds|get_item:2 %}
+                                        {% if r2 %}{{ r2.score|default:"-" }}{% else %}-{% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% with r3=t.rounds|get_item:3 %}
+                                        {% if r3 %}{{ r3.score|default:"-" }}{% else %}-{% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% with r4=t.rounds|get_item:4 %}
+                                        {% if r4 %}{{ r4.score|default:"-" }}{% else %}-{% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td class="text-center fw-bold">
+                                        {% if t.missed_cut %}
+                                        <span class="text-danger small">MC</span>
+                                        {% elif t.total_vs_par is not None %}
+                                        {% if t.total_vs_par > 0 %}
+                                        <span class="text-danger">+{{ t.total_vs_par }}</span>
+                                        {% elif t.total_vs_par == 0 %}
+                                        E
+                                        {% else %}
+                                        <span class="text-success">{{ t.total_vs_par }}</span>
+                                        {% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        {% if t.score_obj %}{{ t.score_obj.thru|default:"-" }}{% else %}-{% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No entries yet.</p>
+            {% endfor %}
+
+            <!-- ============================================================
+                 FULL TOURNAMENT LEADERBOARD
+            ============================================================ -->
+            {% if tournament_started and event_leaderboard %}
+            <hr class="my-3">
+            <h5>Tournament Leaderboard</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover small-font">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Pos</th>
+                            <th>Golfer</th>
+                            <th class="text-center">R1</th>
+                            <th class="text-center">R2</th>
+                            <th class="text-center">R3</th>
+                            <th class="text-center">R4</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Thru</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in event_leaderboard %}
+                        {% if row.golfer.id in user_pick_golfer_ids %}
+                        <tr class="table-info fw-bold">
+                            {% elif row.golfer.id in all_picked_ids %}
+                        <tr class="table-warning">
+                            {% else %}
+                        <tr>
+                            {% endif %}
+                            <td>{{ row.position|default:"-" }}</td>
+                            <td>
+                                {{ row.golfer.first_name }} {{ row.golfer.last_name }}
+                                {% if row.golfer.id in user_pick_golfer_ids %}
+                                <span class="badge bg-primary ms-1">You</span>
+                                {% elif row.golfer.id in all_picked_ids %}
+                                <span class="badge bg-light text-dark border ms-1">Picked</span>
+                                {% endif %}
+                            </td>
+                            <!-- Per-round strokes -->
+                            <td class="text-center">
+                                {% with r1=row.rounds|get_item:1 %}
+                                {% if r1 %}{{ r1.score|default:"-" }}{% else %}-{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="text-center">
+                                {% with r2=row.rounds|get_item:2 %}
+                                {% if r2 %}{{ r2.score|default:"-" }}{% else %}-{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="text-center">
+                                {% with r3=row.rounds|get_item:3 %}
+                                {% if r3 %}{{ r3.score|default:"-" }}{% else %}-{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="text-center">
+                                {% with r4=row.rounds|get_item:4 %}
+                                {% if r4 %}{{ r4.score|default:"-" }}{% else %}-{% endif %}
+                                {% endwith %}
+                            </td>
+                            <!-- Total vs par -->
+                            <td class="text-center fw-bold">
+                                {% if row.total_score is not None %}
+                                {% if row.total_score > 0 %}<span class="text-danger">+{{ row.total_score }}</span>
+                                {% elif row.total_score == 0 %}E
+                                {% else %}<span class="text-success">{{ row.total_score }}</span>
+                                {% endif %}
+                                {% else %}-{% endif %}
+                            </td>
+                            <!-- Thru / current hole -->
+                            <td class="text-center text-muted">{{ row.thru|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif not tournament_started %}
+            <p class="text-muted small mt-3">Scores will appear once the tournament begins.</p>
+            {% endif %}
+
         </div>
-    </div>
-    {% endif %}
-
-    <h4>Full Leaderboard</h4>
-    {% if leaderboard %}
-    <div class="table-responsive">
-        <table class="table table-sm table-striped table-hover small-font">
-            <thead class="table-dark">
-                <tr>
-                    <th>Pos</th>
-                    <th>Golfer</th>
-                    <th>Country</th>
-                    <th>Round</th>
-                    <th>Thru</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in leaderboard %}
-                <tr {% if user_picks %}{% for order in user_picks %}{% if order.golfer.id= =row.golfer.id %}class="table-warning" {% endif %}{% endfor %}{% endif %}>
-                    <td>{{ row.position|default:"-" }}</td>
-                    <td>{{ row.golfer.first_name }} {{ row.golfer.last_name }}</td>
-                    <td>{{ row.golfer.country }}</td>
-                    <td>R{{ row.current_round }}</td>
-                    <td>{{ row.thru|default:"-" }}</td>
-                    <td>{{ row.total_score }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="text-muted">No scores available yet. Check back once the tournament begins.</p>
-    {% endif %}
-
-</div>
-
-{% endblock %}
+        {% endblock %}

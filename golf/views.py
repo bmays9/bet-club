@@ -204,14 +204,18 @@ def join_golf_game(request, game_id):
 def golf_game_detail(request, game_id):
     game = get_object_or_404(GolfGame, id=game_id)
 
-    # Process any expired draft slots before rendering --
-    # catches up on auto-picks missed while nobody was watching
+    # Process any expired draft slots before rendering
     if game.status == GolfGame.Status.DRAFTING:
         from golf.services.draft import process_expired_slots, draft_is_complete
-        processed = process_expired_slots(game)
-        if processed and draft_is_complete(game):
+        process_expired_slots(game)
+        if draft_is_complete(game):
             game.status = GolfGame.Status.ACTIVE
             game.save(update_fields=["status"])
+
+    # Redirect to leaderboard once draft is done -- that's the main game page
+    if game.status in (GolfGame.Status.ACTIVE, GolfGame.Status.FINISHED):
+        from django.shortcuts import redirect as _redirect
+        return _redirect("golf_leaderboard", game_id=game.id)
 
     user_entry = GolfGameEntry.objects.filter(game=game, user=request.user).first()
 
@@ -340,8 +344,10 @@ def golf_game_detail(request, game_id):
                 opens_at__isnull=True,
             ).order_by("pick_number").first()
 
+    from golf.services.draft import draft_is_complete
     context = {
         "game": game,
+        "draft_complete": draft_is_complete(game),
         "user_entry": user_entry,
         "entries": entries,
         "non_entrants": non_entrants,
@@ -505,59 +511,214 @@ def event_entries_view(request, event_id):
 # ---------------------------------------------
 
 @login_required
+# This replaces leaderboard_view in golf/views.py
+
+
+@login_required
 def leaderboard_view(request, game_id):
+    """
+    The main game page once drafting is complete.
+    Shows:
+    - Player standings (ranked by best scoring_picks scores)
+    - Each player's full team with live scores
+    - Missed cuts and fines
+    - Full tournament leaderboard
+    """
     game = get_object_or_404(GolfGame, id=game_id)
     user_entry = GolfGameEntry.objects.filter(game=game, user=request.user).first()
-
-    entries = game.game_entries.select_related("user").order_by("final_rank", "user__username")
-
-    all_picks = DraftPick.objects.filter(game=game).select_related(
-        "golfer", "game_entry__user"
+    event = game.event
+    # Tournament started if status set, OR if scores exist for this event
+    tournament_started = (
+        event.status not in ("", None, "Scheduled", "scheduled")
+        or GolferScore.objects.filter(event=event).exists()
     )
-    picks_by_player = {}
-    for pick in all_picks:
-        uid = pick.game_entry.user_id
-        picks_by_player.setdefault(uid, []).append(pick)
 
-    # Full event leaderboard from GolferScore
-    scores = (
-        GolferScore.objects
-        .filter(event=game.event)
-        .select_related("golfer")
-        .order_by("golfer_id", "-round")
+    # ---- All picks for the game ----
+    all_picks = (
+        DraftPick.objects
+        .filter(game=game)
+        .select_related("golfer", "game_entry__user")
+        .order_by("game_entry__draft_position", "round_number")
     )
-    seen = set()
-    event_leaderboard = []
-    for score in scores:
-        if score.golfer_id not in seen:
-            seen.add(score.golfer_id)
-            all_rounds = GolferScore.objects.filter(golfer=score.golfer, event=game.event)
-            total = sum(r.score or 0 for r in all_rounds if r.score is not None)
-            event_leaderboard.append({
-                "golfer": score.golfer,
-                "position": score.position,
-                "current_round": score.round,
-                "thru": score.thru,
-                "total_score": total,
+
+    # ---- All round scores per golfer from DB ----
+    # latest_scores: golfer_id -> most recent GolferScore (for position/thru/total)
+    # all_round_scores: golfer_id -> {round_num: GolferScore}
+    latest_scores = {}
+    all_round_scores = {}
+    if tournament_started:
+        scores_qs = (
+            GolferScore.objects
+            .filter(event=event)
+            .order_by("golfer_id", "-round")
+        )
+        for s in scores_qs:
+            if s.golfer_id not in latest_scores:
+                latest_scores[s.golfer_id] = s
+            all_round_scores.setdefault(s.golfer_id, {})[s.round] = s
+
+    # ---- Build player standings ----
+    entries = game.game_entries.select_related("user").order_by("draft_position")
+    player_rows = []
+
+    for entry in entries:
+        picks = [p for p in all_picks if p.game_entry_id == entry.id]
+
+        team = []
+        missed_cut_count = 0
+        for pick in picks:
+            score_obj = latest_scores.get(pick.golfer_id)
+            made_cut = pick.made_cut
+            missed = not made_cut if made_cut is not None else False
+            if missed:
+                missed_cut_count += 1
+
+            rounds = all_round_scores.get(pick.golfer_id, {})
+            team.append({
+                "pick": pick,
+                "golfer": pick.golfer,
+                "round_number": pick.round_number,
+                "score_obj": score_obj,
+                "rounds": rounds,
+                "missed_cut": missed,
             })
 
-    def sort_key(row):
-        pos = str(row["position"]).lstrip("T=")
-        try:
-            return int(pos)
-        except ValueError:
-            return 9999
+        # Best scoring_picks scores count toward standing
+        scoring_count = game.scoring_picks
 
-    event_leaderboard.sort(key=sort_key)
+        def get_total(t):
+            """Get total score vs par. Check all round rows for a non-None total."""
+            # First check latest round row
+            s = t["score_obj"]
+            if s and s.total_score is not None:
+                return s.total_score
+            # Check all round rows for any non-None total_score
+            rounds = t["rounds"]
+            if rounds:
+                for r in sorted(rounds.values(), key=lambda x: -x.round):
+                    if r.total_score is not None:
+                        return r.total_score
+                # Fall back: sum round_score values
+                scores = [r.round_score for r in rounds.values() if r.round_score is not None]
+                return sum(scores) if scores else None
+            return None
+
+        for t in team:
+            t["total_vs_par"] = get_total(t)
+            t["counting"] = False  # will be set below
+
+        # Sort team: best scores first, missed cuts last
+        def team_sort_key(t):
+            if t["missed_cut"]:
+                return (2, 9999)
+            if t["total_vs_par"] is None:
+                return (1, 9999)
+            return (0, t["total_vs_par"])
+
+        team.sort(key=team_sort_key)
+
+        # Mark the best scoring_count as counting (missed cuts NEVER count)
+        counting_so_far = 0
+        for t in team:
+            if not t["missed_cut"] and t["total_vs_par"] is not None and counting_so_far < scoring_count:
+                t["counting"] = True
+                counting_so_far += 1
+
+        best_scores = [t for t in team if t["counting"]]
+        fines = missed_cut_count * game.missed_cut_fine
+
+        # Player is eliminated from main pot if they have fewer than
+        # scoring_count valid (non-cut) picks with scores
+        valid_picks = [t for t in team if not t["missed_cut"] and t["total_vs_par"] is not None]
+        eliminated_from_main = len(valid_picks) < scoring_count
+
+        if eliminated_from_main:
+            total = None  # void score
+        elif best_scores:
+            total = sum(t["total_vs_par"] for t in best_scores)
+        else:
+            total = None
+
+        player_rows.append({
+            "entry": entry,
+            "team": team,
+            "total_score": total,
+            "fines": fines,
+            "missed_cuts": missed_cut_count,
+            "eliminated_from_main": eliminated_from_main,
+            "is_user": entry.user == request.user,
+        })
+
+    # Sort by total score ascending (lower = better in stroke play)
+    if tournament_started:
+        def standing_sort(r):
+            if r["eliminated_from_main"]:
+                return (1, 9999)
+            if r["total_score"] is None:
+                return (0, 9999)
+            return (0, r["total_score"])
+        player_rows.sort(key=standing_sort)
+    else:
+        player_rows.sort(key=lambda r: r["entry"].draft_position or 0)
+
+    # ---- Full tournament leaderboard from DB ----
+    event_leaderboard = []
+    if tournament_started:
+        seen2 = set()
+        scores_for_lb = (
+            GolferScore.objects
+            .filter(event=event)
+            .select_related("golfer")
+            .order_by("golfer_id", "-round")
+        )
+        seen2 = set()
+        for s in scores_for_lb:
+            if s.golfer_id in seen2:
+                continue
+            seen2.add(s.golfer_id)
+            golfer_rounds = all_round_scores.get(s.golfer_id, {})
+            event_leaderboard.append({
+                "golfer": s.golfer,
+                "position": s.position,
+                "current_round": s.round,
+                "thru": s.thru,
+                "total_score": s.total_score,
+                "current_round_score": golfer_rounds.get(s.round),
+                "rounds": golfer_rounds,
+            })
+
+        def sort_key(row):
+            pos = str(row["position"] or "").lstrip("T=")
+            try:
+                return int(pos)
+            except ValueError:
+                return 9999
+
+        event_leaderboard.sort(key=sort_key)
+
+    # Picked golfer IDs for highlighting
+    user_pick_golfer_ids = set()
+    if user_entry:
+        user_pick_golfer_ids = {
+            p.golfer_id for p in all_picks
+            if p.game_entry_id == user_entry.id
+        }
+    all_picked_ids = {p.golfer_id for p in all_picks}
 
     return render(request, "golf/leaderboard.html", {
         "game": game,
+        "event": event,
         "user_entry": user_entry,
-        "entries": entries,
-        "picks_by_player": picks_by_player,
+        "player_rows": player_rows,
         "event_leaderboard": event_leaderboard,
+        "tournament_started": tournament_started,
+        "user_pick_golfer_ids": user_pick_golfer_ids,
+        "all_picked_ids": all_picked_ids,
         "main_pot": game.total_main_pot,
+        "secondary_pot": game.total_secondary_pot if hasattr(game, 'total_secondary_pot') else 0,
+        "scoring_picks": game.scoring_picks,
     })
+
 
 @login_required
 def golf_history(request):

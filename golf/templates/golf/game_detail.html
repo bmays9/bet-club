@@ -20,8 +20,8 @@
             </p>
         </div>
         <div>
-            {% if game.status == 'active' or game.status == 'finished' %}
-            <a href="{% url 'golf_leaderboard' game.id %}" class="btn btn-primary btn-sm">Leaderboard</a>
+            {% if game.status == 'active' or game.status == 'finished' or game.status == 'drafting' and draft_complete %}
+            <a href="{% url 'golf_leaderboard' game.id %}" class="btn btn-primary btn-sm">View Picks</a>
             {% endif %}
             <a href="{% url 'golf-events' %}" class="btn btn-outline-secondary btn-sm ms-2">All Events</a>
         </div>
@@ -418,7 +418,7 @@
     <!-- ============================================================
          TEAMS (active/finished)
     ============================================================ -->
-    {% if game.status == 'active' or game.status == 'finished' %}
+    {% if game.status == 'active' or game.status == 'finished' or draft_complete %}
     <h5 class="mt-2">Teams</h5>
     {% for player_data in player_teams %}
     {% if player_data.entry.user == request.user %}

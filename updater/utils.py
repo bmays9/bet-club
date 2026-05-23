@@ -41,7 +41,7 @@ def maybe_update():
                 results_updated = True
 
         # --- Fixtures ---
-        if tracker.should_update_fixtures(UPDATE_INTERVAL_DAYS):
+        if tracker.should_update_fixtures(fixtures, UPDATE_INTERVAL_DAYS):
             call_command("update_fixtures", league_code=league.code, verbosity=0)
             tracker.last_fixtures_check = timezone.now()
             tracker.save()
@@ -58,6 +58,9 @@ def maybe_update():
         call_command("update_lms_results", verbosity=0)
         call_command("update_season_scores", verbosity=0)
 
-    # --- Golf rankings: once a month, independent of football results ---
-    from golf.utils import maybe_update_rankings
+    # --- Golf rankings: once a month ---
+    from golf.utils import maybe_update_rankings, maybe_update_leaderboard
     maybe_update_rankings()
+
+    # --- Golf leaderboard: once daily for in-progress tournaments ---
+    maybe_update_leaderboard()

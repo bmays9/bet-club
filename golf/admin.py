@@ -122,10 +122,15 @@ class EventEntryAdmin(SummernoteModelAdmin):
 
 @admin.register(GolferScore)
 class GolferScoreAdmin(SummernoteModelAdmin):
-    list_display = ("golfer", "event", "round", "score", "total_score", "thru", "position")
-    list_filter = ("event__tour", "round", "event")
+    list_display = (
+        "golfer", "event", "round",
+        "score", "round_score", "total_score",
+        "thru", "position"
+    )
+    list_filter = ("event", "round", "event__tour")
     search_fields = ("golfer__first_name", "golfer__last_name", "event__name")
-    ordering = ("event", "position", "round")
+    ordering = ("event", "round", "total_score")
+    list_per_page = 50
 
 
 @admin.register(UserOrder)

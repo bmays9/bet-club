@@ -77,9 +77,10 @@ class GolferScore(models.Model):
     golfer = models.ForeignKey(Golfer, on_delete=models.CASCADE)
     event = models.ForeignKey(GolfEvent, on_delete=models.CASCADE)
     round = models.IntegerField()
-    score = models.IntegerField(null=True, blank=True)       # strokes this round
-    total_score = models.IntegerField(null=True, blank=True) # cumulative vs par
-    thru = models.IntegerField(null=True, blank=True)
+    score = models.IntegerField(null=True, blank=True)        # strokes this round
+    round_score = models.IntegerField(null=True, blank=True)  # this round vs par e.g. -3
+    total_score = models.IntegerField(null=True, blank=True)  # cumulative vs par
+    thru = models.CharField(max_length=10, null=True, blank=True)  # "F", "12", "-"
     position = models.CharField(max_length=10, blank=True)
 
     class Meta:

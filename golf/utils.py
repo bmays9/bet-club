@@ -63,3 +63,56 @@ def maybe_update_rankings():
             return False
 
     return False
+
+def maybe_update_leaderboard():
+    """
+    Update leaderboard scores once daily for any golf event currently in progress
+    that has an active game. Never calls the API more than once per 24 hours.
+    """
+    import logging
+    from django.utils import timezone
+    from django.core.management import call_command
+    from updater.models import UpdateTracker
+    from golf.models import GolfEvent, GolfGame
+
+    logger = logging.getLogger(__name__)
+
+    tracker, _ = UpdateTracker.objects.get_or_create(id=1)
+
+    # Gate: max once per 24 hours
+    if (tracker.last_golf_rankings_check and
+            timezone.now() - tracker.last_golf_rankings_check < timezone.timedelta(hours=24)):
+        return
+
+    # Find events that are currently in progress (start_date passed, end_date not yet)
+    today = timezone.now()
+    active_events = GolfEvent.objects.filter(
+        start_date__lte=today,
+        end_date__gte=today,
+    ).select_related("tour")
+
+    if not active_events.exists():
+        logger.info("[golf] No active events for leaderboard update")
+        return
+
+    # Only call API if there is an active game for this event
+    events_with_games = active_events.filter(
+        golf_games__status__in=[GolfGame.Status.ACTIVE, GolfGame.Status.FINISHED],
+    ).distinct()
+
+    if not events_with_games.exists():
+        logger.info("[golf] Active events found but no active games -- skipping leaderboard")
+        return
+
+    updated = 0
+    for event in events_with_games:
+        try:
+            call_command("update_leaderboard", event_id=event.tourn_id, verbosity=0)
+            updated += 1
+            logger.info(f"[golf] Updated leaderboard for {event.name}")
+        except Exception as e:
+            logger.error(f"[golf] Leaderboard update failed for {event.name}: {e}")
+
+    if updated:
+        tracker.last_golf_rankings_check = timezone.now()
+        tracker.save(update_fields=["last_golf_rankings_check"])
