@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width:780px;">
+
+    <h3>Create Season Game</h3>
+    <p class="text-muted small">
+        Prize amounts are fixed per player. No money is collected until the
+        game is finalised at the end of the season.
+    </p>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <!-- Basic details -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Game Details</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Game Name</label>
+                        <input type="text" name="name" class="form-control"
+                               placeholder="e.g. 2024/25 Season" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Group</label>
+                        <select name="group_id" class="form-select" required>
+                            <option value="">-- select group --</option>
+                            {% for group in user_groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Draft Date &amp; Time</label>
+                        <input type="datetime-local" name="draft_date" class="form-control">
+                        <div class="form-text">When players will make their picks.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Draft Method</label>
+                        <select name="draft_method" class="form-select">
+                            <option value="straight">Straight (same order each round)</option>
+                            <option value="snake">Snake (reverses each round)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leagues -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Leagues</div>
+            <div class="card-body">
+                <div class="row">
+                    {% for league in leagues %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="league_ids" value="{{ league.id }}"
+                                   id="league_{{ league.id }}" checked>
+                            <label class="form-check-label" for="league_{{ league.id }}">
+                                {{ league.name }}
+                                <span class="text-muted small">({{ league.season_games }} games)</span>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Prize Configuration -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">
+                Prize Amounts
+                <span class="text-muted fw-normal small ms-2">
+                    Positive = paid to player. Negative = player pays into the pot.
+                </span>
+            </div>
+            <div class="card-body">
+
+                <!-- Teams to Win -->
+                <h6>Teams to Win &amp; Handicap</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label text-success small">Best (receive)</label>
+                        {% for row in defaults.tw_best %}
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text" style="width:40px;">{{ row.rank }}</span>
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="tw_best_{{ row.rank }}"
+                                   class="form-control" value="{{ row.amount }}" step="1">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-danger small">Worst (pay in)</label>
+                        {% for row in defaults.tw_worst %}
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text" style="width:40px;">{{ row.rank }}</span>
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="tw_worst_{{ row.rank }}"
+                                   class="form-control" value="{{ row.amount }}" step="1">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Teams to Lose -->
+                <h6>Teams to Lose</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label text-success small">Best (receive)</label>
+                        {% for row in defaults.tl_best %}
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text" style="width:40px;">{{ row.rank }}</span>
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="tl_best_{{ row.rank }}"
+                                   class="form-control" value="{{ row.amount }}" step="1">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-danger small">Worst (pay in)</label>
+                        {% for row in defaults.tl_worst %}
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text" style="width:40px;">{{ row.rank }}</span>
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="tl_worst_{{ row.rank }}"
+                                   class="form-control" value="{{ row.amount }}" step="1">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- League and Monthly -->
+                <h6>Per-Player Contributions</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">League winner (per player)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="league_per_player"
+                                   class="form-control" value="{{ defaults.league_per_player }}"
+                                   step="1">
+                            <span class="input-group-text">x players x leagues</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Monthly winner (per player)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="monthly_per_player"
+                                   class="form-control" value="{{ defaults.monthly_per_player }}"
+                                   step="1">
+                            <span class="input-group-text">x players x months</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall standings penalties -->
+                <h6>
+                    Overall Standings
+                    <span class="text-muted fw-normal small">
+                        -- 1st wins the total of all penalties below
+                    </span>
+                </h6>
+                <div class="row g-2">
+                    {% for row in defaults.overall_penalties %}
+                    <div class="col-4 col-md-3">
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text" style="width:40px;">{{ row.rank }}</span>
+                            <span class="input-group-text">&pound;</span>
+                            <input type="number" name="overall_penalty_{{ row.rank }}"
+                                   class="form-control" value="{{ row.amount }}" step="1">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Create Game</button>
+            <a href="{% url 'season_overall' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

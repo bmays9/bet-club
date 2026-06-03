@@ -1,24 +1,20 @@
+# season/management/commands/update_season_scores.py
 from django.core.management.base import BaseCommand
 from django.db.models import Sum, Max
 from season.utils.payouts import allocate_payouts_for_game
 import decimal
 
 from season.models import (
-    Game,
-    PlayerPick,
-    PlayerScoreSnapshot,
-    StandingsRow,
-    StandingsBatch,
-    Handicap,
-    PickType,
+    Game, PlayerPick, PlayerScoreSnapshot,
+    StandingsRow, StandingsBatch, Handicap, PickType,
 )
 
 
 class Command(BaseCommand):
-    help = "Update PlayerScoreSnapshot for the latest standings batches across all leagues"
+    help = "Update PlayerScoreSnapshot for the latest standings batches."
 
     def handle(self, *args, **options):
-        # --- Get latest batch for each league ---
+        # --- Get latest batch per league ---
         latest_batches = (
             StandingsBatch.objects.values("league_id")
             .annotate(latest_taken_at=Max("taken_at"))
@@ -27,7 +23,8 @@ class Command(BaseCommand):
         batch_map = {}
         for row in latest_batches:
             batch = StandingsBatch.objects.get(
-                league_id=row["league_id"], taken_at=row["latest_taken_at"]
+                league_id=row["league_id"],
+                taken_at=row["latest_taken_at"],
             )
             batch_map[batch.league_id] = batch
 
@@ -40,7 +37,6 @@ class Command(BaseCommand):
         # --- Clear old snapshots for these batches ---
         PlayerScoreSnapshot.objects.filter(batch__in=batch_map.values()).delete()
 
-        # --- Loop through all picks ---
         picks = PlayerPick.objects.select_related(
             "player_game", "game_league", "team", "game_league__league"
         )
@@ -57,32 +53,36 @@ class Command(BaseCommand):
                 row = StandingsRow.objects.get(batch=batch, team=pick.team)
             except StandingsRow.DoesNotExist:
                 self.stdout.write(
-                    f"Skipped pick {pick.id}: no standings row for team {pick.team} in {league}"
+                    f"Skipped pick {pick.id}: no row for {pick.team} in {league}"
                 )
                 continue
 
             points = row.pure_points
-
-            win_points = 0
+            win_points = decimal.Decimal("0")
             handicap_points = decimal.Decimal("0")
-            lose_points = 0
+            lose_points = decimal.Decimal("0")
 
             if pick.pick_type == PickType.WIN:
-                win_points = points
+                win_points = decimal.Decimal(str(points))
             elif pick.pick_type == PickType.HANDICAP:
                 try:
-                    hcp = Handicap.objects.get(game_league=pick.game_league, team=pick.team)
-                    per_game = decimal.Decimal(hcp.points) / pick.game_league.league.season_games
-                    handicap_points = decimal.Decimal(points) + per_game * decimal.Decimal(row.played)
+                    hcp = Handicap.objects.get(
+                        game_league=pick.game_league, team=pick.team
+                    )
+                    season_games = pick.game_league.league.season_games
+                    per_game = decimal.Decimal(str(hcp.points)) / decimal.Decimal(str(season_games))
+                    handicap_points = decimal.Decimal(str(points)) + per_game * decimal.Decimal(str(row.played))
                 except Handicap.DoesNotExist:
-                    handicap_points = decimal.Decimal(points)
+                    handicap_points = decimal.Decimal(str(points))
             elif pick.pick_type == PickType.LOSE:
-                lose_points = points
+                lose_points = decimal.Decimal(str(points))
 
             key = (pick.player_game_id, pick.game_league_id, batch.id)
-            agg.setdefault(
-                key, {"win": 0, "hcp": decimal.Decimal("0"), "lose": 0}
-            )
+            agg.setdefault(key, {
+                "win": decimal.Decimal("0"),
+                "hcp": decimal.Decimal("0"),
+                "lose": decimal.Decimal("0"),
+            })
             agg[key]["win"] += win_points
             agg[key]["hcp"] += handicap_points
             agg[key]["lose"] += lose_points
@@ -90,11 +90,7 @@ class Command(BaseCommand):
         # --- Save snapshots ---
         snapshots = []
         for (player_game_id, game_league_id, batch_id), scores in agg.items():
-            league_total = (
-                decimal.Decimal(scores["win"])
-                + scores["hcp"]
-                - decimal.Decimal(scores["lose"])
-            )
+            league_total = scores["win"] + scores["hcp"] - scores["lose"]
             snap = PlayerScoreSnapshot.objects.create(
                 player_game_id=player_game_id,
                 game_league_id=game_league_id,
@@ -103,52 +99,57 @@ class Command(BaseCommand):
                 handicap_points=scores["hcp"],
                 lose_points=scores["lose"],
                 league_total_points=league_total,
-                overall_total_points=league_total,  # will update later
+                overall_total_points=league_total,  # updated below
             )
             snapshots.append(snap)
 
-        # --- Assign league ranks ---
+        # --- League ranks ---
         for (game_league_id, batch_id) in set((k[1], k[2]) for k in agg.keys()):
             league_snaps = [
-                s for s in snapshots if s.game_league_id == game_league_id and s.batch_id == batch_id
+                s for s in snapshots
+                if s.game_league_id == game_league_id and s.batch_id == batch_id
             ]
             league_snaps.sort(key=lambda s: s.league_total_points, reverse=True)
             for rank, snap in enumerate(league_snaps, start=1):
                 snap.league_rank = rank
                 snap.save(update_fields=["league_rank"])
 
-        # --- Aggregate overall totals per player across leagues ---
-        overall_points = (
-            PlayerScoreSnapshot.objects.filter(batch__in=batch_map.values())
-            .values("player_game_id", "batch_id")
-            .annotate(total=Sum("league_total_points"))
-        )
-
-        totals = {}
-        for row in overall_points:
-            totals.setdefault(row["player_game_id"], 0)
-            totals[row["player_game_id"]] += row["total"]
-
-        # Update each snapshot with the player’s overall total
+        # --- Overall totals: sum league_total_points per player across leagues ---
+        # Key fix: group by player_game_id ONLY (not batch_id)
+        # Each player has one snapshot per league -- sum them
+        player_totals = {}
         for snap in snapshots:
-            total = totals.get(snap.player_game_id, snap.league_total_points)
-            snap.overall_total_points = total
+            pid = snap.player_game_id
+            player_totals[pid] = player_totals.get(pid, decimal.Decimal("0")) + snap.league_total_points
+
+        # Update snapshots with overall total
+        for snap in snapshots:
+            snap.overall_total_points = player_totals.get(
+                snap.player_game_id, snap.league_total_points
+            )
             snap.save(update_fields=["overall_total_points"])
 
-        # --- Assign overall ranks ---
-        all_totals = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)
-        for rank, (player_game_id, total) in enumerate(all_totals, start=1):
+        # --- Overall ranks ---
+        ranked = sorted(player_totals.items(), key=lambda kv: kv[1], reverse=True)
+        batch_id_list = [b.id for b in batch_map.values()]
+        for rank, (player_game_id, total) in enumerate(ranked, start=1):
             PlayerScoreSnapshot.objects.filter(
-                player_game_id=player_game_id, batch__in=batch_map.values()
+                player_game_id=player_game_id,
+                batch_id__in=batch_id_list,
             ).update(overall_rank=rank)
 
-        self.stdout.write(self.style.SUCCESS("Scoring complete for all leagues."))
+        self.stdout.write(self.style.SUCCESS("Scoring complete."))
 
-        # After scoring snapshots
-        games_to_update = PlayerPick.objects.filter(
+        # --- Allocate prize payouts ---
+        game_ids = PlayerPick.objects.filter(
             game_league__league__in=batch_map.keys()
-        ).values_list('game_league__game', flat=True).distinct()
+        ).values_list("game_league__game", flat=True).distinct()
 
-        for game_id in games_to_update:
-            game = Game.objects.get(id=game_id)
-            allocate_payouts_for_game(game, batch_map)
+        for game_id in game_ids:
+            try:
+                game = Game.objects.get(id=game_id)
+                allocate_payouts_for_game(game, batch_map)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"Payout allocation failed for game {game_id}: {e}")
+                )

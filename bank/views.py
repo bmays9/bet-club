@@ -26,17 +26,15 @@ from player_messages.utils import create_message
 def get_game_pnl(user, group):
     """
     Returns net P&L per game type for a user in a group.
-    Calculated from BankTransaction records created by apply_batch.
-    Only reflects games that have been fully settled (apply_batch called).
-    Games where check_for_winners has not yet run will show GBP0.
+    Game categories read from BankTransaction records.
+    Cash category reads directly from RealMoneyPayment records --
+    shows real money received as positive, real money paid as negative.
     """
-    # Keywords in batch descriptions to categorise
     CATEGORIES = {
         "Score Predict": ["Score Predict", "score predict"],
         "LMS": ["LMS", "Last Man Standing"],
         "Golf": ["Golf", "golf"],
         "Season": ["Season", "season"],
-        "Cash": ["Cash payment", "cash payment"],
     }
 
     result = {}
@@ -58,12 +56,32 @@ def get_game_pnl(user, group):
             transaction_type=BankTransaction.DEBIT
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-        net = credits - debits
         result[label] = {
             "credits": credits,
             "debits": debits,
-            "net": net,
+            "net": credits - debits,
         }
+
+    # Cash: read directly from RealMoneyPayment records
+    # Receiver = real cash received = positive P&L
+    # Payer = real cash paid out = negative P&L
+    received = RealMoneyPayment.objects.filter(
+        group=group,
+        receiver=user,
+        status=RealMoneyPayment.STATUS_CONFIRMED,
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    paid = RealMoneyPayment.objects.filter(
+        group=group,
+        payer=user,
+        status=RealMoneyPayment.STATUS_CONFIRMED,
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    result["Cash"] = {
+        "credits": received,
+        "debits": paid,
+        "net": received - paid,
+    }
 
     return result
 
@@ -250,16 +268,21 @@ def confirm_payment(request, payment_id):
                 payment.resolved_at = timezone.now()
                 payment.save(update_fields=["status", "resolved_at"])
 
-                # Apply balance changes
+                # Real money settlement:
+                # Payer (B) gave cash to receiver (A) outside the game.
+                # In the bank ledger this means:
+                #   - Receiver (A) balance decreases by amount (credit consumed)
+                #   - Payer (B) balance increases by amount (debt cleared)
+                # So receiver is the "entrant" (pays in) and payer is the "winner" (receives)
                 description = (
-                    f"Cash payment: {payment.payer.username} -> "
-                    f"{payment.receiver.username}"
+                    f"Cash settlement: {payment.payer.username} paid "
+                    f"{payment.receiver.username} GBP{payment.amount:.2f}"
                     + (f" ({payment.note})" if payment.note else "")
                 )
                 apply_batch(
                     group=payment.group,
-                    entrants=[payment.payer],
-                    winners=[payment.receiver],
+                    entrants=[payment.receiver],   # receiver's balance goes down
+                    winners=[payment.payer],        # payer's balance goes up
                     entry_fee=payment.amount,
                     prize_pool=payment.amount,
                     description=description,

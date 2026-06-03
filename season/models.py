@@ -18,7 +18,7 @@ from groups.models import UserGroup
 class League(models.Model):
     """A football league (e.g., Premier League).
 
-    season_games may vary by league (EPL=38). Used to pro‑rate handicaps.
+    season_games may vary by league (EPL=38). Used to prorate handicaps.
     """
 
     name = models.CharField(max_length=100, unique=True)
@@ -99,7 +99,7 @@ class GameLeague(models.Model):
         ordering = ["game", "league__name"]
 
     def __str__(self) -> str:
-        return f"{self.game.name} – {self.league.name}"
+        return f"{self.game.name} - {self.league.name}"
 
 
 class PlayerGameQuerySet(models.QuerySet):
@@ -114,7 +114,6 @@ class PlayerGameQuerySet(models.QuerySet):
         if game:
             qs = qs.filter(game=game)
 
-        # Subquery to calculate total entry fees for the game
         all_fees_subquery = PrizePayout.objects.filter(
             prize_pool__game=OuterRef('game')
         ).values('prize_pool__game').annotate(
@@ -146,9 +145,9 @@ class PlayerGame(models.Model):
 
 
 class Handicap(models.Model):
-    """Pre‑season handicap points per team for a specific Game+League.
+    """Preseason handicap points per team for a specific Game+League.
 
-    Stored as an integer total for the season (e.g., +19), to be pro‑rated over
+    Stored as an integer total for the season (e.g., +19), to be prorated over
     the league's season_games when computing current scores.
     """
 
@@ -228,7 +227,7 @@ class PlayerPick(models.Model):
             raise ValidationError("Selected team does not belong to this league.")
 
     def __str__(self) -> str:
-        return f"{self.player_game.user} – {self.get_pick_type_display()} – {self.team.name} ({self.game_league.league.code})"
+        return f"{self.player_game.user} - {self.get_pick_type_display()} - {self.team.name} ({self.game_league.league.code})"
 
 
 # -----------------------------
@@ -254,7 +253,7 @@ class StandingsRow(models.Model):
     """Row for a given team at a snapshot point.
 
     We store wins/draws/losses and recompute points as 3*W + 1*D to ignore any
-    off‑pitch deductions, per game rules.
+    offpitch deductions, per game rules.
     """
 
     batch = models.ForeignKey(StandingsBatch, on_delete=models.CASCADE, related_name="rows")
@@ -338,6 +337,7 @@ class PrizePool(models.Model):
 
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="prize_pools")
     category = models.CharField(max_length=20, choices=PrizeCategory.choices)
+    sub_category = models.CharField(max_length=20, blank=True, default="")  # e.g. "best", "worst"
     league = models.ForeignKey(League, on_delete=models.PROTECT, null=True, blank=True, related_name="prize_pools")
     name = models.CharField(max_length=120, help_text="Human label shown to users")
     active = models.BooleanField(default=True)
@@ -368,7 +368,7 @@ class PrizePayout(models.Model):
     entry_fee_per_player = models.DecimalField(
         max_digits=9, decimal_places=2,
         null=True, blank=True,
-        help_text="If set, prize = entry_fee_per_player × number of players"
+        help_text="If set, prize = entry_fee_per_player  number of players"
     )
     recipient = models.ForeignKey(
         "season.PlayerGame",   # For payouts to a player / PlayerGame
@@ -399,8 +399,8 @@ class PrizePayout(models.Model):
 
     def __str__(self) -> str:
         if self.entry_fee_per_player:
-            return f"{self.prize_pool.name} – Rank {self.rank or 1}: {self.entry_fee_per_player} × players"
-        return f"{self.prize_pool.name} – Rank {self.rank}: £{self.amount}"
+            return f"{self.prize_pool.name} - Rank {self.rank or 1}: {self.entry_fee_per_player}  players"
+        return f"{self.prize_pool.name} - Rank {self.rank}: GBP{self.amount}"
 
     def calculate_prize(self, num_players: int) -> Decimal:
         """Return the payout amount based on player count."""

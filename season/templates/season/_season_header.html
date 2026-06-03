@@ -12,9 +12,11 @@
             <label for="group-select" class="form-label">Select Group:</label>
             <select name="group" id="group-select" class="form-select" onchange="this.form.submit()">
                 {% for group in user_groups %}
-                <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>
-                    {{ group.name }}
-                </option>
+                {% if selected_group and group.id == selected_group.id %}
+                <option value="{{ group.id }}" selected>{{ group.name }}</option>
+                {% else %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -25,9 +27,11 @@
             <select name="game" id="game-select" class="form-select" onchange="this.form.submit()">
                 <option value="">-- Select a game --</option>
                 {% for game in group_games %}
-                <option value="{{ game.id }}" {% if selected_game and game.id == selected_game.id %}selected{% endif %}>
-                    {{ game.name }}
-                </option>
+                {% if selected_game and game.id == selected_game.id %}
+                <option value="{{ game.id }}" selected>{{ game.name }}</option>
+                {% else %}
+                <option value="{{ game.id }}">{{ game.name }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
