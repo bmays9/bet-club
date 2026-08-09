@@ -13,6 +13,12 @@
     <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
     {% endfor %}
     {% endif %}
+    {% if error_detail %}
+    <div class="alert alert-danger">
+        <strong>Error detail:</strong>
+        <pre class="small mt-2 mb-0">{{ error_detail }}</pre>
+    </div>
+    {% endif %}
 
     <form method="post" novalidate>
         {% csrf_token %}

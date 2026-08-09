@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% load dict_extras %}
+{% block content %}
+<div class="container mt-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="mb-0">{{ game.name }} &mdash; Draft</h3>
+        <a href="{% url 'season_overall' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+    </div>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} py-2">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- My Picks Summary -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">My Picks</div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0 text-center small-font">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start">League</th>
+                        <th>Win</th>
+                        <th>Handicap</th>
+                        <th>Lose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for league_name in league_order %}
+                    {% with s=my_summary|get_item:league_name c=pick_counts|get_item:league_name %}
+                    {% if s %}
+                    <tr>
+                        <td class="text-start fw-bold">{{ league_name }}</td>
+                        <td>
+                            {% if s.win %}
+                            <span class="badge bg-success">{{ s.win.team.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">{{ c.win }} picked</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.handicap %}
+                            <span class="badge bg-info text-dark">{{ s.handicap.team.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">{{ c.handicap }} picked</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.lose %}
+                            <span class="badge bg-danger">{{ s.lose.team.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">{{ c.lose }} picked</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Draft Status -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between">
+            <span>Draft Status &mdash; {{ draft.get_phase_display }}</span>
+            {% if is_my_turn %}
+            <span class="badge bg-success fs-6">Your pick!</span>
+            {% elif current_slot %}
+            <span class="text-muted small">Waiting for {{ current_slot.player_game.user.username }}</span>
+            {% else %}
+            <span class="badge bg-secondary">Draft complete</span>
+            {% endif %}
+        </div>
+        <div class="card-body p-2">
+            {% if current_slot %}
+            <p class="mb-1 small">
+                <strong>Next:</strong>
+                <strong>{{ current_slot.player_game.user.username }}</strong>
+                &mdash;
+                {% if draft_phase == "win_lose" %}
+                picks a team to Win or Lose
+                {% else %}
+                picks a Handicap team
+                {% endif %}
+                (pick #{{ current_slot.pick_number }})
+            </p>
+            {% endif %}
+
+            <!-- Draft order -->
+            <div class="d-flex gap-1 flex-wrap mb-2">
+                {% for do in draft_order %}
+                {% if do.player_game == current_slot.player_game %}
+                <span class="badge bg-success">{{ do.position }}. {{ do.player_game.user.username }}</span>
+                {% else %}
+                <span class="badge bg-light text-dark border">{{ do.position }}. {{ do.player_game.user.username }}</span>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Recent picks feed -->
+            {% if completed_slots %}
+            <div class="border rounded p-2 bg-light" style="max-height:150px;overflow-y:auto;">
+                <div class="small text-muted mb-1">Recent picks:</div>
+                {% for item in completed_slots %}
+                <div class="small">
+                    <strong>{{ item.slot.player_game.user.username }}</strong>
+                    &mdash;
+                    {% if item.pick %}
+                    {% if item.pick.pick_type == "win" %}
+                    <span class="text-success fw-bold">{{ item.pick.team.name }}</span> to WIN
+                    {% elif item.pick.pick_type == "lose" %}
+                    <span class="text-danger fw-bold">{{ item.pick.team.name }}</span> to LOSE
+                    {% else %}
+                    <span class="text-info fw-bold">{{ item.pick.team.name }}</span> HANDICAP
+                    {% endif %}
+                    <span class="text-muted">({{ item.slot.game_league.league.name }})</span>
+                    {% else %}
+                    <span class="text-muted">pick #{{ item.slot.pick_number }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Team Tables -->
+    {% for lt in league_tables %}
+    <div class="card mb-3">
+        <div class="card-header fw-bold">
+            {{ lt.league.name }}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0 small-font">
+                <thead class="table-light">
+                    <tr>
+                        <th>Team</th>
+                        <th class="text-center">Hcp</th>
+                        <th class="text-center">Picked to Win</th>
+                        <th class="text-center">Picked to Lose</th>
+                        {% if is_my_turn %}
+                        <th class="text-center">Pick</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in lt.teams %}
+                    {% if t.win_pick and t.lose_pick %}
+                    <tr class="table-secondary">
+                        {% elif t.win_pick %}
+                    <tr class="table-warning">
+                        {% elif t.lose_pick %}
+                    <tr class="table-info">
+                        {% else %}
+                    <tr>
+                        {% endif %}
+                        <td>{{ t.team.name }}</td>
+                        <td class="text-center">{{ t.handicap|default:"-" }}</td>
+                        <td class="text-center">
+                            {% if t.win_pick %}
+                            {% if t.win_pick.pick_type == "win" %}
+                            <span class="badge bg-success">{{ t.win_pick.player_game.user.username }}</span>
+                            {% else %}
+                            <span class="badge bg-info text-dark">{{ t.win_pick.player_game.user.username }} (H)</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if t.lose_pick %}
+                            <span class="badge bg-danger">{{ t.lose_pick.player_game.user.username }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% if is_my_turn %}
+                        <td class="text-center">
+                            {% if draft_phase == "win_lose" %}
+                            {% if t.avail_for_win %}
+                            <button type="button" class="btn btn-success btn-sm py-0"
+                                    onclick="confirmPick('{{ t.team.id }}', 'win', '{{ t.team.name }}', '{{ lt.league.name }}')">
+                                W
+                            </button>
+                            {% endif %}
+                            {% if t.avail_for_lose %}
+                            <button type="button" class="btn btn-danger btn-sm py-0 ms-1"
+                                    onclick="confirmPick('{{ t.team.id }}', 'lose', '{{ t.team.name }}', '{{ lt.league.name }}')">
+                                L
+                            </button>
+                            {% endif %}
+                            {% if not t.avail_for_win and not t.avail_for_lose %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                            {% elif draft_phase == "handicap" %}
+                            {% if t.avail_for_win %}
+                            <button type="button" class="btn btn-info btn-sm py-0"
+                                    onclick="confirmPick('{{ t.team.id }}', 'handicap', '{{ t.team.name }}', '{{ lt.league.name }}')">
+                                H
+                            </button>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="pickModal" tabindex="-1" aria-labelledby="pickModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="pickModalLabel">Confirm Pick</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-3">
+                <p class="mb-1">You are picking</p>
+                <p class="fw-bold fs-5 mb-1" id="confirmTeamName"></p>
+                <p class="mb-1">to <span class="fw-bold" id="confirmPickType"></span></p>
+                <p class="text-muted small" id="confirmLeague"></p>
+            </div>
+            <div class="modal-footer py-2 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">No, cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="confirmYesBtn">Yes, pick this team</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden submit form -->
+<form method="post" id="pickForm" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="team_id" id="pickTeamId">
+    <input type="hidden" name="pick_type" id="pickType">
+</form>
+
+<script>
+    function confirmPick(teamId, pickType, teamName, leagueName) {
+        const labels = { win: "WIN", lose: "LOSE", handicap: "HANDICAP" };
+        const colours = { win: "text-success", lose: "text-danger", handicap: "text-info" };
+
+        document.getElementById("confirmTeamName").textContent = teamName;
+        const typeEl = document.getElementById("confirmPickType");
+        typeEl.textContent = labels[pickType] || pickType;
+        typeEl.className = "fw-bold " + (colours[pickType] || "");
+        document.getElementById("confirmLeague").textContent = leagueName;
+        document.getElementById("pickTeamId").value = teamId;
+        document.getElementById("pickType").value = pickType;
+
+        const modal = new bootstrap.Modal(document.getElementById("pickModal"));
+        modal.show();
+
+        document.getElementById("confirmYesBtn").onclick = function () {
+            modal.hide();
+            document.getElementById("pickForm").submit();
+        };
+    }
+</script>
+{% endblock %}

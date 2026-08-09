@@ -70,8 +70,14 @@ class Game(models.Model):
     entry_fee = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal("0.00"))
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
 
-    start_date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(blank=True, null=True)
+    draft_date = models.DateTimeField(null=True, blank=True)
+    draft_method = models.CharField(
+        max_length=10,
+        choices=[("straight", "Straight"), ("snake", "Snake")],
+        default="straight",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -407,3 +413,116 @@ class PrizePayout(models.Model):
         if self.entry_fee_per_player:
             return self.entry_fee_per_player * Decimal(num_players)
         return self.amount or Decimal("0.00")
+
+
+# Add these to season/models.py (after PlayerPick model)
+
+
+# Add these to season/models.py (after PlayerPick model)
+
+
+class SeasonDraft(models.Model):
+    """
+    Controls the draft session for a Game.
+    Draft happens once at season start.
+    Phase 1: Win + Lose picks (all players pick these first)
+    Phase 2: Handicap picks (after Phase 1 complete for all leagues)
+    """
+
+    class Phase(models.TextChoices):
+        WIN_LOSE = "win_lose", "Win & Lose Picks"
+        HANDICAP = "handicap", "Handicap Picks"
+        COMPLETE = "complete", "Draft Complete"
+
+    class Method(models.TextChoices):
+        STRAIGHT = "straight", "Straight (same order each round)"
+        SNAKE = "snake", "Snake (reverse every other round)"
+
+    game = models.OneToOneField(
+        Game, on_delete=models.CASCADE, related_name="draft"
+    )
+    method = models.CharField(
+        max_length=10, choices=Method.choices, default=Method.STRAIGHT
+    )
+    phase = models.CharField(
+        max_length=10, choices=Phase.choices, default=Phase.WIN_LOSE
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    randomized_at_count = models.PositiveSmallIntegerField(null=True, blank=True)
+    # tracks how many players were in the game when randomize was last used
+    # can_randomize = randomized_at_count is None or randomized_at_count < current player count
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"Draft for {self.game.name} [{self.phase}]"
+
+
+class DraftOrder(models.Model):
+    """Draft order position for each player in a SeasonDraft."""
+
+    draft = models.ForeignKey(
+        SeasonDraft, on_delete=models.CASCADE, related_name="order"
+    )
+    player_game = models.ForeignKey(
+        PlayerGame, on_delete=models.CASCADE, related_name="draft_orders"
+    )
+    position = models.PositiveSmallIntegerField()
+
+    class Meta:
+        unique_together = [("draft", "player_game"), ("draft", "position")]
+        ordering = ["draft", "position"]
+
+    def __str__(self):
+        return f"{self.draft} pos {self.position}: {self.player_game.user}"
+
+
+class DraftSlotSeason(models.Model):
+    """
+    A single pick slot in the season draft.
+    Slots are pre-generated for the whole draft at start.
+    Each slot = one player's turn to pick. League and pick_type
+    are determined when the player actually makes their pick.
+
+    phase indicates which picking phase this slot belongs to:
+    - win_lose: player picks a team to WIN or LOSE (their choice)
+    - handicap: player picks a handicap team
+    """
+
+    draft = models.ForeignKey(
+        SeasonDraft, on_delete=models.CASCADE, related_name="slots"
+    )
+    player_game = models.ForeignKey(
+        PlayerGame, on_delete=models.CASCADE, related_name="draft_slots"
+    )
+    pick_number = models.PositiveIntegerField()  # global sequence = draft order
+    phase = models.CharField(
+        max_length=10,
+        choices=[("win_lose", "Win/Lose"), ("handicap", "Handicap")],
+        default="win_lose",
+    )
+
+    # Set when the player makes their pick
+    game_league = models.ForeignKey(
+        GameLeague, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="draft_slots"
+    )
+    pick_type = models.CharField(
+        max_length=10, choices=PickType.choices, blank=True, default=""
+    )
+    completed = models.BooleanField(default=False)
+    skipped = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = [("draft", "pick_number")]
+        ordering = ["pick_number"]
+
+    def __str__(self):
+        if self.completed and self.game_league:
+            return (
+                f"Slot {self.pick_number}: {self.player_game.user} "
+                f"{self.pick_type} {self.game_league.league.name}"
+            )
+        return f"Slot {self.pick_number}: {self.player_game.user} ({self.phase})"

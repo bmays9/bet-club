@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width:700px;">
+    <h3>Edit Handicaps &mdash; {{ game.name }}</h3>
+    <p class="text-muted small">
+        Set pre-season handicap points for each team. These are added pro-rata
+        to the team's actual points when calculating the handicap pick ranking.
+        Values may have been copied from a previous game as a starting point -- edit as needed.
+    </p>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for ld in league_data %}
+        <div class="card mb-3">
+            <div class="card-header fw-bold">{{ ld.game_league.league.name }}</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Pos</th>
+                            <th>Team</th>
+                            <th style="width:130px;">Handicap pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in ld.teams %}
+                        <tr>
+                            <td class="text-muted">{{ t.position }}</td>
+                            <td>{{ t.team.name }}</td>
+                            <td>
+                                {% if t.handicap is None %}
+                                <input type="number" name="hcp_{{ ld.game_league.id }}_{{ t.team.id }}"
+                                       class="form-control form-control-sm border-warning"
+                                       value="" step="0.1" placeholder="not set">
+                                {% else %}
+                                <input type="number" name="hcp_{{ ld.game_league.id }}_{{ t.team.id }}"
+                                       class="form-control form-control-sm"
+                                       value="{{ t.handicap }}" step="0.1">
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Save Handicaps</button>
+            <a href="{% url 'season_overall' %}" class="btn btn-outline-secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

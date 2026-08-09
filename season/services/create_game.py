@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.utils.timezone import now
 from django.db import transaction
 from season.models import (
-    Game, GameLeague, PlayerGame, PrizePool, PrizePayout, PrizeCategory,
+    Game, GameLeague, PlayerGame, PrizePool, PrizePayout, PrizeCategory, Handicap,
 )
 from season.prize_config import (
     TEAMS_TO_WIN_BEST, TEAMS_TO_WIN_WORST,
@@ -39,19 +39,42 @@ def create_season_game(
     Create a Game, attach leagues, configure all prize pools.
     Returns the created Game.
     """
+    from django.utils.timezone import now as tz_now
     game = Game.objects.create(
         name=name,
         group=group,
         created_by=created_by,
         entry_fee=entry_fee,
         status=Game.Status.OPEN,
+        start_date=draft_date.date() if draft_date else tz_now().date(),
         draft_date=draft_date,
         draft_method=draft_method,
     )
 
-    # Attach leagues
+    # Auto-join the creator as first player
+    PlayerGame.objects.get_or_create(game=game, user=created_by)
+
+    # Attach leagues and copy handicaps from most recent game in same group or any group
     for league in leagues:
-        GameLeague.objects.create(game=game, league=league, active=True)
+        gl = GameLeague.objects.create(game=game, league=league, active=True)
+
+        # Find most recently updated handicaps for this league from any other game
+        # Priority: same group first, then any group
+        recent_hcp_qs = Handicap.objects.filter(
+            game_league__league=league,
+        ).exclude(game_league__game=game).order_by("-game_league__game__created_at")
+
+        if recent_hcp_qs.exists():
+            # Copy all handicap values as defaults for this new game
+            seen_teams = set()
+            for hcp in recent_hcp_qs:
+                if hcp.team_id not in seen_teams:
+                    seen_teams.add(hcp.team_id)
+                    Handicap.objects.create(
+                        game_league=gl,
+                        team=hcp.team,
+                        points=hcp.points,
+                    )
 
     # Use defaults or overrides
     tw_best = teams_to_win_best or TEAMS_TO_WIN_BEST

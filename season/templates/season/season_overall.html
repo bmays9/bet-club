@@ -7,78 +7,127 @@
 
 {% include "season/_season_header.html" %}
 
-<!-- Game Summary -->
-{% if overall %}
-<div class="table-responsive">
-    <table class="table table-sm small-font table-striped table-bordered mt-3 text-center">
-        <thead class="table-dark">
-            <tr class="table-primary">
-                <th>PL</th>
-                <th>CH</th>
-                <th>L1</th>
-                <th>L2</th>
-                <th>Player</th>
-                <th>Total Points</th>
-                <th>Money</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in overall %}
-            {% with username=player.player_game__user__username %}
-            <tr>
-                {# League ranks with icons #}
-                <td>
-                    {% with rank=league_ranks|get_item:player.username|get_item:"Premier League" %}
-                    {% if rank %}
-                    <i class="bi bi-trophy-fill text-warning"></i> {{ rank }}
+{% if open_games %}
+<div class="mt-3">
+    {% for og in open_games %}
+    {% if og.is_creator %}
+    <div class="card mb-2 border-primary">
+        {% else %}
+        <div class="card mb-2 border-secondary">
+            {% endif %}
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <strong>{{ og.game.name }}</strong>
+                    {% if og.game.status == "draft" %}
+                    <span class="badge bg-primary ms-2">Draft in Progress</span>
                     {% else %}
-                    -
+                    <span class="badge bg-warning text-dark ms-2">Setting Up</span>
                     {% endif %}
-                    {% endwith %}
-                </td>
-                <td>
-                    {% with rank=league_ranks|get_item:player.username|get_item:"Championship" %}
-                    {% if rank %}
-                    <i class="bi bi-award-fill text-secondary"></i> {{ rank }}
+                    <span class="text-muted small ms-2">{{ og.num_players }} player(s)</span>
+                </div>
+                <div class="d-flex gap-1 flex-wrap justify-content-end">
+                    {% if og.game.status == "draft" %}
+                    <a href="{% url 'season_draft' og.game.id %}" class="btn btn-primary btn-sm">Go to Draft</a>
+                    {% elif og.is_creator %}
+                    <a href="{% url 'season_edit_draft_date' og.game.id %}" class="btn btn-outline-primary btn-sm">Draft Date</a>
+                    <a href="{% url 'season_edit_handicaps' og.game.id %}" class="btn btn-outline-secondary btn-sm">
+                        Handicaps{% if og.missing_handicaps %} <span class="badge bg-danger">!</span>{% endif %}
+                    </a>
+                    <a href="{% url 'season_manage_draft_order' og.game.id %}" class="btn btn-outline-success btn-sm">Draft Order</a>
+                    {% elif not og.is_member %}
+                    <a href="{% url 'season_join_game' og.game.id %}" class="btn btn-success btn-sm">Join</a>
                     {% else %}
-                    -
+                    <span class="badge bg-success">Joined</span>
                     {% endif %}
-                    {% endwith %}
-                </td>
-                <td>
-                    {% with rank=league_ranks|get_item:player.username|get_item:"League One" %}
-                    {% if rank %}
-                    <i class="bi bi-star-fill text-info"></i> {{ rank }}
-                    {% else %}
-                    -
-                    {% endif %}
-                    {% endwith %}
-                </td>
-                <td>
-                    {% with rank=league_ranks|get_item:player.username|get_item:"League Two" %}
-                    {% if rank %}
-                    <i class="bi bi-star text-muted"></i> {{ rank }}
-                    {% else %}
-                    -
-                    {% endif %}
-                    {% endwith %}
-                </td>
+                </div>
+            </div>
+            {% if og.missing_handicaps %}
+            <div class="card-body py-2">
+                <p class="text-danger small mb-0">Handicaps missing for: {{ og.missing_handicaps|join:", " }}</p>
+            </div>
+            {% endif %}
+            {% if og.game.draft_date %}
+            <div class="card-footer py-1 small text-muted">Draft: {{ og.game.draft_date|date:"D d M Y H:i" }}</div>
+            {% else %}
+            <div class="card-footer py-1 small text-warning">Draft date not set</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-                {# Player name, total points, money #}
-                <td>{{ player.username }}</td>
-                <td>{{ player.total_points }}</td>
-                <td>&pound;{{ player.net_total|floatformat:2 }}</td>
-            </tr>
-            {% endwith %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <!-- Game Summary -->
+    {% if overall %}
+    <div class="table-responsive">
+        <table class="table table-sm small-font table-striped table-bordered mt-3 text-center">
+            <thead class="table-dark">
+                <tr class="table-primary">
+                    <th>PL</th>
+                    <th>CH</th>
+                    <th>L1</th>
+                    <th>L2</th>
+                    <th>Player</th>
+                    <th>Total Points</th>
+                    <th>Money</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in overall %}
+                {% with username=player.player_game__user__username %}
+                <tr>
+                    {# League ranks with icons #}
+                    <td>
+                        {% with rank=league_ranks|get_item:player.username|get_item:"Premier League" %}
+                        {% if rank %}
+                        <i class="bi bi-trophy-fill text-warning"></i> {{ rank }}
+                        {% else %}
+                        -
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% with rank=league_ranks|get_item:player.username|get_item:"Championship" %}
+                        {% if rank %}
+                        <i class="bi bi-award-fill text-secondary"></i> {{ rank }}
+                        {% else %}
+                        -
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% with rank=league_ranks|get_item:player.username|get_item:"League One" %}
+                        {% if rank %}
+                        <i class="bi bi-star-fill text-info"></i> {{ rank }}
+                        {% else %}
+                        -
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% with rank=league_ranks|get_item:player.username|get_item:"League Two" %}
+                        {% if rank %}
+                        <i class="bi bi-star text-muted"></i> {{ rank }}
+                        {% else %}
+                        -
+                        {% endif %}
+                        {% endwith %}
+                    </td>
 
-<p class="text-muted mt-2">As of: {{ latest_time|date:"Y-m-d H:i" }}</p>
+                    {# Player name, total points, money #}
+                    <td>{{ player.username }}</td>
+                    <td>{{ player.total_points }}</td>
+                    <td>&pound;{{ player.net_total|floatformat:2 }}</td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-{% else %}
-<p>No data available yet.</p>
-{% endif %}
+    <p class="text-muted mt-2">As of: {{ latest_time|date:"Y-m-d H:i" }}</p>
 
-{% endblock content %}
+    {% else %}
+    <p>No data available yet.</p>
+    {% endif %}
+
+    {% endblock content %}
