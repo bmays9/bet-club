@@ -16,7 +16,6 @@ from decimal import Decimal
 import json
 from datetime import date, datetime
 from player_messages.utils import create_message
-from updater.utils import maybe_update
 
 
 LEAGUE_ORDER = {
@@ -198,10 +197,6 @@ class GameDetailView(DetailView):
     model = GameInstance
     template_name = "score_predict/game_detail.html"
     context_object_name = "game"
-
-    def dispatch(self, request, *args, **kwargs):
-        maybe_update()
-        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

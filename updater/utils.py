@@ -4,11 +4,9 @@ from updater.models import UpdateTracker, LeagueUpdateTracker
 from score_predict.models import Fixture, GameInstance, GameTemplate
 from season.models import League
 from django.core.management import call_command
-from django.utils import timezone
 from django.utils.timezone import now
 from datetime import timedelta
 from django.db.models import Q
-from django.core.management import call_command
 from django.core.management.base import CommandError
 import traceback
 
@@ -64,3 +62,13 @@ def maybe_update():
 
     # --- Golf leaderboard: once daily for in-progress tournaments ---
     maybe_update_leaderboard()
+
+    # --- Season monthly prize: check if a calendar month just ended ---
+    try:
+        from season.utils.season_helpers import should_mark_month_end
+        from django.utils.timezone import now as tz_now
+        if should_mark_month_end(tz_now()):
+            call_command("finalise_monthly_winners", verbosity=0)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"[season] monthly prize check failed: {e}")

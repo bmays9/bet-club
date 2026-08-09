@@ -78,24 +78,26 @@
             {% endif %}
 
             {% for league_name, fixtures in fixture_list.items %}
-            <div class="card mb-2">
+            <div class="card mb-2 league-block"
+                 data-league="{{ league_name }}"
+                 data-fixture-count="{{ fixtures|length }}"
+                 data-valid="pending">
                 <div class="card-header py-2 d-flex align-items-center"
                      style="cursor:pointer;"
                      data-bs-toggle="collapse"
                      data-bs-target="#league-{{ forloop.counter }}">
                     <span class="fw-bold flex-grow-1">{{ league_name }}</span>
+                    <span class="league-status small me-2"></span>
                     <span class="text-muted small me-3">{{ fixtures|length }} fixtures</span>
-                    <span class="text-center small" style="width:30px;">H</span>
-                    <span class="text-center small" style="width:30px;">A</span>
                 </div>
                 <div id="league-{{ forloop.counter }}"
                      class="collapse show">
                     <div class="card-body p-0">
                         {% for fixture in fixtures %}
                         {% if fixture.status_code == 100 %}
-                        <div class="d-flex align-items-center px-3 py-2 border-bottom small-font bg-light">
+                        <div class="d-flex align-items-center px-3 py-2 border-bottom small-font bg-light fixture-item" data-fixture-id="{{ fixture.id }}">
                             {% else %}
-                            <div class="d-flex align-items-center px-3 py-2 border-bottom small-font">
+                            <div class="d-flex align-items-center px-3 py-2 border-bottom small-font fixture-item" data-fixture-id="{{ fixture.id }}">
                                 {% endif %}
 
                                 <!-- Date + teams -->
@@ -189,49 +191,6 @@
         </div>
 
 
-        <style>
-            .team-swatch {
-                display: inline-block;
-                width: 10px;
-                height: 10px;
-                border-radius: 2px;
-                flex-shrink: 0;
-                vertical-align: middle;
-            }
-            /* 3-column grid: home | score | away */
-            .fixture-row {
-                display: grid;
-                grid-template-columns: 1fr 52px 1fr;
-                align-items: center;
-                gap: 4px;
-            }
-
-            .fixture-home {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                justify-content: flex-start;
-                overflow: hidden;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-            }
-
-            .fixture-away {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                justify-content: flex-end;
-                overflow: hidden;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-                text-align: right;
-            }
-
-            .fixture-score {
-                text-align: center;
-                flex-shrink: 0;
-            }
-        </style>
 
         {% endblock content %}
 

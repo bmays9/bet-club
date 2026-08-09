@@ -18,10 +18,10 @@ HEADERS = {
 }
 
 ENGLISH_LEAGUES = {
-    "Premier League": {"short_name": "EPL", "tournament_id": 17, "season_id": 76986},
-    "Championship": {"short_name": "ECH", "tournament_id": 18, "season_id": 77347},
-    "League One": {"short_name": "EL1", "tournament_id": 24, "season_id": 77352},
-    "League Two": {"short_name": "EL2", "tournament_id": 25, "season_id": 77351},
+    "Premier League": {"short_name": "EPL", "tournament_id": 17, "season_id": 96668},
+    "Championship": {"short_name": "ECH", "tournament_id": 18, "season_id": 97037},
+    "League One": {"short_name": "EL1", "tournament_id": 24, "season_id": 97077},
+    "League Two": {"short_name": "EL2", "tournament_id": 25, "season_id": 97078},
 }
 
 ENGLISH_LEAGUE_IDS = {v["tournament_id"] for v in ENGLISH_LEAGUES.values()}

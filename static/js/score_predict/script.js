@@ -1,119 +1,142 @@
-console.log("Script loaded");
+console.log("Score Predict script loaded");
 
 document.addEventListener("DOMContentLoaded", function () {
-  // ===== Accordion score -> prediction color logic =====
-  const accordionItems = document.querySelectorAll(".accordion-item");
-
-  accordionItems.forEach(item => {
-    const inputs = item.querySelectorAll(".score-input");
-    inputs.forEach(input => {
-      input.addEventListener("input", () => handlePredictionChange(item));
-    });
-  });
-
-  function handlePredictionChange(leagueBlock) {
-    const fixtureGroups = {};
-    const inputs = leagueBlock.querySelectorAll(".score-input");
-
-    // Gather scores per fixture
-    inputs.forEach(input => {
-      const fixtureId = input.dataset.fixtureId;
-      const team = input.dataset.team;
-      const value = input.value;
-
-      if (!fixtureGroups[fixtureId]) fixtureGroups[fixtureId] = {};
-      fixtureGroups[fixtureId][team] = value;
-    });
-
-    // Count predictions
-    const predictionCount = { H: 0, D: 0, A: 0 };
-
-    Object.values(fixtureGroups).forEach(({ home, away }) => {
-      if (home !== undefined && away !== undefined && home !== '' && away !== '') {
-        const h = parseInt(home);
-        const a = parseInt(away);
-        if (h > a) predictionCount.H++;
-        else if (h < a) predictionCount.A++;
-        else predictionCount.D++;
-      }
-    });
-
-    // Reset all prediction cells in this league
-    leagueBlock.querySelectorAll(".prediction-cell").forEach(cell => {
-      cell.classList.remove("green", "red");
-    });
-
-    // Update colors based on counts
-    ["H", "D", "A"].forEach(result => {
-      const count = predictionCount[result];
-      const cells = leagueBlock.querySelectorAll(`.prediction-cell[data-result="${result}"]`);
-      if (count === 1) {
-        cells.forEach(c => c.classList.add("green"));
-      } else if (count > 1) {
-        cells.forEach(c => c.classList.add("red"));
-      }
-    });
+  const fixtureContainer = document.getElementById("fixture-container");
+  if (!fixtureContainer) {
+    console.log("No fixture container on this page — nothing to wire up.");
+    return;
   }
 
-  // ===== Submit button handler (only if it exists) =====
-  const submitBtn = document.getElementById("submit-scores");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", function () {
-      if (!allLeaguesValid()) {
-        alert("Each league must have exactly one prediction for H, D, and A.");
+  const leagueBlocks = fixtureContainer.querySelectorAll(".league-block");
+  const submitButtons = document.querySelectorAll(".submit-scores-btn");
+
+  // ===== Result helper =====
+  function getFixtureResult(homeVal, awayVal) {
+    if (homeVal === "" || awayVal === "" || homeVal === undefined || awayVal === undefined) {
+      return null;
+    }
+    const h = parseInt(homeVal, 10);
+    const a = parseInt(awayVal, 10);
+    if (isNaN(h) || isNaN(a)) return null;
+    if (h > a) return "H";
+    if (h < a) return "A";
+    return "D";
+  }
+
+  // ===== Per-league validation =====
+  // Rule:
+  //  - League has >= 3 fixtures listed -> exactly 1 Home win, 1 Away win, 1 Draw. No more, no fewer.
+  //  - League has < 3 fixtures listed  -> no predictions allowed at all.
+  function validateLeague(block) {
+    const fixtureCount = parseInt(block.dataset.fixtureCount, 10) || 0;
+    const fixtureItems = block.querySelectorAll(".fixture-item");
+
+    const results = [];
+    fixtureItems.forEach(item => {
+      const homeInput = item.querySelector('.score-input[data-team="home"]');
+      const awayInput = item.querySelector('.score-input[data-team="away"]');
+      if (!homeInput || !awayInput) return;
+      const result = getFixtureResult(homeInput.value, awayInput.value);
+      if (result) results.push(result);
+    });
+
+    let valid = true;
+    let message = "";
+
+    if (fixtureCount < 3) {
+      if (results.length > 0) {
+        valid = false;
+        message = "No predictions allowed (fewer than 3 fixtures)";
+      }
+    } else {
+      const counts = { H: 0, D: 0, A: 0 };
+      results.forEach(r => counts[r]++);
+      const total = results.length;
+
+      if (total < 3) {
+        const remaining = 3 - total;
+        valid = false;
+        message = `Need ${remaining} more pick${remaining === 1 ? "" : "s"} (1 Home, 1 Away, 1 Draw)`;
+      } else if (total > 3 || counts.H !== 1 || counts.D !== 1 || counts.A !== 1) {
+        valid = false;
+        message = "Must be exactly 1 Home win, 1 Away win, 1 Draw";
+      } else {
+        message = "\u2713 Complete";
+      }
+    }
+
+    block.dataset.valid = valid ? "true" : "false";
+
+    const statusEl = block.querySelector(".league-status");
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle("text-danger", !valid);
+      statusEl.classList.toggle("text-success", valid && message !== "");
+    }
+
+    return valid;
+  }
+
+  function validateAll() {
+    let allValid = true;
+    leagueBlocks.forEach(block => {
+      if (!validateLeague(block)) allValid = false;
+    });
+
+    submitButtons.forEach(btn => {
+      btn.disabled = !allValid;
+      btn.classList.toggle("disabled", !allValid);
+    });
+
+    return allValid;
+  }
+
+  // Re-validate on every score change
+  fixtureContainer.querySelectorAll(".score-input").forEach(input => {
+    input.addEventListener("input", validateAll);
+  });
+
+  // Run once on load so buttons start in the correct (disabled) state
+  validateAll();
+
+  // ===== Submit handling (one button per group, sharing the same predictions) =====
+  submitButtons.forEach(btn => {
+    btn.addEventListener("click", function () {
+      if (!validateAll()) {
+        alert("Each league needs exactly one Home win, one Away win, and one Draw prediction. Leagues with fewer than 3 fixtures can't have any predictions.");
         return;
       }
 
-     // Disable button to prevent duplicate clicks
-     submitBtn.disabled = true;
-     submitBtn.textContent = "Submitting...";
+      const groupId = btn.dataset.groupId;
+      const templateId = btn.dataset.templateId;
+      const originalText = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
 
       const predictions = [];
-      const scoreInputs = document.querySelectorAll(".score-input");
-      const groupedByFixture = {};
+      fixtureContainer.querySelectorAll(".fixture-item").forEach(item => {
+        const fixtureId = item.dataset.fixtureId;
+        const homeInput = item.querySelector('.score-input[data-team="home"]');
+        const awayInput = item.querySelector('.score-input[data-team="away"]');
+        if (!homeInput || !awayInput) return;
 
-      const groupSelect = document.getElementById("sp-group-select"); // select of groups
-      const fixtureContainer = document.getElementById("fixture-container");
-
-      if (!groupSelect || !fixtureContainer) {
-        console.error("Required DOM elements not found");
-        return;
-      }
-
-      const selectedGroupId = groupSelect.value;
-      const gameTemplateId = fixtureContainer.dataset.templateId;
-
-      // Build grouped scores
-      scoreInputs.forEach(input => {
-        const fixtureId = input.dataset.fixtureId;
-        const team = input.dataset.team;
-        const score = parseInt(input.value);
-
-        if (!groupedByFixture[fixtureId]) {
-          groupedByFixture[fixtureId] = {};
-        }
-        groupedByFixture[fixtureId][team] = score;
-      });
-
-      for (const [fixtureId, scores] of Object.entries(groupedByFixture)) {
-        if (!isNaN(scores.home) && !isNaN(scores.away)) {
+        const h = parseInt(homeInput.value, 10);
+        const a = parseInt(awayInput.value, 10);
+        if (!isNaN(h) && !isNaN(a)) {
           predictions.push({
             fixture_id: fixtureId,
-            home_score: scores.home,
-            away_score: scores.away
+            home_score: h,
+            away_score: a,
           });
         }
-      }
+      });
 
       const payload = {
-        group_id: selectedGroupId,
-        game_template_id: gameTemplateId,
-        predictions: predictions
+        group_id: groupId,
+        game_template_id: templateId,
+        predictions: predictions,
       };
-
-      console.log("Submitting predictions JSON:", JSON.stringify(payload));
-      const jsonCheck = isJsonString(JSON.stringify(payload));
-      console.log("JSON Check:", jsonCheck);
 
       fetch("/scores/submit-predictions/", {
         method: "POST",
@@ -121,7 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "Content-Type": "application/json",
           "X-CSRFToken": getCookie("csrftoken"),
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
         .then(response => response.json())
         .then(data => {
@@ -130,41 +153,20 @@ document.addEventListener("DOMContentLoaded", function () {
             window.location.reload();
           } else {
             alert("Failed to submit: " + (data.error || "Unknown error"));
+            btn.disabled = false;
+            btn.textContent = originalText;
           }
+        })
+        .catch(err => {
+          console.error("Error submitting predictions:", err);
+          alert("Something went wrong submitting your predictions.");
+          btn.disabled = false;
+          btn.textContent = originalText;
         });
     });
-  } else {
-    console.log("No submit button found — user may have already entered.");
-  }
-
-  // ===== Helpers (declared inside DOMContentLoaded for safety) =====
-  function allLeaguesValid() {
-    const leagueBlocks = document.querySelectorAll(".accordion-item");
-
-    for (const leagueBlock of leagueBlocks) {
-      const resultTypes = ["H", "D", "A"];
-      for (const result of resultTypes) {
-        const cells = leagueBlock.querySelectorAll(`.prediction-cell[data-result="${result}"]`);
-        let greenCount = 0;
-
-        cells.forEach(cell => {
-          if (cell.classList.contains("green")) {
-            greenCount++;
-          }
-        });
-
-        // If not exactly one green cell per result in this league, fail validation
-        if (greenCount !== 1) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
+  });
 
   function getCookie(name) {
-    // Django requires CSRF tokens for POST requests made via JavaScript.
     let cookieValue = null;
     if (document.cookie && document.cookie !== "") {
       const cookies = document.cookie.split(";");
@@ -178,64 +180,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     return cookieValue;
   }
-
-  function isJsonString(str) {
-    try {
-      JSON.parse(str);
-    } catch (e) {
-      return false;
-    }
-    return true;
-  }
-
-  // ===== Game summary loader (live card) =====
-  const groupSelect = document.getElementById("sp-group-select");
-
-  function loadGameSummary(groupId, templateSlug) {
-  const summaryEl = document.getElementById("game-summary");
-  const submitBtn = document.getElementById("submit-scores");
-  if (!summaryEl || !submitBtn) return;
-
-  fetch(`/scores/game-summary/${groupId}/${templateSlug}/`)
-    .then(res => res.json())
-    .then(data => {
-      summaryEl.innerHTML = `
-        <div class="card mb-3 text-white bg-info shadow-sm border rounded" style="max-width: 25rem;">
-          <div class="card-header">${data.group_name}</div>
-          <div class="card-body">
-            <p class="card-text">Entries: ${data.player_count}</p>
-            <p class="card-text">Prize Pot: £${data.pot}</p>
-            <p class="card-text">Status: ${data.has_entered ? "Entered" : "Not yet entered"}</p>
-            ${
-              data.has_entered
-                ? `<a href="/scores/game/${data.game_id}/" class="btn btn-primary">View Game</a>`
-                : ""
-            }
-          </div>
-        </div>
-      `;
-
-      // Show or hide submit button
-      if (data.has_entered) {
-        submitBtn.classList.add("d-none");
-      } else {
-        submitBtn.classList.remove("d-none");
-      }
-    })
-    .catch(err => console.error("Error loading game summary:", err));
-}
-
-
-  if (groupSelect) {
-    const slugEl = document.getElementById("game-template-slug");
-    const templateSlug = slugEl ? slugEl.value : "";
-
-    // Load for the initially selected group at page load
-    loadGameSummary(groupSelect.value, templateSlug);
-
-    // Load again when user changes dropdown
-    groupSelect.addEventListener("change", function () {
-      loadGameSummary(this.value, templateSlug);
-    });
-  }
-}); // <-- closes DOMContentLoaded
+});

@@ -99,18 +99,21 @@ class LeagueUpdateTracker(models.Model):
     def should_update_tables(self, fixtures, interval_minutes=120):
         """
         Only fetch standings if:
-        - Fixtures have finished since the last standings check
+        - At least one fixture has finished (status_code=100)
         - AND enough time has passed since last check
-        Never calls API if no new results since last table fetch.
+        Never calls API if no finished fixtures exist.
         """
-        if not self.last_tables_check:
-            # Only fetch if any fixture has ever finished
-            return fixtures.filter(status_code=100).exists()
+        if not fixtures.filter(status_code=100).exists():
+            return False
 
-        # Only update if there are newly finished fixtures since last check
+        if not self.last_tables_check:
+            return True
+
+        # Only update if a fixture finished AFTER the last standings check
+        # Use fixture date as proxy since we may not have updated_at
         new_results = fixtures.filter(
             status_code=100,
-            updated_at__gte=self.last_tables_check,
+            date__gte=self.last_tables_check,
         ).exists()
 
         if not new_results:
