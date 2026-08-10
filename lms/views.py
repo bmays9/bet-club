@@ -249,14 +249,66 @@ def create_game(request):
     if request.method == "POST":
         form = CreateLMSGameForm(request.POST, user=request.user)
         if form.is_valid():
-            game = form.save()
+            game = form.save(commit=False)
+            game.save()
+
             create_message(
                 code="LM-NEW",
                 context={"User": request.user, "league": game.get_league_display()},
                 group=game.group,
             )
-            # Round 1 will be created by update_lms_results
-            messages.success(request, f"Game created! Round 1 will be set up automatically.")
+
+            today = now().date()
+            created_round = None
+
+            # Look ahead up to 30 days for first valid fixture block
+            for days_ahead in range(0, 30):
+                current_day = today + timedelta(days=days_ahead)
+                weekday = current_day.weekday()
+
+                if weekday == 4:   # Friday -> Fri-Mon block
+                    block_start = current_day
+                    block_end = block_start + timedelta(days=3)
+                elif weekday == 1:  # Tuesday -> Tue-Thu block
+                    block_start = current_day
+                    block_end = block_start + timedelta(days=2)
+                else:
+                    continue
+
+                fixtures = Fixture.objects.filter(
+                    league_short_name=game.league,
+                    date__date__range=(block_start, block_end),
+                ).order_by("date")
+
+
+                if fixtures.count() >= 7:
+                    created_round = LMSRound.objects.create(
+                        game=game,
+                        round_number=1,
+                        start_date=fixtures.first().date,
+                        end_date=fixtures.last().date,
+                    )
+                    created_round.fixtures.set(fixtures)
+
+                    auto_picks = get_auto_pick_teams_for_round(
+                        game, created_round, fixtures, count=4
+                    )
+                    if auto_picks:
+                        created_round.auto_pick_team1 = auto_picks[0]
+                        created_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
+                        created_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
+                        created_round.save()
+                    break
+
+            if not created_round:
+                messages.warning(
+                    request,
+                    "Game created. No fixture block found yet -- "
+                    "Round 1 will be created automatically before the next gameweek."
+                )
+            else:
+                messages.success(request, "Game created with Round 1 ready.")
+
             return redirect("lms_dashboard")
     else:
         form = CreateLMSGameForm(user=request.user)
