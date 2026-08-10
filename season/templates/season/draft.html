@@ -46,7 +46,7 @@
                         </td>
                         <td>
                             {% if s.handicap %}
-                            <span class="badge bg-info text-dark">{{ s.handicap.team.name }}</span>
+                            <span class="badge bg-info text-white">{{ s.handicap.team.name }}</span>
                             {% elif c.handicap %}
                             <span class="text-muted small picked-tooltip" style="cursor:help;"
                                   data-bs-toggle="tooltip" data-bs-placement="top"
@@ -88,6 +88,13 @@
             {% endif %}
         </div>
         <div class="card-body p-2">
+            {% if not is_my_turn %}
+            <div class="alert alert-info py-1 px-2 small mb-2">
+                <i class="bi bi-arrow-clockwise"></i>
+                Auto-refreshing every 10 seconds&hellip;
+                <span id="refresh-countdown" class="fw-bold ms-1">10</span>s
+            </div>
+            {% endif %}
             {% if current_slot %}
             <p class="mb-1 small">
                 <strong>Next:</strong>
@@ -127,7 +134,7 @@
                     {% elif item.pick.pick_type == "lose" %}
                     <span class="text-danger fw-bold">{{ item.pick.team.name }}</span> to LOSE
                     {% else %}
-                    <span class="text-info fw-bold">{{ item.pick.team.name }}</span> HANDICAP
+                    <span class="fw-bold" style="color:#087990;">{{ item.pick.team.name }}</span> HANDICAP
                     {% endif %}
                     <span class="text-muted">({{ item.slot.game_league.league.name }})</span>
                     {% else %}
@@ -177,7 +184,7 @@
                             {% if t.win_pick.pick_type == "win" %}
                             <span class="badge bg-success">{{ t.win_pick.player_game.user.username }}</span>
                             {% else %}
-                            <span class="badge bg-info text-dark">{{ t.win_pick.player_game.user.username }} (H)</span>
+                            <span class="badge bg-info text-white">{{ t.win_pick.player_game.user.username }} (H)</span>
                             {% endif %}
                             {% else %}
                             <span class="text-muted">-</span>
@@ -260,34 +267,60 @@
 </form>
 
 <script>
-    function confirmPick(teamId, pickType, teamName, leagueName) {
-        const labels = { win: "WIN", lose: "LOSE", handicap: "HANDICAP" };
-        const colours = { win: "text-success", lose: "text-danger", handicap: "text-info" };
+function confirmPick(teamId, pickType, teamName, leagueName) {
+    const labels = {win: "WIN", lose: "LOSE", handicap: "HANDICAP"};
+    const colours = {win: "text-success", lose: "text-danger", handicap: "text-info"};
 
-        document.getElementById("confirmTeamName").textContent = teamName;
-        const typeEl = document.getElementById("confirmPickType");
-        typeEl.textContent = labels[pickType] || pickType;
-        typeEl.className = "fw-bold " + (colours[pickType] || "");
-        document.getElementById("confirmLeague").textContent = leagueName;
-        document.getElementById("pickTeamId").value = teamId;
-        document.getElementById("pickType").value = pickType;
+    document.getElementById("confirmTeamName").textContent = teamName;
+    const typeEl = document.getElementById("confirmPickType");
+    typeEl.textContent = labels[pickType] || pickType;
+    typeEl.className = "fw-bold " + (colours[pickType] || "");
+    document.getElementById("confirmLeague").textContent = leagueName;
+    document.getElementById("pickTeamId").value = teamId;
+    document.getElementById("pickType").value = pickType;
 
-        const modal = new bootstrap.Modal(document.getElementById("pickModal"));
-        modal.show();
+    const modal = new bootstrap.Modal(document.getElementById("pickModal"));
+    modal.show();
 
-        document.getElementById("confirmYesBtn").onclick = function () {
-            modal.hide();
-            document.getElementById("pickForm").submit();
-        };
-    }
-    // Initialise Bootstrap tooltips
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".picked-tooltip").forEach(function (el) {
-            new bootstrap.Tooltip(el, {
-                trigger: "hover",
-                html: false,
-            });
+    document.getElementById("confirmYesBtn").onclick = function() {
+        modal.hide();
+        document.getElementById("pickForm").submit();
+    };
+}
+// Initialise Bootstrap tooltips
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".picked-tooltip").forEach(function(el) {
+        new bootstrap.Tooltip(el, {
+            trigger: "hover",
+            html: false,
         });
     });
+
+    // Auto-refresh when it's not the current user's turn
+    // Stops refreshing when the modal is open (user is mid-pick)
+    var isMyTurn = {{ is_my_turn|yesno:"true,false" }};
+    var modalOpen = false;
+
+    document.getElementById("pickModal").addEventListener("show.bs.modal", function() {
+        modalOpen = true;
+    });
+    document.getElementById("pickModal").addEventListener("hidden.bs.modal", function() {
+        modalOpen = false;
+    });
+
+    if (!isMyTurn) {
+        var countdown = 10;
+        var countEl = document.getElementById("refresh-countdown");
+        setInterval(function() {
+            if (!modalOpen) {
+                countdown--;
+                if (countEl) countEl.textContent = countdown;
+                if (countdown <= 0) {
+                    window.location.reload();
+                }
+            }
+        }, 1000);
+    }
+});
 </script>
 {% endblock %}
