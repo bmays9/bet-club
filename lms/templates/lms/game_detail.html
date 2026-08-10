@@ -75,16 +75,50 @@
 
     {% if round %}
     <!-- Auto-pick info -->
-    {% if game.no_pick_rule == 'random_team' and round.auto_pick_team %}
-    <div class="alert alert-info small">
-        <strong>Auto-pick for Round {{ round.round_number }}:</strong>
-        {{ round.auto_pick_team }}
-        {% if round.auto_pick_team1 %}
-        &middot; Postponed backups:
-        {{ round.auto_pick_team1 }}
-        {% if round.auto_pick_team2 %}, {{ round.auto_pick_team2 }}{% endif %}
-        {% if round.auto_pick_team3 %}, {{ round.auto_pick_team3 }}{% endif %}
-        {% endif %}
+    {% if round.auto_pick_team1 or round.auto_pick_team %}
+    <div class="card mb-3 border-info">
+        <div class="card-header bg-info text-white py-2 small fw-bold">
+            Round {{ round.round_number }} Auto-Pick Settings
+        </div>
+        <div class="card-body py-2">
+            <div class="row small g-2">
+
+                {% if round.round_number > 1 and round.auto_pick_team %}
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning text-dark">Default</span>
+                        <span>
+                            <strong>{{ round.auto_pick_team }}</strong>
+                            <span class="text-muted ms-1">
+                                &mdash; used if you don't make a pick
+                            </span>
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if round.auto_pick_team1 %}
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary">Postponed backups</span>
+                        <span>
+                            <strong>{{ round.auto_pick_team1 }}</strong>
+                            {% if round.auto_pick_team2 %}
+                            &middot; <strong>{{ round.auto_pick_team2 }}</strong>
+                            {% endif %}
+                            {% if round.auto_pick_team3 %}
+                            &middot; <strong>{{ round.auto_pick_team3 }}</strong>
+                            {% endif %}
+                            <span class="text-muted ms-1">
+                                &mdash; used if your pick is postponed
+                            </span>
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
     </div>
     {% endif %}
 
