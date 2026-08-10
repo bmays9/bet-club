@@ -36,22 +36,34 @@
                         <td>
                             {% if s.win %}
                             <span class="badge bg-success">{{ s.win.team.name }}</span>
+                            {% elif c.win %}
+                            <span class="text-muted small picked-tooltip" style="cursor:help;"
+                                  data-bs-toggle="tooltip" data-bs-placement="top"
+                                  data-bs-title="{{ c.win_tooltip }}">{{ c.win }} picked</span>
                             {% else %}
-                            <span class="text-muted small">{{ c.win }} picked</span>
+                            <span class="text-muted small">-</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if s.handicap %}
                             <span class="badge bg-info text-dark">{{ s.handicap.team.name }}</span>
+                            {% elif c.handicap %}
+                            <span class="text-muted small picked-tooltip" style="cursor:help;"
+                                  data-bs-toggle="tooltip" data-bs-placement="top"
+                                  data-bs-title="{{ c.handicap_tooltip }}">{{ c.handicap }} picked</span>
                             {% else %}
-                            <span class="text-muted small">{{ c.handicap }} picked</span>
+                            <span class="text-muted small">-</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if s.lose %}
                             <span class="badge bg-danger">{{ s.lose.team.name }}</span>
+                            {% elif c.lose %}
+                            <span class="text-muted small picked-tooltip" style="cursor:help;"
+                                  data-bs-toggle="tooltip" data-bs-placement="top"
+                                  data-bs-title="{{ c.lose_tooltip }}">{{ c.lose }} picked</span>
                             {% else %}
-                            <span class="text-muted small">{{ c.lose }} picked</span>
+                            <span class="text-muted small">-</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -197,7 +209,7 @@
                             <span class="text-muted">-</span>
                             {% endif %}
                             {% elif draft_phase == "handicap" %}
-                            {% if t.avail_for_win %}
+                            {% if t.avail_for_hcp %}
                             <button type="button" class="btn btn-info btn-sm py-0"
                                     onclick="confirmPick('{{ t.team.id }}', 'handicap', '{{ t.team.name }}', '{{ lt.league.name }}')">
                                 H
@@ -268,5 +280,14 @@
             document.getElementById("pickForm").submit();
         };
     }
+    // Initialise Bootstrap tooltips
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".picked-tooltip").forEach(function (el) {
+            new bootstrap.Tooltip(el, {
+                trigger: "hover",
+                html: false,
+            });
+        });
+    });
 </script>
 {% endblock %}

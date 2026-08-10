@@ -1030,6 +1030,7 @@ def season_draft(request, game_id):
             my_league_picks = [p for p in my_picks if p.game_league_id == gl.id]
             my_pick_types = {p.pick_type for p in my_league_picks}
 
+            avail_for_hcp = False
             if is_my_turn and draft.phase == "win_lose":
                 # Can pick WIN if not yet picked win in this league
                 can_pick_win = PickType.WIN not in my_pick_types
@@ -1044,9 +1045,10 @@ def season_draft(request, game_id):
                 available = avail_for_win or avail_for_lose
             elif is_my_turn and draft.phase == "handicap":
                 can_pick_hcp = PickType.HANDICAP not in my_pick_types
-                available = can_pick_hcp and get_available_teams(
+                avail_for_hcp = can_pick_hcp and get_available_teams(
                     draft, gl, PickType.HANDICAP, player_game
                 ).filter(id=row.team.id).exists()
+                available = avail_for_hcp
                 avail_for_win = False
                 avail_for_lose = False
             else:
@@ -1063,6 +1065,7 @@ def season_draft(request, game_id):
                 "available": available,
                 "avail_for_win": avail_for_win,
                 "avail_for_lose": avail_for_lose,
+                "avail_for_hcp": avail_for_hcp if draft.phase == "handicap" else False,
             })
 
         # Sort by handicap value (0 first, then ascending), then position
@@ -1089,16 +1092,33 @@ def season_draft(request, game_id):
             "lose": next((p for p in my_picks if p.game_league_id == gl.id and p.pick_type == PickType.LOSE), None),
         }
 
-    # --- Count picks per category per league ---
+    # --- Count picks per category per league + tooltip detail ---
     pick_counts = {}
     for lg in LEAGUE_ORDER:
         gl = game_leagues.get(lg)
         if not gl:
             continue
+
+        def picks_for(pt):
+            return [p for p in all_picks if p.game_league_id == gl.id and p.pick_type == pt]
+
+        def tooltip(picks):
+            return ", ".join(
+                f"{p.team.name} ({p.player_game.user.username})"
+                for p in picks
+            )
+
+        win_picks_here = picks_for(PickType.WIN)
+        hcp_picks_here = picks_for(PickType.HANDICAP)
+        lose_picks_here = picks_for(PickType.LOSE)
+
         pick_counts[lg] = {
-            "win": sum(1 for p in all_picks if p.game_league_id == gl.id and p.pick_type == PickType.WIN),
-            "handicap": sum(1 for p in all_picks if p.game_league_id == gl.id and p.pick_type == PickType.HANDICAP),
-            "lose": sum(1 for p in all_picks if p.game_league_id == gl.id and p.pick_type == PickType.LOSE),
+            "win": len(win_picks_here),
+            "win_tooltip": tooltip(win_picks_here),
+            "handicap": len(hcp_picks_here),
+            "handicap_tooltip": tooltip(hcp_picks_here),
+            "lose": len(lose_picks_here),
+            "lose_tooltip": tooltip(lose_picks_here),
         }
 
     return render(request, "season/draft.html", {
