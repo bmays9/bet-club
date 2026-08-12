@@ -837,9 +837,22 @@ def manage_draft_order(request, game_id):
     )
     current_order_ids = [do.player_game_id for do in current_order]
 
-    # Track whether randomize has been used since last player joined
-    # Store last_player_count on draft (we'll use a simple approach: compare
-    # num players when order was last randomised vs now)
+    # Add any new players not yet in draft order
+    new_players = [pg for pg in players if pg.id not in current_order_ids]
+    if new_players:
+        next_pos = (max((do.position for do in current_order), default=0)) + 1
+        for pg in new_players:
+            DraftOrder.objects.create(draft=draft, player_game=pg, position=next_pos)
+            next_pos += 1
+        # Refresh order after adding new players
+        current_order = list(
+            DraftOrder.objects.filter(draft=draft)
+            .select_related("player_game__user")
+            .order_by("position")
+        )
+        current_order_ids = [do.player_game_id for do in current_order]
+
+    # Randomize available if no order set yet, or new players joined since last randomize
     can_randomize = (
         draft.randomized_at_count is None
         or draft.randomized_at_count < len(players)
