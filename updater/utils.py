@@ -17,6 +17,7 @@ def maybe_update():
     RESULTS_DELAY_HOURS = 2
 
     results_updated = False
+    tables_updated = False
 
     for league in League.objects.all():
         tracker, _ = LeagueUpdateTracker.objects.get_or_create(league=league)
@@ -49,11 +50,16 @@ def maybe_update():
             call_command("fetch_standings", league_code=league.code, verbosity=0)
             tracker.last_tables_check = timezone.now()
             tracker.save()
+            tables_updated = True
 
     # --- Run these once, after all leagues are processed ---
     if results_updated:
         call_command("update_scores", verbosity=0)
         call_command("update_lms_results", verbosity=0)
+
+    # Season scores only update when standings have changed
+    # Track standings updates separately from results
+    if tables_updated:
         call_command("update_season_scores", verbosity=0)
 
     # --- Golf rankings: once a month ---

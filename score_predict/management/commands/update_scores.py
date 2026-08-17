@@ -62,13 +62,17 @@ def update_scores(stdout=None):
         for prediction in predictions:
             points = calculate_points(prediction, fixture)
             alt_points = calculate_alt_points(prediction, fixture)
-            if prediction.score != points or prediction.alternate_score != alt_points:
-                prediction.score = points
-                prediction.alternate_score = alt_points
-                prediction.save(update_fields=["score", "alternate_score"])
+            # Always update to ensure scores are current
+            prediction.score = points
+            prediction.alternate_score = alt_points
+            prediction.save(update_fields=["score", "alternate_score"])
 
     # Update totals for each player in each active game
-    for game in active_games:
+    # Also recalculate for recently finished games to keep history accurate
+    games_to_score = GameInstance.objects.filter(
+        gameentry__isnull=False
+    ).distinct()
+    for game in games_to_score:
         for entry in GameEntry.objects.filter(game=game):
             totals = Prediction.objects.filter(
                 game_instance=game,
@@ -81,17 +85,17 @@ def update_scores(stdout=None):
             entry.alt_score = totals["alt_total"] or 0
             entry.save(update_fields=["total_score", "alt_score"])
 
-            if stdout:
-                stdout.write(
-                    f"{entry.player.username} in {game}: "
-                    f"{entry.total_score} pts (tie: {entry.alt_score})"
-                )
-
-    check_for_winners(stdout)
+        check_for_winners(stdout)
 
 
 def check_for_winners(stdout=None):
     for game in GameInstance.objects.filter(winners__isnull=True).filter(gameentry__isnull=False).distinct():
+        # Guard: re-check winners haven't been set since query ran (prevent double settlement)
+        game.refresh_from_db()
+        if game.winners.exists():
+            if stdout:
+                stdout.write(f"  {game}: already has winners, skipping")
+            continue
 
         # FIX: was using fixture__game_instance which doesn't exist.
         # Correct path: fixtures linked to this game's template,
