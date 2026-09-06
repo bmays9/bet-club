@@ -28,7 +28,7 @@ def maybe_update():
             pending_fixtures = fixtures.filter(
                 date__lte=timezone.now() - timedelta(hours=RESULTS_DELAY_HOURS)
             ).exclude(
-                status_code__in=[100, 90, 60]
+                status_code__in=[100, 90, 60, 110, 70]
             )
             pending_fixtures = pending_fixtures.exclude(date__gt=now())
 
