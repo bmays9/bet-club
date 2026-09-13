@@ -495,7 +495,9 @@ def prize_summary(request):
             "prize_pool", "prize_pool__league",
             "recipient__user", "winning_pick__team",
         )
-        .order_by("prize_pool__category", "rank")
+        # Positive amounts (prizes) first, negative (penalties) last
+        # Within each group, order by rank
+        .order_by("prize_pool__category", "-amount", "rank")
     )
 
     for payout in payouts_qs:
@@ -507,15 +509,27 @@ def prize_summary(request):
             normalized = getattr(payout.prize_pool, "name", raw_cat) or "Other"
 
         try:
-            if payout.recipient and payout.amount is not None:
-                # Already settled row -- show the actual amount paid out
-                prize_value = abs(payout.amount)
-            elif payout.entry_fee_per_player and num_players:
-                # Per-player: winner gets fee from each OTHER player (num_players - 1)
+            if payout.entry_fee_per_player and num_players:
+                # Per-player prize: fee * (num_players - 1)
                 prize_value = payout.entry_fee_per_player * Decimal(str(max(num_players - 1, 1)))
+            elif (payout.prize_pool.category == "overall"
+                  and payout.rank == 1
+                  and (not payout.amount or payout.amount == 0)):
+                # Overall winner: dynamically sum all penalty amounts
+                prize_value = PrizePayout.objects.filter(
+                    prize_pool=payout.prize_pool,
+                    rank__gt=1,
+                    amount__lt=0,
+                ).aggregate(
+                    total=__import__("django.db.models", fromlist=["Sum"]).Sum("amount")
+                )["total"] or Decimal("0")
+                prize_value = abs(prize_value)
+            elif payout.recipient and payout.amount:
+                # Settled row -- keep sign (negative = penalty, positive = prize)
+                prize_value = payout.amount
             elif payout.amount is not None:
-                # Fixed amount row
-                prize_value = abs(payout.amount)
+                # Config row -- keep sign
+                prize_value = payout.amount
             else:
                 prize_value = None
         except Exception:
@@ -543,7 +557,12 @@ def prize_summary(request):
         grouped[normalized].append(item)
 
     for items in grouped.values():
-        items.sort(key=lambda it: (it["rank"] is None, it["rank"] or 0))
+        # Positive amounts (prizes) first ordered by rank, then negatives (penalties)
+        items.sort(key=lambda it: (
+            1 if (it["payout"].amount is not None and it["payout"].amount < 0) else 0,
+            it["rank"] is None,
+            it["rank"] or 0,
+        ))
 
     for item in grouped.get("Monthly", []):
         closing_date = getattr(item["payout"], "awarded_for_month", None)
@@ -887,9 +906,12 @@ def manage_draft_order(request, game_id):
                 messages.error(request, "Need at least 2 players to start the draft.")
                 return redirect("season_manage_draft_order", game_id=game.id)
             if not current_order:
-                # Auto-set order if not set yet
                 for i, pg in enumerate(players, start=1):
                     DraftOrder.objects.get_or_create(draft=draft, player_game=pg, defaults={"position": i})
+
+            # Sync overall penalties to actual player count before generating slots
+            from season.services.draft import sync_overall_penalties
+            sync_overall_penalties(game)
 
             # Generate all draft slots
             generate_draft_slots(draft)
