@@ -133,6 +133,27 @@ class Command(BaseCommand):
 
             if alive_count == 1:
                 winner_entry = alive.first()
+
+                # Cannot confirm winner until their pick's fixture is decided
+                # The winning player must have WON their last pick -- not just survived
+                winner_picks = round_obj.picks.filter(entry=winner_entry)
+                winner_pick_pending = winner_picks.filter(result="PENDING").exists()
+                winner_pick_won = winner_picks.filter(result="WIN").exists()
+
+                if winner_pick_pending:
+                    self.stdout.write(
+                        f"  Last player standing is {winner_entry.user} "
+                        f"but their pick is still PENDING -- waiting for result"
+                    )
+                    continue
+
+                if not winner_pick_won:
+                    # Their pick didn't win (draw or not yet resolved) -- not a winner yet
+                    self.stdout.write(
+                        f"  Last player {winner_entry.user} pick not yet WON -- skipping"
+                    )
+                    continue
+
                 game.winner = winner_entry.user
                 game.active = False
                 game.save(update_fields=["winner", "active"])
