@@ -195,13 +195,27 @@ def create_season_game(
         category=PrizeCategory.OVERALL,
         active=True,
     )
-    # Winner row -- amount calculated at settle time from penalties collected
+    # Winner row -- prize is sum of all penalties, calculated at display/finalise time
     PrizePayout.objects.create(
         prize_pool=pool_overall,
         rank=1,
-        amount=Decimal("0.00"),  # filled in at finalise time
+        amount=Decimal("0.00"),
     )
+    # Only create penalty rows for actual players (ranks 2 to num_players)
+    # Count players already joined (creator is auto-joined)
+    current_player_count = PlayerGame.objects.filter(game=game).count()
+    # Use current count or a reasonable max - penalties capped at num_players-1
+    # Since more players may join, we create rows based on max expected
+    # but at minimum we need len(ov_penalties) capped at the penalty config
+    # We use the penalty config as the upper bound but note this runs at creation
+    # when only creator has joined -- use leagues count as proxy for expected players
+    # Best approach: create all configured penalties, trim in display if needed
+    # Actually: just create all -- admin can delete extras. But for new games,
+    # cap at num_leagues * 2 as a reasonable player count estimate.
+    # SIMPLEST fix: don't create more penalty rows than configured players - 1
     for row in ov_penalties:
+        if row["rank"] > max(current_player_count, 2):
+            break  # stop creating penalties beyond actual player count
         PrizePayout.objects.create(
             prize_pool=pool_overall,
             rank=row["rank"],

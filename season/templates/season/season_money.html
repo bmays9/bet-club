@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
-{% block content %}
 {% load dict_extras %}
+{% block content %}
 {% include "season/_season_header.html" %}
 
-<h3 class="mt-3">Money</h3>
+<h3 class="mt-3">Money Summary</h3>
 
 <div class="table-responsive">
     {% for category, items in grouped_payouts.items %}
@@ -21,7 +21,11 @@
         </thead>
         <tbody>
             {% for it in items %}
-            <tr {% if it.recipient and user == it.recipient.user %}class="table-info" {% endif %}>
+            {% if it.recipient and user == it.recipient.user %}
+            <tr class="table-info">
+                {% else %}
+            <tr>
+                {% endif %}
                 {% for col in category_columns|get_item:category %}
                 <td>
                     {% if col == "rank" %}
@@ -29,11 +33,10 @@
                     {% elif col == "prize_pool" %}
                     {{ it.prize_pool.name|default:"" }}
                     {% elif col == "league" %}
-                    {% if it.winning_pick and it.winning_pick.team and it.winning_pick.team.league %}
+                    {% if it.league %}{{ it.league.code|default:it.league.name }}
+                    {% elif it.winning_pick and it.winning_pick.team and it.winning_pick.team.league %}
                     {{ it.winning_pick.team.league.code }}
-                    {% else %}
-                    &ndash;
-                    {% endif %}
+                    {% else %}&ndash;{% endif %}
                     {% elif col == "player" %}
                     {% if it.recipient %}{{ it.recipient.user.username }}{% else %}&ndash;{% endif %}
                     {% elif col == "winning_pick" %}
@@ -41,7 +44,13 @@
                     {% elif col == "points" %}
                     {{ it.points|floatformat:0|default:"" }}
                     {% elif col == "prize_value" %}
-                    {% if it.prize_value is not None %}&pound;{{ it.prize_value|floatformat:0 }}{% else %}&ndash;{% endif %}
+                    {% if it.prize_value is not None %}
+                    {% if it.prize_value < 0 %}
+                    <span class="text-danger">-&pound;{{ it.prize_value|floatformat:2|slice:"1:" }}</span>
+                    {% else %}
+                    <span class="text-success">+&pound;{{ it.prize_value|floatformat:2 }}</span>
+                    {% endif %}
+                    {% else %}&ndash;{% endif %}
                     {% elif col == "type" %}
                     {% if it.winning_pick %}{{ it.winning_pick.pick_type|capfirst }}{% else %}&ndash;{% endif %}
                     {% elif col == "month" %}
@@ -56,6 +65,5 @@
     {% endif %}
     {% endfor %}
 </div>
-
 
 {% endblock %}

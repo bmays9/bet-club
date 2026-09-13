@@ -189,6 +189,49 @@ def get_current_slot(draft, player_game):
     return None
 
 
+def sync_overall_penalties(game):
+    """
+    Create/trim overall penalty rows to match the actual number of players.
+    Called when draft starts -- player count is now final.
+    Ranks 2 to num_players each get a penalty row.
+    """
+    from season.models import PrizePool, PrizePayout, PrizeCategory
+    from season.prize_config import OVERALL_LOSER_PENALTIES
+
+    pool = PrizePool.objects.filter(
+        game=game, category=PrizeCategory.OVERALL
+    ).first()
+    if not pool:
+        return
+
+    num_players = PlayerGame.objects.filter(game=game).count()
+
+    # Remove any penalty rows beyond num_players
+    PrizePayout.objects.filter(
+        prize_pool=pool,
+        rank__gt=num_players,
+    ).delete()
+
+    # Add any missing penalty rows up to num_players
+    existing_ranks = set(
+        PrizePayout.objects.filter(
+            prize_pool=pool, rank__gt=1
+        ).values_list("rank", flat=True)
+    )
+
+    penalty_map = {row["rank"]: row["amount"] for row in OVERALL_LOSER_PENALTIES}
+
+    for rank in range(2, num_players + 1):
+        if rank not in existing_ranks:
+            amount = penalty_map.get(rank, -(rank - 1) * 10)  # fallback: -10 per position
+            from decimal import Decimal
+            PrizePayout.objects.create(
+                prize_pool=pool,
+                rank=rank,
+                amount=Decimal(str(amount)),
+            )
+
+
 def create_draft(game, method=SeasonDraft.Method.STRAIGHT):
     import random
     draft, created = SeasonDraft.objects.get_or_create(
@@ -205,4 +248,6 @@ def create_draft(game, method=SeasonDraft.Method.STRAIGHT):
             defaults={"position": i}
         )
     generate_draft_slots(draft)
+    # Sync overall penalties to actual player count
+    sync_overall_penalties(game)
     return draft, True
