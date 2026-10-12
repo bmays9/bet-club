@@ -1,9 +1,14 @@
-from bank.services import apply_batch
-from decimal import Decimal
-from django.core.management.base import BaseCommand
-from django.db.models import Max, Min
-from django.utils import timezone
+from collections import defaultdict
 from datetime import timedelta, datetime, time
+from decimal import Decimal
+
+from django.core.management.base import BaseCommand
+from django.db import IntegrityError, transaction
+from django.db.models import Max
+from django.utils import timezone
+from django.utils.timezone import make_aware
+
+from bank.services import apply_batch
 from lms.models import LMSPick, LMSRound, LMSEntry, LMSGame
 from lms.services.pick_resolution import (
     assign_missing_picks, handle_unresolved_postponed_picks
@@ -12,6 +17,8 @@ from lms.utils import get_auto_pick_teams_for_round
 from player_messages.utils import create_message
 from score_predict.models import Fixture
 
+# Add every status code your provider uses for a finished match
+# (e.g. after extra time / penalties), otherwise those picks stay PENDING.
 FINAL_STATUS_CODES = (100,)
 CANCELLED_CODE = 90
 POSTPONED_CODE = 60
@@ -24,22 +31,17 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Updating LMS pick results...")
 
-        # 1. Find earliest incomplete round per active game
-        earliest_rounds = (
-            LMSRound.objects
-            .filter(game__active=True, completed=False)
-            .values("game")
-            .annotate(earliest_round=Min("round_number"))
-        )
-
-        rounds = LMSRound.objects.filter(
-            game__active=True,
-            completed=False,
-            round_number__in=[r["earliest_round"] for r in earliest_rounds],
-        ).select_related("game").order_by("game_id", "round_number")
-
-        for round_obj in rounds:
-            game = round_obj.game
+        # 1. Process the earliest incomplete round of each active game
+        #    (paired per game, so another game's round numbers can't leak in)
+        for game in LMSGame.objects.filter(active=True).order_by("id"):
+            round_obj = (
+                LMSRound.objects
+                .filter(game=game, completed=False)
+                .order_by("round_number", "id")
+                .first()
+            )
+            if round_obj is None:
+                continue
             now_ts = timezone.now()
 
             self.stdout.write(f"\nProcessing {round_obj}")
@@ -51,20 +53,39 @@ class Command(BaseCommand):
             first_fixture = round_obj.fixtures.order_by("date").first()
 
             if game.deadline_mode == "first_game":
-                deadline_passed = first_fixture and now_ts >= first_fixture.date
+                deadline_passed = bool(first_fixture and now_ts >= first_fixture.date)
             else:
                 deadline_passed = now_ts >= round_obj.end_date
 
-            # 2. Assign missing picks after deadline
+            # 2. Assign missing picks after deadline -- ONLY if some alive
+            #    entry genuinely has no pick in this round.
             if deadline_passed:
-                assign_missing_picks(game, round_obj)
+                entries_with_picks = round_obj.picks.values_list("entry_id", flat=True)
+                entries_missing = game.entries.filter(alive=True).exclude(
+                    id__in=entries_with_picks
+                )
+                if entries_missing.exists():
+                    self.stdout.write(
+                        f"  {entries_missing.count()} entr(y/ies) missing picks -- assigning"
+                    )
+                    assign_missing_picks(game, round_obj)
 
-            # 3. Handle postponed fixtures after round ends
+            # 3. Handle postponed fixtures after round ends -- ONLY for picks
+            #    whose fixture is actually postponed/cancelled, never for
+            #    picks that are merely waiting on a result.
             if now_ts >= round_obj.end_date:
-                handle_unresolved_postponed_picks(game, round_obj)
+                postponed_picks = round_obj.picks.filter(
+                    result="PENDING",
+                    fixture__status_code__in=[POSTPONED_CODE, CANCELLED_CODE],
+                )
+                if postponed_picks.exists():
+                    self.stdout.write(
+                        f"  {postponed_picks.count()} pick(s) on postponed/cancelled fixtures -- resolving"
+                    )
+                    handle_unresolved_postponed_picks(game, round_obj)
 
             # 4. Compute results for pending picks
-            for pick in round_obj.picks.filter(result="PENDING"):
+            for pick in round_obj.picks.filter(result="PENDING").select_related("fixture"):
                 fixture = pick.fixture
                 if not fixture or fixture.date > now_ts:
                     continue
@@ -134,8 +155,8 @@ class Command(BaseCommand):
             if alive_count == 1:
                 winner_entry = alive.first()
 
-                # Cannot confirm winner until their pick's fixture is decided
-                # The winning player must have WON their last pick -- not just survived
+                # Cannot confirm winner until their pick's fixture is decided.
+                # The winning player must have WON their last pick -- not just survived.
                 winner_picks = round_obj.picks.filter(entry=winner_entry)
                 winner_pick_pending = winner_picks.filter(result="PENDING").exists()
                 winner_pick_won = winner_picks.filter(result="WIN").exists()
@@ -148,7 +169,6 @@ class Command(BaseCommand):
                     continue
 
                 if not winner_pick_won:
-                    # Their pick didn't win (draw or not yet resolved) -- not a winner yet
                     self.stdout.write(
                         f"  Last player {winner_entry.user} pick not yet WON -- skipping"
                     )
@@ -192,7 +212,7 @@ class Command(BaseCommand):
                 )
 
             # 8. Create next round if this one just completed
-            if round_obj.completed:
+            if round_obj.completed and game.active:
                 latest_round_num = LMSRound.objects.filter(game=game).aggregate(
                     Max("round_number")
                 )["round_number__max"]
@@ -202,20 +222,20 @@ class Command(BaseCommand):
                     if created:
                         self.stdout.write(f"  Created Round {created.round_number}")
                     else:
-                        self.stdout.write(f"  No fixtures available for next round")
+                        self.stdout.write("  Next round not created (no fixtures or already exists)")
 
         # Final pass: ensure active games have a next round ready
         self.stdout.write("\nChecking active games for missing next rounds...")
         for game in LMSGame.objects.filter(active=True):
-            rounds = LMSRound.objects.filter(game=game).order_by("-round_number")
+            game_rounds = LMSRound.objects.filter(game=game).order_by("-round_number")
 
-            if not rounds.exists():
+            if not game_rounds.exists():
                 created = self.create_next_round(game=game, previous_round=None)
                 if created:
                     self.stdout.write(f"Created Round 1 for {game}")
                 continue
 
-            latest = rounds.first()
+            latest = game_rounds.first()
             if not latest.completed:
                 continue
 
@@ -233,7 +253,6 @@ class Command(BaseCommand):
         """
         Find the next valid fixture block for the game's league.
 
-        Improved logic:
         - Scans forward from after the previous round ended
         - Groups fixtures by calendar date
         - Finds the next cluster of dates where each TEAM appears only once
@@ -248,13 +267,12 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Searching for next round for {game} after {search_after.date()}")
 
-        # Get all upcoming fixtures for this league
         upcoming = (
             Fixture.objects
             .filter(
                 league_short_name=game.league,
                 date__gt=search_after,
-                date__lt=timezone.make_aware(
+                date__lt=make_aware(
                     datetime.combine(lookahead_limit.date(), time.max)
                 ),
             )
@@ -267,25 +285,23 @@ class Command(BaseCommand):
             return None
 
         # Group fixtures by date
-        from collections import defaultdict
         by_date = defaultdict(list)
         for fx in upcoming:
             by_date[fx.date.date()].append(fx)
 
         sorted_dates = sorted(by_date.keys())
 
-        # Find natural fixture clusters:
-        # A cluster is a group of consecutive dates where no more than 1 day
-        # gap exists between them. This handles Fri-Mon AND holiday schedules.
+        # Find natural fixture clusters: consecutive dates with at most a
+        # 2-day gap between them. Handles Fri-Mon AND holiday schedules.
         clusters = []
         current_cluster_dates = []
 
-        for i, d in enumerate(sorted_dates):
+        for d in sorted_dates:
             if not current_cluster_dates:
                 current_cluster_dates = [d]
             else:
                 gap = (d - current_cluster_dates[-1]).days
-                if gap <= 2:  # allow up to 2-day gap within a cluster
+                if gap <= 2:
                     current_cluster_dates.append(d)
                 else:
                     clusters.append(current_cluster_dates)
@@ -298,13 +314,12 @@ class Command(BaseCommand):
         for cluster_dates in clusters:
             cluster_fixtures = []
             seen_teams = set()
-            valid = True
 
             for d in cluster_dates:
                 for fx in by_date[d]:
                     # Each team can only appear once in a round
                     if fx.home_team in seen_teams or fx.away_team in seen_teams:
-                        continue  # skip duplicate team fixture
+                        continue
                     seen_teams.add(fx.home_team)
                     seen_teams.add(fx.away_team)
                     cluster_fixtures.append(fx)
@@ -316,46 +331,54 @@ class Command(BaseCommand):
                 )
                 continue
 
-            # Valid cluster found
             self.stdout.write(
                 f"  Using cluster {cluster_dates[0]} - {cluster_dates[-1]} "
                 f"({len(cluster_fixtures)} fixtures)"
             )
 
-            # Sort fixtures by date
             cluster_fixtures.sort(key=lambda f: f.date)
 
             round_number = (previous_round.round_number + 1) if previous_round else 1
 
-            from django.utils.timezone import make_aware
-            block_start_dt = make_aware(
-                datetime.combine(cluster_dates[0], time.min)
-            )
-            block_end_dt = make_aware(
-                datetime.combine(cluster_dates[-1], time.max)
-            )
+            # Lock the game row, re-check, then create -- so two overlapping
+            # runs can never both create the same round number.
+            try:
+                with transaction.atomic():
+                    LMSGame.objects.select_for_update().get(pk=game.pk)
 
-            new_round = LMSRound.objects.create(
-                game=game,
-                round_number=round_number,
-                start_date=cluster_fixtures[0].date,
-                end_date=cluster_fixtures[-1].date + timedelta(hours=4),
-            )
-            new_round.fixtures.set(cluster_fixtures)
+                    if LMSRound.objects.filter(game=game, round_number=round_number).exists():
+                        self.stdout.write(
+                            f"  Round {round_number} already exists for {game} -- not creating"
+                        )
+                        return None
 
-            # Auto-picks
-            auto_picks = get_auto_pick_teams_for_round(
-                game, new_round, cluster_fixtures, count=4
-            )
-            if auto_picks:
-                new_round.auto_pick_team1 = auto_picks[0]
-                new_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
-                new_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
-                new_round.auto_pick_team = auto_picks[3] if len(auto_picks) > 3 else None
-                new_round.save(update_fields=[
-                    "auto_pick_team1", "auto_pick_team2",
-                    "auto_pick_team3", "auto_pick_team",
-                ])
+                    new_round = LMSRound.objects.create(
+                        game=game,
+                        round_number=round_number,
+                        start_date=cluster_fixtures[0].date,
+                        end_date=cluster_fixtures[-1].date + timedelta(hours=4),
+                    )
+                    new_round.fixtures.set(cluster_fixtures)
+
+                    # Auto-picks
+                    auto_picks = get_auto_pick_teams_for_round(
+                        game, new_round, cluster_fixtures, count=4
+                    )
+                    if auto_picks:
+                        new_round.auto_pick_team1 = auto_picks[0]
+                        new_round.auto_pick_team2 = auto_picks[1] if len(auto_picks) > 1 else None
+                        new_round.auto_pick_team3 = auto_picks[2] if len(auto_picks) > 2 else None
+                        new_round.auto_pick_team = auto_picks[3] if len(auto_picks) > 3 else None
+                        new_round.save(update_fields=[
+                            "auto_pick_team1", "auto_pick_team2",
+                            "auto_pick_team3", "auto_pick_team",
+                        ])
+            except IntegrityError:
+                # Backstop: the unique constraint caught a concurrent create
+                self.stdout.write(
+                    f"  Round {round_number} was created concurrently for {game} -- skipping"
+                )
+                return None
 
             return new_round
 
