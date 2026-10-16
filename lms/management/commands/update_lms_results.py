@@ -174,9 +174,30 @@ class Command(BaseCommand):
                     )
                     continue
 
-                game.winner = winner_entry.user
-                game.active = False
-                game.save(update_fields=["winner", "active"])
+                # Atomically "claim" the settlement: only the run whose UPDATE
+                # flips active True -> False gets to pay out. Any other run
+                # (overlapping cron, manual run, stale in-memory game) gets 0
+                # rows back and skips. Payout and flag commit together.
+                with transaction.atomic():
+                    claimed = LMSGame.objects.filter(pk=game.pk, active=True).update(
+                        active=False, winner=winner_entry.user
+                    )
+                    if not claimed:
+                        self.stdout.write(f"  {game} already settled -- skipping payout")
+                        continue
+
+                    game.active = False
+                    game.winner = winner_entry.user
+
+                    apply_batch(
+                        group=game.group,
+                        entrants=entrant_users,
+                        winners=[winner_entry.user],
+                        entry_fee=Decimal(str(game.entry_fee)),
+                        prize_pool=prize_pool,
+                        description=f"LMS Settlement - {game.get_league_display()} (#{game.id})",
+                    )
+
                 self.stdout.write(f"  Winner: {winner_entry.user}")
 
                 create_message(
@@ -191,18 +212,13 @@ class Command(BaseCommand):
                     receiver=winner_entry.user,
                     link=f"lms_game_detail:{game.id}",
                 )
-                apply_batch(
-                    group=game.group,
-                    entrants=entrant_users,
-                    winners=[winner_entry.user],
-                    entry_fee=Decimal(str(game.entry_fee)),
-                    prize_pool=prize_pool,
-                    description=f"LMS Settlement - {game.get_league_display()} (#{game.id})",
-                )
 
             elif alive_count == 0:
+                claimed = LMSGame.objects.filter(pk=game.pk, active=True).update(active=False)
+                if not claimed:
+                    self.stdout.write(f"  {game} already closed -- skipping")
+                    continue
                 game.active = False
-                game.save(update_fields=["active"])
                 self.stdout.write(f"  No winner for {game}")
                 create_message(
                     code="LM-OOO",
