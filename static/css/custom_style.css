@@ -215,41 +215,115 @@ main {
 
 /* ============================================================
    FIXTURE DISPLAY (Score Predict & LMS)
+   Mobile first: on portrait phones the home and away teams sit
+   on two lines (home above away), the score/"vs" sits to the
+   right, and the two score inputs stack so each one lines up
+   with its team. From 576px up it switches back to the
+   single-line  home | vs | away  layout.
    ============================================================ */
 
-/* 3-column grid: home | score/vs | away -- keeps vs aligned */
+/* --- Base (mobile portrait) --- */
 .fixture-row {
     display: grid;
-    grid-template-columns: 1fr 52px 1fr;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    grid-template-areas:
+        "home score"
+        "away score";
+    grid-auto-rows: 36px; /* matches .score-input height so rows line up */
+    row-gap: 6px; /* matches the inline gap between the inputs */
+    column-gap: 6px;
     align-items: center;
-    gap: 4px;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
-.fixture-home {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    justify-content: flex-start;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
+.fixture-home,
 .fixture-away {
     display: flex;
     align-items: center;
-    gap: 5px;
-    justify-content: flex-end;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    text-align: right;
+    gap: 6px;
+    min-width: 0; /* lets long names ellipsize instead of overflowing */
+    justify-content: flex-start;
+    text-align: left;
 }
 
+.fixture-home {
+    grid-area: home;
+}
+
+.fixture-away {
+    grid-area: away;
+}
+
+    /* Team name text truncates cleanly when space runs out */
+    .fixture-home > span:not(.team-swatch),
+    .fixture-away > span:not(.team-swatch) {
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    /* Away swatch moves in front of the name so both teams align */
+    .fixture-away > .team-swatch {
+        order: -1;
+    }
+
 .fixture-score {
+    grid-area: score;
+    align-self: center;
     text-align: center;
-    flex-shrink: 0;
     white-space: nowrap;
+}
+
+/* Score inputs: stacked so the home input sits beside the home team */
+.fixture-item > div:last-child {
+    flex-direction: column;
+    align-self: flex-end;
+}
+
+@media (max-width: 575.98px) {
+    /* Reclaim horizontal space for team names */
+    .fixture-item {
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+    }
+
+        .fixture-item > div:last-child {
+            margin-left: 0.5rem !important;
+        }
+}
+
+/* --- Tablet / landscape and up: single-line layout --- */
+@media (min-width: 576px) {
+    .fixture-row {
+        grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1fr);
+        grid-template-areas: "home score away";
+        grid-auto-rows: auto;
+        row-gap: 0;
+        column-gap: 4px;
+        font-size: inherit;
+        font-weight: inherit;
+    }
+
+    .fixture-home,
+    .fixture-away {
+        gap: 5px;
+    }
+
+    .fixture-away {
+        justify-content: flex-end;
+        text-align: right;
+    }
+
+        .fixture-away > .team-swatch {
+            order: 0;
+        }
+
+    .fixture-item > div:last-child {
+        flex-direction: row;
+        align-self: auto;
+    }
 }
 
 /* Legacy .fixture class */
@@ -261,11 +335,6 @@ main {
 @media (max-width: 575.98px) {
     .fixture {
         font-size: 0.8rem;
-    }
-
-    .fixture-row {
-        grid-template-columns: 1fr 44px 1fr;
-        font-size: 0.78rem;
     }
 }
 
